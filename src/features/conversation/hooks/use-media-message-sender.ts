@@ -1,0 +1,97 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { type ChangeEvent } from 'react'
+import { toast } from 'sonner'
+
+import { WIDGET_ALLOWED_MIME_TYPES, WIDGET_MAX_FILE_SIZE } from '@/constants/file-upload'
+import { useUnreadMessages } from '@/contexts/unread-messages-context'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { CONVERSATION_QUERY_KEYS } from '@/features/conversation/constants/conversation-keys'
+import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
+import { useUploadMedia } from '@/features/conversation/hooks/use-upload-media'
+import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+
+const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
+
+interface UseMediaMessageSenderProps {
+  conversationId: string | null
+}
+
+export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderProps) {
+  const queryClient = useQueryClient()
+  const { navigateToConversation } = useWidgetNavigation()
+  const { subscribeToConversation } = useUnreadMessages()
+
+  const { mutateAsync: sendMessageMutation, isPending: isSendMessagePending } = useSendMessage()
+
+  const { mutateAsync: uploadMediaMutation, isPending: isUploadMediaPending } = useUploadMedia()
+
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!WIDGET_ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast.error('File type not supported. Please upload an image or video.', {
+        position: 'top-center',
+        richColors: true,
+      })
+      e.target.value = '' // Reset input
+      return
+    }
+
+    // Validate file size
+    if (file.size > WIDGET_MAX_FILE_SIZE) {
+      toast.error(`File size exceeds the limit of ${WIDGET_MAX_FILE_SIZE / (1024 * 1024)}MB.`, {
+        position: 'top-center',
+        richColors: true,
+      })
+      e.target.value = '' // Reset input
+      return
+    }
+
+    try {
+      // 1. Upload file
+      const uploadResponse = await uploadMediaMutation(file)
+
+      // 2. Determine message type
+      // Use the media type returned from the server as the source of truth
+      const messageType = uploadResponse.media_type as 'image' | 'video'
+
+      // 3. Send message with media payload
+      const response = await sendMessageMutation({
+        ...(conversationId ? { conversation_id: conversationId } : {}),
+        content: '', // Empty content for media messages typically
+        message_type: messageType,
+        media_url: uploadResponse.media_url,
+        metadata: {
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type,
+        },
+      })
+
+      // Handle navigation if needed (same as text message)
+      if (!conversationId && response.conversation_id) {
+        navigateToConversation(response.conversation_id)
+        subscribeToConversation(response.conversation_id)
+        queryClient.invalidateQueries({ queryKey: CONVERSATION_QUERY_KEYS.CONVERSATIONS(), exact: false })
+      }
+
+      e.target.value = '' // Reset input
+    } catch (error) {
+      logger.debug('useMediaMessageSender', 'Failed to upload/send media', error)
+      toast.error('Failed to upload file. Please try again.', {
+        position: 'top-center',
+        richColors: true,
+      })
+      e.target.value = '' // Reset input
+    }
+  }
+
+  return {
+    handleFileSelect,
+    isUploading: isUploadMediaPending,
+    isSending: isSendMessagePending,
+    isProcessing: isUploadMediaPending || isSendMessagePending,
+  }
+}

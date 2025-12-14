@@ -1,0 +1,20 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = crlf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+
+# Specific file types
+[*.{js,jsx,ts,tsx,json,css,scss,html,md}]
+end_of_line = crlf
+insert_final_newline = true
+
+[*.{yml,yaml}]
+end_of_line = crlf
+insert_final_newline = true

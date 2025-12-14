@@ -1,0 +1,248 @@
+/* Pair AI Widget SDK Styles */
+
+/* Bubble holder - handles fixed positioning */
+#pair-ai-bubble-holder {
+  position: fixed;
+  bottom: 20px;
+  z-index: 2147483000;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ========== BUBBLE BUTTON ========== */
+.pair-ai-bubble {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #1f93ff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+  transform-origin: center;
+  opacity: 0;
+  transform: scale(0) rotate(0deg);
+  animation: pair-ai-bubble-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+
+@keyframes pair-ai-bubble-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Hover effect - matches widget-eye whileHover scale(1.05) */
+.pair-ai-bubble:hover:not(:active) {
+  transform: scale(1.05) rotate(0deg) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+}
+
+/* Tap/Active effect - matches widget-eye whileTap scale(0.9) */
+.pair-ai-bubble:active {
+  transform: scale(0.9) rotate(0deg) !important;
+  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.pair-ai-bubble svg {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
+  color: white;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+  flex-shrink: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.pair-ai-bubble.pair-ai-bubble--icon-changing svg {
+  transform: rotate(90deg);
+  opacity: 0;
+}
+
+/* Expanded bubble style */
+.pair-ai-bubble.pair-ai-bubble--expanded {
+  width: auto;
+  height: 48px;
+  border-radius: 24px;
+  padding: 0 20px 0 16px;
+  gap: 8px;
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Expanded bubble hover effect - matches widget-eye whileHover scale(1.02) */
+.pair-ai-bubble.pair-ai-bubble--expanded:hover:not(:active) {
+  transform: scale(1.02) rotate(0deg) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+}
+
+/* Expanded bubble tap effect - matches widget-eye whileTap scale(0.95) */
+.pair-ai-bubble.pair-ai-bubble--expanded:active {
+  transform: scale(0.95) rotate(0deg) !important;
+  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.pair-ai-bubble--expanded span {
+  color: white;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  animation: pair-ai-text-fade-in 0.2s ease 0.1s forwards;
+}
+
+@keyframes pair-ai-text-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== UNREAD BADGE ========== */
+.pair-ai-bubble-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483001;
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.4);
+  line-height: 1;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  pointer-events: none;
+  letter-spacing: -0.01em;
+}
+
+.pair-ai-bubble-badge.pair-ai-badge--visible {
+  display: flex !important;
+}
+
+/* Larger circle for multi-digit counts like "9+" */
+.pair-ai-bubble-badge:not([data-count='1']) {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+/* ========== WIDGET HOLDER (PANEL) ========== */
+.pair-ai-widget-holder {
+  position: fixed;
+  bottom: 104px;
+  width: 400px;
+  height: calc(100vh - 104px - 20px);
+  max-height: 700px;
+  min-height: 250px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 5px 40px rgba(0, 0, 0, 0.16);
+  z-index: 2147483000;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease,
+    visibility 0s linear 0s;
+}
+
+.pair-ai-widget-holder.pair-ai-position-right {
+  right: 20px;
+}
+
+.pair-ai-widget-holder.pair-ai-position-left {
+  left: 20px;
+}
+
+/* Hidden state */
+.pair-ai-widget-holder.pair-ai--hide {
+  opacity: 0;
+  transform: translateY(20px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease,
+    visibility 0s linear 0.25s;
+}
+
+/* Iframe inside widget holder */
+.pair-ai-widget-holder iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Hide bubble holder inside widget holder (prevents duplicate bubbles in iframe) */
+.pair-ai-widget-holder .pair-ai-bubble-holder {
+  display: none !important;
+}
+
+/* ========== MOBILE STYLES ========== */
+@media (max-width: 667px) {
+  .pair-ai-widget-holder {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+  .pair-ai-bubble.pair-ai--hide-mobile {
+    display: none;
+  }
+}
