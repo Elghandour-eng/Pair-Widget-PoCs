@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pair AI Widget - Form Example</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0;
+        padding: 40px;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      p {
+        color: #666;
+        margin-bottom: 24px;
+      }
+      #pairContactUs {
+        max-width: 500px;
+        min-height: 600px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Contact Us</h1>
+    <p>Example of an embedded feedback form</p>
+
+    <!-- The form will render inside this container -->
+    <div id="pairContactUs"></div>
+
+    <script>
+      ;(function (d, t) {
+        var BASE_URL = 'http://localhost:3000'
+        var g = d.createElement(t),
+          s = d.getElementsByTagName(t)[0]
+        g.src = BASE_URL + '/sdk.js'
+        g.async = true
+        s.parentNode.insertBefore(g, s)
+        g.onload = function () {
+          window.PairAiWidgetSDK.renderForm({
+            formId: '01KFTJTRWR6CB9Z0YRRW40FSPY',
+            containerId: 'pairContactUs',
+            baseUrl: BASE_URL,
+            styles: {
+              // Form container
+              backgroundColor: '#ffffff', // Form background color
+              fontFamily: 'Inter, sans-serif', // Font for the entire form
+
+              // Inputs
+              inputBackgroundColor: '#f9f9f9', // Input field background
+              inputBorderColor: '#e0e0e0', // Input field border
+              inputTextColor: '#333333', // Input text color
+              borderRadius: '20px', // Border radius for inputs & button
+
+              // Labels
+              labelColor: '#555555', // Label text color
+
+              // Submit button
+              submitButtonText: 'Custom text', // Button label (default: "Submit")
+              submitButtonColor: 'red', // Button background color
+              submitButtonTextColor: '#ffffff', // Button text color
+
+              // Alias
+              primaryColor: '#1f93ff', // Fallback for submitButtonColor if not set
+            },
+            onSubmitted: function (data) {
+              console.log('Form submitted!', data)
+            },
+          })
+        }
+      })(document, 'script')
+    </script>
+  </body>
+</html>

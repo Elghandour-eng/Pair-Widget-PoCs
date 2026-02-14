@@ -379,9 +379,152 @@
     }
   }
 
+  // ========== EMBEDDED FORM ==========
+
+  /**
+   * Render a feedback form inside a host-provided container.
+   *
+   * @param {Object} options
+   * @param {string} options.formId - The feedback form ULID (required)
+   * @param {string} options.containerId - The ID of the host container element (required)
+   * @param {string} [options.baseUrl] - Widget base URL
+   * @param {Object} [options.styles] - Style overrides for the form
+   */
+  function renderForm(options) {
+    if (!options || !options.formId) {
+      console.error('[PairAI SDK] formId is required for renderForm')
+      return
+    }
+    if (!options.containerId) {
+      console.error('[PairAI SDK] containerId is required for renderForm')
+      return
+    }
+
+    var container = document.getElementById(options.containerId)
+    if (!container) {
+      console.error('[PairAI SDK] Container element not found: #' + options.containerId)
+      return
+    }
+
+    var baseUrl = options.baseUrl || config.baseUrl || 'https://pair-ai-widget-69d50.web.app'
+    // Remove trailing slash
+    baseUrl = baseUrl.replace(/\/$/, '')
+
+    // Build form URL with parameters
+    var params = []
+    params.push('formId=' + encodeURIComponent(options.formId))
+
+    // Pass style overrides as URL params
+    var styleKeys = [
+      'backgroundColor',
+      'primaryColor',
+      'fontFamily',
+      'borderRadius',
+      'inputBackgroundColor',
+      'inputBorderColor',
+      'inputTextColor',
+      'labelColor',
+      'submitButtonText',
+      'submitButtonColor',
+      'submitButtonTextColor',
+    ]
+    if (options.styles) {
+      for (var i = 0; i < styleKeys.length; i++) {
+        var key = styleKeys[i]
+        if (options.styles[key]) {
+          params.push(key + '=' + encodeURIComponent(options.styles[key]))
+        }
+      }
+    }
+
+    // Pass beBaseUrl if available
+    var settings = window.PairAiWidgetSettings || {}
+    if (settings.beBaseUrl) {
+      params.push('beBaseUrl=' + encodeURIComponent(settings.beBaseUrl))
+    }
+
+    var formUrl = baseUrl + '/form?' + params.join('&')
+
+    // Create iframe
+    var iframe = document.createElement('iframe')
+    iframe.id = 'pair-ai-form-iframe-' + options.containerId
+    iframe.className = 'pair-ai-form-iframe'
+    iframe.src = formUrl
+    iframe.setAttribute('frameborder', '0')
+    iframe.setAttribute('allowtransparency', 'true')
+    // Inline styles — fills container completely
+    iframe.style.width = '100%'
+    iframe.style.height = container.offsetHeight + 'px' // iframes ignore height:100%, use actual px
+    iframe.style.border = 'none'
+    iframe.style.display = 'block'
+    iframe.style.overflow = 'auto'
+
+    // Clear container and insert iframe
+    container.innerHTML = ''
+    container.classList.add('pair-ai-form-container')
+    container.style.position = 'relative'
+    container.style.width = '100%'
+    // container.style.height = '100%'
+    container.style.overflow = 'auto'
+    container.appendChild(iframe)
+
+    // Debug: log container and iframe dimensions
+    console.log('[PairAI SDK] Form container #' + options.containerId + ' dimensions:', {
+      containerOffsetWidth: container.offsetWidth,
+      containerOffsetHeight: container.offsetHeight,
+      containerClientWidth: container.clientWidth,
+      containerClientHeight: container.clientHeight,
+      containerStyleHeight: container.style.height,
+      containerComputedHeight: window.getComputedStyle(container).height,
+      containerComputedMinHeight: window.getComputedStyle(container).minHeight,
+      parentElement: container.parentElement ? container.parentElement.tagName : 'none',
+      parentHeight: container.parentElement ? window.getComputedStyle(container.parentElement).height : 'N/A',
+    })
+
+    // Debug: log iframe dimensions after load
+    iframe.addEventListener('load', function () {
+      console.log('[PairAI SDK] Form iframe loaded, dimensions:', {
+        iframeOffsetWidth: iframe.offsetWidth,
+        iframeOffsetHeight: iframe.offsetHeight,
+        iframeClientWidth: iframe.clientWidth,
+        iframeClientHeight: iframe.clientHeight,
+        iframeStyleHeight: iframe.style.height,
+        iframeComputedHeight: window.getComputedStyle(iframe).height,
+      })
+    })
+
+    // Listen for resize messages from the form iframe
+    var containerHeight = container.offsetHeight
+    window.addEventListener('message', function (event) {
+      if (!event.data || typeof event.data !== 'object') return
+      if (event.data.type === 'form:resize' && event.data.height) {
+        // Never shrink below container height
+        var newHeight = Math.max(event.data.height, containerHeight)
+        console.log('[PairAI SDK] Form resize message received:', {
+          requestedHeight: event.data.height,
+          containerHeight: containerHeight,
+          resolvedHeight: newHeight,
+          currentIframeHeight: iframe.offsetHeight,
+        })
+        iframe.style.height = newHeight + 'px'
+        console.log('[PairAI SDK] Iframe height set to:', iframe.style.height)
+      }
+      if (event.data.type === 'form:submitted') {
+        console.log('[PairAI SDK] Form submitted successfully')
+        if (options.onSubmitted && typeof options.onSubmitted === 'function') {
+          options.onSubmitted(event.data)
+        }
+      }
+    })
+
+    console.log('[PairAI SDK] Form rendered in #' + options.containerId)
+    return iframe
+  }
+
   // Public API
   window.PairAiWidgetSDK = {
     run: init,
+    renderForm: renderForm,
     toggle: function (show) {
       toggleWidget(show)
     },
