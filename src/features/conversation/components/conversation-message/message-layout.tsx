@@ -1,11 +1,10 @@
 import { type ReactNode } from 'react'
 
-import { MessageAvatar } from '@/features/conversation/components/conversation-message/message-avatar'
 import { MessageFooter } from '@/features/conversation/components/conversation-message/message-footer'
 import type { Message } from '@/features/conversation/types/message'
 import {
   isFailedMessage,
-  isOutgoingMessage,
+  // isOutgoingMessage,
   isPendingMessage,
   isUserMessage,
 } from '@/features/conversation/utils/message-utils'
@@ -16,6 +15,7 @@ interface MessageLayoutProps {
   isUnread?: boolean
   primaryColor?: string
   websiteName?: string
+  hideTime?: boolean
   children: ReactNode
 }
 
@@ -24,10 +24,11 @@ function MessageLayout({
   isUnread = false,
   primaryColor = '#3b82f6',
   websiteName,
+  hideTime,
   children,
 }: MessageLayoutProps) {
   const isUser = isUserMessage(message)
-  const isOutgoing = isOutgoingMessage(message)
+  // const isOutgoing = isOutgoingMessage(message)
   const isPending = isPendingMessage(message)
   const isFailed = isFailedMessage(message)
 
@@ -60,7 +61,7 @@ function MessageLayout({
         </div>
       )}
 
-      <MessageAvatar show={isOutgoing} />
+      {/* <MessageAvatar show={isOutgoing} /> */}
 
       <div
         className={cn('flex max-w-[70%] flex-col gap-1', {
@@ -69,7 +70,7 @@ function MessageLayout({
         })}
       >
         {children}
-        <MessageFooter message={message} websiteName={websiteName} />
+        <MessageFooter message={message} websiteName={websiteName} hideTime={hideTime} />
       </div>
 
       {/* Spacer for user messages to maintain alignment */}

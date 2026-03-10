@@ -14,8 +14,7 @@
         launcherTitle: 'Chat with us!',
       }
       ;(function (d, t) {
-        var BASE_URL = 'https://widgets-test.trypair.ai/'
-        // var BASE_URL = 'http://localhost:3000'
+        var BASE_URL = 'http://localhost:3000'
         var g = d.createElement(t),
           s = d.getElementsByTagName(t)[0]
         g.src = BASE_URL + '/sdk.js'
@@ -23,9 +22,7 @@
         s.parentNode.insertBefore(g, s)
         g.onload = function () {
           window.PairAiWidgetSDK.run({
-            widgetId: '01KEFGPG3DVHNZ6013BMAJ2FMP',
-            // Has CSAT
-            widgetId: '01KCHXF0CXA1Q5EWDY8GKFMDVK',
+            widgetId: '01KFVCKVXQJ0JBDV73TYD0S0KY',
             baseUrl: BASE_URL,
           })
         }

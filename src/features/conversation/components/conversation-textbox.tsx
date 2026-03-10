@@ -1,4 +1,8 @@
 import { EmojiPicker } from '@/components/emoji-picker'
+import { AttachIcon } from '@/components/icons/attach-icon'
+import { EmojiIcon } from '@/components/icons/emoji-icon'
+import { SendIcon } from '@/components/icons/send-icon'
+import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import { Spinner } from '@/components/ui/spinner'
 import { WIDGET_ALLOWED_MIME_TYPES } from '@/constants/file-upload'
@@ -10,7 +14,6 @@ import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { useLayoutEffect } from '@tanstack/react-router'
-import { Paperclip, SendHorizontal, Smile } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { CONVERSATION_QUERY_KEYS } from '../constants/conversation-keys'
@@ -142,7 +145,7 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   const hasMessage = message.trim().length > 0
 
   return (
-    <div className="px-4">
+    <div className="px-4 pt-4">
       <input
         type="file"
         ref={fileInputRef}
@@ -150,8 +153,8 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
         accept={WIDGET_ALLOWED_MIME_TYPES.join(',')}
         onChange={handleFileSelect}
       />
-      <form onSubmit={handleSubmit}>
-        <InputGroup>
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <InputGroup className="border-0 bg-[#FAFAFA]">
           <InputGroupTextarea
             ref={textEditorRef}
             placeholder="Type your message"
@@ -162,18 +165,6 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
             disabled={isSendMessagePending || isProcessing}
           />
           <InputGroupAddon align="inline-end">
-            {!hasMessage && widgetConfig.selectedFeatureFlags?.includes('attachments') && (
-              <InputGroupButton
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-              >
-                {isProcessing ? <Spinner className="size-4" /> : <Paperclip className="size-4" />}
-              </InputGroupButton>
-            )}
             {isEmojiPickerEnabled && (
               <div className="relative">
                 <InputGroupButton
@@ -184,7 +175,7 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
                   className="text-muted-foreground hover:text-foreground"
                   onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
                 >
-                  <Smile className="size-4" />
+                  <EmojiIcon className="size-4" />
                 </InputGroupButton>
                 <EmojiPicker
                   isOpen={isEmojiPickerOpen}
@@ -194,24 +185,35 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
                 />
               </div>
             )}
-            {hasMessage && (
-              <InputGroupButton
-                type="submit"
-                variant="ghost"
-                size="icon-xs"
-                disabled={isSendMessagePending}
-                className="rounded-full"
-              >
-                {isSendMessagePending ? (
-                  <Spinner style={{ color: widgetConfig.primaryColor }} />
-                ) : (
-                  <SendHorizontal className="size-4" style={{ color: widgetConfig.primaryColor }} />
-                )}
-                <span className="sr-only">Send</span>
-              </InputGroupButton>
-            )}
+            <InputGroupButton
+              type="submit"
+              variant="ghost"
+              size="icon-xs"
+              disabled={!hasMessage || isSendMessagePending}
+              className="rounded-full"
+            >
+              {isSendMessagePending ? (
+                <Spinner style={{ color: widgetConfig.primaryColor }} />
+              ) : (
+                <SendIcon className="size-4" style={{ color: widgetConfig.primaryColor }} />
+              )}
+              <span className="sr-only">Send</span>
+            </InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
+
+        {widgetConfig.selectedFeatureFlags?.includes('attachments') && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            className="text-muted-foreground hover:text-foreground bg-[#FAFAFA] p-6"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={hasMessage || isProcessing}
+          >
+            {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-4" />}
+          </Button>
+        )}
       </form>
     </div>
   )

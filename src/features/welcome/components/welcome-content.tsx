@@ -1,3 +1,4 @@
+import { BackIcon as RightArrowIcon } from '@/components/icons/back-icon'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { WidgetAvatar } from '@/components/widget-avatar'
@@ -9,7 +10,6 @@ import { tokenStorage } from '@/core/token-storage'
 import { useConversations } from '@/features/conversation/queries/use-conversations-queries'
 import { usePreChat } from '@/features/pre-chat-form/hooks/use-pre-chat'
 import { getWidgetId } from '@/utils/widget-id'
-import { ChevronRight } from 'lucide-react'
 
 const WelcomeContent = () => {
   // TODO: implement online and offline status of the host
@@ -63,7 +63,7 @@ const WelcomeContent = () => {
               {isHostOnline ? 'We are online' : 'We are away at the moment'}
             </div>
 
-            <span className="text-muted-foreground">
+            <span className="text-[16px] leading-[150%] font-normal tracking-[0%] text-[#85888E]">
               {isHostOnline ? replyTimeText : 'We will be back as soon as possible'}
             </span>
           </div>
@@ -88,7 +88,7 @@ const WelcomeContent = () => {
                   ? 'Continue conversation'
                   : 'Start conversation')}
           </span>
-          {!isPreChatPending && !isConversationsLoading && <ChevronRight className="size-5" />}
+          {!isPreChatPending && !isConversationsLoading && <RightArrowIcon className="size-3 rotate-180" />}
         </Button>
       </div>
     </WidgetContent>

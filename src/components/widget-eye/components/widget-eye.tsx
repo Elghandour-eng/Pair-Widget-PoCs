@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { MessageCircle, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
+import { BubbleChatIcon } from '@/components/icons/bubble-chat-icon'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetUIContext } from '@/contexts/widget-ui-context'
@@ -66,7 +67,7 @@ export function WidgetEye() {
           aria-label={launcherTitle}
           title={launcherTitle}
           className={`fixed ${WIDGET_EYE_POSITION_CLASSES[position]} z-50 flex cursor-pointer touch-none items-center gap-2 overflow-hidden rounded-full px-4 shadow-lg hover:shadow-xl ${
-            isOpen ? 'size-16' : 'h-12 max-w-[300px] min-w-[200px]'
+            isOpen ? 'size-16' : 'h-12 max-w-75 min-w-50'
           }`}
           style={{ backgroundColor: widgetConfig.primaryColor }}
           initial={{
@@ -90,7 +91,7 @@ export function WidgetEye() {
           }}
         >
           <div className="pointer-events-none flex shrink-0 items-center justify-center">
-            {!isOpen && <MessageCircle className="pointer-events-none size-5 text-white" />}
+            {!isOpen && <BubbleChatIcon className="pointer-events-none size-5 text-white" />}
             <AnimatePresence initial={false}>
               {isOpen && (
                 <motion.div
@@ -130,7 +131,7 @@ export function WidgetEye() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className={`fixed ${position === 'right' ? 'right-4' : 'left-4'} bottom-[60px] z-[51] flex size-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-lg`}
+              className={`fixed ${position === 'right' ? 'right-4' : 'left-4'} bottom-15 z-51 flex size-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-lg`}
             >
               {visibleUnreadCount > 9 ? '9+' : visibleUnreadCount}
             </motion.div>
@@ -188,7 +189,7 @@ export function WidgetEye() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="pointer-events-none absolute inset-0 flex items-center justify-center"
               >
-                <MessageCircle className="pointer-events-none size-6 text-white" />
+                <BubbleChatIcon className="pointer-events-none size-6 text-white" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -203,7 +204,7 @@ export function WidgetEye() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className={`fixed ${position === 'right' ? 'right-3' : 'left-3'} bottom-[60px] z-[51] flex size-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-lg ring-2 ring-white`}
+            className={`fixed ${position === 'right' ? 'right-3' : 'left-3'} bottom-15 z-51 flex size-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-lg ring-2 ring-white`}
           >
             {visibleUnreadCount > 99 ? '99+' : visibleUnreadCount}
           </motion.div>

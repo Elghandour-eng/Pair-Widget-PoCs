@@ -189,7 +189,7 @@ function ConversationMessages({
   }, [conversationId, getFirstUnreadMessageId, handleScrollToBottom, scrollContainerRef])
 
   return (
-    <WidgetContent className="relative flex-1 overflow-hidden p-0">
+    <WidgetContent className="relative flex-1 overflow-hidden bg-[#FAFAFA] p-0">
       {isLoadingMore && <LoadMore />}
 
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex h-full w-full flex-col overflow-y-auto">

@@ -1,9 +1,10 @@
+import { EmojiIcon } from '@/components/icons/emoji-icon'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useSubmitCsat } from '@/features/conversation/hooks/use-submit-csat'
 import type { InteractiveMetadata, Message } from '@/features/conversation/types/message'
 import { cn } from '@/lib/utils'
 import { getWidgetId } from '@/utils/widget-id'
-import { ChevronDown, Smile, Star } from 'lucide-react'
+import { ChevronDown, Star } from 'lucide-react'
 import { useState } from 'react'
 import { MessageLayout } from './message-layout'
 
@@ -77,7 +78,7 @@ export function CsatMessage({ message, isUnread, primaryColor, websiteName }: Cs
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
       <div
-        className="dark:bg-card flex w-full max-w-sm min-w-[280px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-800"
+        className="dark:bg-card flex w-full max-w-sm min-w-70 flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-800"
         style={{ '--primary-color': primaryColor } as React.CSSProperties}
       >
         {/* Card Header Content */}
@@ -104,7 +105,7 @@ export function CsatMessage({ message, isUnread, primaryColor, websiteName }: Cs
             <div className="flex items-center gap-2">
               {/* Show icon based on state */}
               {submittedRatingId && displayType === 'star' ? <Star className="h-4 w-4 fill-current" /> : null}
-              {submittedRatingId && displayType === 'emoji' ? <Smile className="h-4 w-4" /> : null}
+              {submittedRatingId && displayType === 'emoji' ? <EmojiIcon className="h-4 w-4" /> : null}
 
               <span>{selectedOption ? `You rated: ${selectedOption.title}` : buttonText}</span>
             </div>
