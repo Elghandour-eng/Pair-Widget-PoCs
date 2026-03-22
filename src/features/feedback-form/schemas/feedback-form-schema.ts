@@ -16,9 +16,15 @@ export function createFeedbackFormSchema(visibleFields: FeedbackFormField[]) {
   fieldSchemas.email = z.string().min(1, 'Email is required').email('Please enter a valid email')
   fieldSchemas.phone = z.string().min(1, 'Phone number is required')
 
-  // Dynamic visible fields — all required for now
+  // Dynamic visible fields
   for (const field of visibleFields) {
-    fieldSchemas[`field_${field.id}`] = z.string().min(1, `${field.label} is required`)
+    if (field.inputType === 'checkbox') {
+      fieldSchemas[`field_${field.id}`] = z.boolean().default(false)
+    } else if (field.isRequired) {
+      fieldSchemas[`field_${field.id}`] = z.string().min(1, `${field.label} is required`)
+    } else {
+      fieldSchemas[`field_${field.id}`] = z.string().optional()
+    }
   }
 
   return z.object(fieldSchemas)

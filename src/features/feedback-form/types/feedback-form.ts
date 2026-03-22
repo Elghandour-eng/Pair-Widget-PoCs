@@ -12,7 +12,8 @@ export interface FeedbackFormField {
   customFieldId?: string
   label: string
   isVisible: boolean
-  defaultValue: string | null
+  isRequired: boolean
+  defaultValue: string | boolean | null
   createdAt: string
   updatedAt: string
   /** From backend: text | email | number | textarea | select | etc. */
@@ -25,6 +26,7 @@ export interface FeedbackFormConfig {
   ulid: string
   name: string
   isActive: boolean
+  isEnable: boolean
   createdAt: string
   updatedAt: string
   fields: FeedbackFormField[]
@@ -34,7 +36,7 @@ export interface FeedbackFormConfig {
 
 export interface FeedbackFormSubmitFieldValue {
   fieldUlid: string
-  value: string
+  value: string | number | boolean
 }
 
 export interface FeedbackFormSubmitPayload {

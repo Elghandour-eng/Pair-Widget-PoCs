@@ -1,13 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { format } from 'date-fns'
+import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 import { useSubmitFeedback } from '../hooks/use-submit-feedback'
 import { useFeedbackFormConfig } from '../queries/use-feedback-form-queries'
@@ -40,10 +47,14 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
       phone: '',
       ...visibleFields.reduce(
         (acc, field) => {
-          acc[`field_${field.id}`] = field.defaultValue || ''
+          if (field.inputType === 'checkbox') {
+            acc[`field_${field.id}`] = Boolean(field.defaultValue)
+          } else {
+            acc[`field_${field.id}`] = (field.defaultValue as string) || ''
+          }
           return acc
         },
-        {} as Record<string, string>,
+        {} as Record<string, string | boolean>,
       ),
     },
   })
@@ -72,8 +83,16 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
 
     // Visible fields — user-entered values
     for (const field of visibleFields) {
-      const value = values[`field_${field.id}`] as string
-      if (value) {
+      const rawValue = values[`field_${field.id}`]
+      if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+        let value: string | number | boolean
+        if (field.inputType === 'number') {
+          value = Number(rawValue)
+        } else if (typeof rawValue === 'boolean') {
+          value = rawValue
+        } else {
+          value = rawValue as string
+        }
         fieldValues.push({ fieldUlid: field.id, value })
       }
     }
@@ -81,7 +100,7 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
     // Hidden fields — auto-submit defaultValues
     for (const field of hiddenFields) {
       if (field.defaultValue) {
-        fieldValues.push({ fieldUlid: field.id, value: field.defaultValue })
+        fieldValues.push({ fieldUlid: field.id, value: String(field.defaultValue) })
       }
     }
 
@@ -129,11 +148,13 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
   // Resolve input type: prefer backend inputType, else infer from systemField/label
   const resolveInputType = (
     field: FeedbackFormField,
-  ): 'text' | 'email' | 'number' | 'textarea' | 'select' | 'phone' => {
+  ): 'text' | 'email' | 'number' | 'textarea' | 'select' | 'phone' | 'date' | 'checkbox' => {
     if (field.inputType === 'select' || (field.options && field.options.length > 0)) return 'select'
     if (field.inputType === 'textarea') return 'textarea'
     if (field.inputType === 'email') return 'email'
     if (field.inputType === 'number') return 'number'
+    if (field.inputType === 'date') return 'date'
+    if (field.inputType === 'checkbox') return 'checkbox'
     if (field.systemField === 'description') return 'textarea'
     const labelLower = field.label.toLowerCase()
     if (labelLower.includes('email')) return 'email'
@@ -156,31 +177,63 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
           key={fieldKey}
           control={form.control}
           name={fieldKey}
-          render={({ field: formField }) => (
-            <FormItem>
-              <FormLabel className="gap-1">
-                {field.label}
-                <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <select
-                  className="border-input focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 md:text-sm"
-                  style={getInputStyles(styles)}
-                  {...formField}
-                  value={(formField.value as string) ?? ''}
-                  onChange={(e) => formField.onChange(e.target.value)}
-                >
-                  <option value="">{getPlaceholder(field, `Select ${field.label.toLowerCase()}`)}</option>
-                  {options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field: formField }) => {
+            const selectedOption = options.find((opt) => opt.value === formField.value)
+            return (
+              <FormItem>
+                <FormLabel className="gap-1">
+                  {field.label}
+                  {field.isRequired && <span className="text-destructive">*</span>}
+                </FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          'w-full justify-between font-normal',
+                          !formField.value && 'text-muted-foreground',
+                        )}
+                        style={getInputStyles(styles)}
+                      >
+                        {selectedOption?.label || getPlaceholder(field, `Select ${field.label.toLowerCase()}`)}
+                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder={`Search ${field.label.toLowerCase()}...`} />
+                      <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup>
+                          {options.map((opt) => (
+                            <CommandItem
+                              key={opt.value}
+                              value={opt.label}
+                              onSelect={() => {
+                                formField.onChange(opt.value === formField.value ? '' : opt.value)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  formField.value === opt.value ? 'opacity-100' : 'opacity-0',
+                                )}
+                              />
+                              {opt.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )
+          }}
         />
       )
     }
@@ -195,7 +248,7 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
             <FormItem>
               <FormLabel className="gap-1">
                 {field.label}
-                <span className="text-destructive">*</span>
+                {field.isRequired && <span className="text-destructive">*</span>}
               </FormLabel>
               <FormControl>
                 <Textarea
@@ -223,7 +276,7 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
             <FormItem>
               <FormLabel className="gap-1">
                 {field.label}
-                <span className="text-destructive">*</span>
+                {field.isRequired && <span className="text-destructive">*</span>}
               </FormLabel>
               <FormControl>
                 <PhoneInput
@@ -241,6 +294,75 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
       )
     }
 
+    if (inputType === 'checkbox') {
+      return (
+        <FormField
+          key={fieldKey}
+          control={form.control}
+          name={fieldKey}
+          render={({ field: formField }) => (
+            <FormItem className="flex flex-row items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox checked={formField.value as boolean} onCheckedChange={formField.onChange} />
+              </FormControl>
+              <FormLabel className="cursor-pointer gap-1">
+                {field.label}
+                {field.isRequired && <span className="text-destructive">*</span>}
+              </FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )
+    }
+
+    if (inputType === 'date') {
+      return (
+        <FormField
+          key={fieldKey}
+          control={form.control}
+          name={fieldKey}
+          render={({ field: formField }) => {
+            const dateValue = formField.value ? new Date(formField.value as string) : undefined
+            return (
+              <FormItem>
+                <FormLabel className="gap-1">
+                  {field.label}
+                  {field.isRequired && <span className="text-destructive">*</span>}
+                </FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !formField.value && 'text-muted-foreground',
+                        )}
+                        style={getInputStyles(styles)}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateValue ? format(dateValue, 'PPP') : getPlaceholder(field, 'Pick a date')}
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateValue}
+                      onSelect={(date) => formField.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )
+          }}
+        />
+      )
+    }
+
     return (
       <FormField
         key={fieldKey}
@@ -250,7 +372,7 @@ export function FeedbackForm({ formId, styles }: FeedbackFormProps) {
           <FormItem>
             <FormLabel className="gap-1">
               {field.label}
-              <span className="text-destructive">*</span>
+              {field.isRequired && <span className="text-destructive">*</span>}
             </FormLabel>
             <FormControl>
               <Input
