@@ -20,6 +20,15 @@ interface UnreadMessage {
   timestamp: number
 }
 
+interface LastIncomingMessage {
+  messageId: string
+  conversationId: string
+  content: string
+  senderName: string | undefined
+  senderAvatar: string | undefined
+  timestamp: number
+}
+
 interface UnreadMessagesContextType {
   // Map of conversation ID to array of unread message IDs
   unreadMessages: Map<string, UnreadMessage[]>
@@ -39,6 +48,12 @@ interface UnreadMessagesContextType {
   subscribeToConversation: (conversationId: string) => void
   // Set current viewing state (for badge visibility logic)
   setViewingConversation: (conversationId: string | null, isOpen: boolean, currentScreen: string) => void
+  // Latest incoming message data for preview UI
+  lastIncomingMessage: LastIncomingMessage | null
+  // Whether user dismissed the preview
+  isPreviewDismissed: boolean
+  // Dismiss preview function
+  dismissPreview: () => void
 }
 
 const UnreadMessagesContext = createContext<UnreadMessagesContextType | undefined>(undefined)
@@ -58,6 +73,8 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     isOpen: false,
     currentScreen: 'welcome',
   })
+  const [lastIncomingMessage, setLastIncomingMessage] = useState<LastIncomingMessage | null>(null)
+  const [isPreviewDismissed, setIsPreviewDismissed] = useState(true)
 
   // Calculate total unread count
   const totalUnreadCount = Array.from(unreadMessages.values()).reduce((total, messages) => total + messages.length, 0)
@@ -100,6 +117,10 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     },
     [], // No dependencies - just updates state
   )
+
+  const dismissPreview = useCallback(() => {
+    setIsPreviewDismissed(true)
+  }, [])
 
   // Add an unread message
   const addUnreadMessage = useCallback((conversationId: string, messageId: string) => {
@@ -303,6 +324,15 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
                   messageId: message.ulid,
                 })
                 addUnreadMessage(conversationId, message.ulid)
+                setLastIncomingMessage({
+                  messageId: message.ulid,
+                  conversationId,
+                  content: message.content || '',
+                  senderName: message.sender_name,
+                  senderAvatar: message.sender_avatar,
+                  timestamp: Date.now(),
+                })
+                setIsPreviewDismissed(false)
               } else {
                 logger.debug('🔵 MESSAGE:RENDER', 'Skipping unread (user message)', {
                   conversationId,
@@ -487,6 +517,15 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
                   // Only add to unread if it's from an agent or bot (not from the user/contact) or system
                   if (message.sender_type !== 'contact' && message.sender_type !== 'system') {
                     addUnreadMessage(conversation.ulid, message.ulid)
+                    setLastIncomingMessage({
+                      messageId: message.ulid,
+                      conversationId: conversation.ulid,
+                      content: message.content || '',
+                      senderName: message.sender_name,
+                      senderAvatar: message.sender_avatar,
+                      timestamp: Date.now(),
+                    })
+                    setIsPreviewDismissed(false)
                   }
                 }
               } catch (error) {
@@ -564,6 +603,9 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
         getFirstUnreadMessageId,
         subscribeToConversation,
         setViewingConversation,
+        lastIncomingMessage,
+        isPreviewDismissed,
+        dismissPreview,
       }}
     >
       {children}

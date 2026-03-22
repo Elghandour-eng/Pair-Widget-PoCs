@@ -13,7 +13,7 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 export function WidgetEye() {
   const { isOpen, toggle } = useWidgetUIContext()
   const { widgetConfig } = useWidgetConfigContext()
-  const { getVisibleUnreadCount } = useUnreadMessages()
+  const { getVisibleUnreadCount, dismissPreview } = useUnreadMessages()
 
   // Get count that should be visible on badge
   const visibleUnreadCount = getVisibleUnreadCount()
@@ -32,6 +32,7 @@ export function WidgetEye() {
       newState: !isOpen,
     })
 
+    dismissPreview()
     toggle()
   }
 

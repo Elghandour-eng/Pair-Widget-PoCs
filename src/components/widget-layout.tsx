@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Card } from '@/components/ui/card'
+import { IncomingMessagePreview } from '@/components/incoming-message-preview'
 import { WidgetEye } from '@/components/widget-eye/components/widget-eye'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetUIContext } from '@/contexts/widget-ui-context'
@@ -84,6 +85,9 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Incoming Message Preview - only in standalone mode */}
+      <IncomingMessagePreview />
 
       {/* Chat Bubble Button - only in standalone mode */}
       <WidgetEye />

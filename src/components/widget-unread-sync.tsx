@@ -28,7 +28,8 @@ function sendToParent(type: string, data?: Record<string, unknown>) {
  * Must be rendered inside UnreadMessagesProvider, WidgetUIProvider, and WidgetNavigationProvider
  */
 export function WidgetUnreadSync() {
-  const { getVisibleUnreadCount, setViewingConversation } = useUnreadMessages()
+  const { getVisibleUnreadCount, setViewingConversation, lastIncomingMessage, isPreviewDismissed, dismissPreview } =
+    useUnreadMessages()
   const { isOpen } = useWidgetUIContext()
   const { currentScreen, conversationId } = useWidgetNavigation()
   const visibleUnreadCount = getVisibleUnreadCount()
@@ -48,6 +49,36 @@ export function WidgetUnreadSync() {
     })
     sendToParent('widget:unreadCount', { count: visibleUnreadCount })
   }, [visibleUnreadCount, isOpen, currentScreen, conversationId])
+
+  // Listen for sdk:dismissPreview from parent SDK (e.g. user clicked Close on the SDK-rendered preview)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'object') return
+      if (event.data.type === 'sdk:dismissPreview') {
+        dismissPreview()
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => {
+      window.removeEventListener('message', handler)
+    }
+  }, [dismissPreview])
+
+  // Send preview data to parent SDK to render natively
+  useEffect(() => {
+    if (lastIncomingMessage && !isPreviewDismissed) {
+      sendToParent('widget:previewMessage', {
+        message: {
+          content: lastIncomingMessage.content,
+          senderName: lastIncomingMessage.senderName,
+          senderAvatar: lastIncomingMessage.senderAvatar,
+        },
+        unreadCount: visibleUnreadCount,
+      })
+    } else if (isPreviewDismissed) {
+      sendToParent('widget:dismissPreview')
+    }
+  }, [lastIncomingMessage, isPreviewDismissed, visibleUnreadCount])
 
   return null
 }

@@ -10,6 +10,200 @@
   pointer-events: auto;
 }
 
+/* Preview holder - handles fixed positioning for new message popups */
+#pair-ai-preview-holder {
+  position: fixed;
+  bottom: 104px;
+  z-index: 2147483000;
+  width: 368px;
+  max-width: calc(100vw - 40px);
+  display: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+#pair-ai-preview-holder.pair-ai-preview--visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ========== PREVIEW CARD ========== */
+.pair-ai-preview-close {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 4px 16px;
+  gap: 8px;
+  height: 30px;
+  background: #f9fafb;
+  border-radius: 38px;
+  cursor: pointer;
+  border: none;
+  font-family:
+    'Outfit',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 140%;
+  color: #475467;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.pair-ai-preview-close:hover {
+  color: #1e1e1e;
+}
+
+.pair-ai-preview-close svg {
+  width: 16px;
+  height: 16px;
+  color: #475467;
+}
+
+.pair-ai-preview-card {
+  background: #edf5fc;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 12px 16px;
+  gap: 8px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.pair-ai-preview-card--right {
+  border-bottom-right-radius: 0;
+}
+
+.pair-ai-preview-card--left {
+  border-bottom-left-radius: 0;
+}
+
+.pair-ai-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 8px 0;
+  border-bottom: 1px solid rgba(133, 136, 142, 0.2);
+  width: 100%;
+}
+
+.pair-ai-preview-header img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5.76px;
+  object-fit: cover;
+}
+
+.pair-ai-preview-header-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 5.76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5.76px;
+  background: #4d98e2;
+  color: white;
+  box-sizing: border-box;
+}
+
+.pair-ai-preview-header-fallback svg {
+  width: 12.48px;
+  height: 12.48px;
+}
+
+.pair-ai-preview-header-name {
+  font-family:
+    'Outfit',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 150%;
+  color: #85888e;
+}
+
+.pair-ai-preview-body {
+  padding: 0;
+  font-family:
+    'Outfit',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 140%;
+  color: #1e1e1e;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  width: 100%;
+}
+
+.pair-ai-preview-action {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  margin-top: 16px;
+  font-family:
+    'Outfit',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 140%;
+  color: #4d98e2;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: opacity 0.2s;
+}
+
+.pair-ai-preview-action:hover {
+  opacity: 0.8;
+}
+
+.pair-ai-preview-action svg {
+  width: 20px;
+  height: 20px;
+  color: #4d98e2;
+}
+
+.pair-ai-preview-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #ff3b30;
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 /* ========== BUBBLE BUTTON ========== */
 .pair-ai-bubble {
   position: relative;
@@ -244,6 +438,9 @@
   }
   .pair-ai-bubble.pair-ai--hide-mobile {
     display: none;
+  }
+  #pair-ai-preview-holder {
+    display: none !important;
   }
 }
 
