@@ -1,6 +1,7 @@
 import { EmojiPicker } from '@/components/emoji-picker'
 import { AttachIcon } from '@/components/icons/attach-icon'
 import { EmojiIcon } from '@/components/icons/emoji-icon'
+import { MicIcon } from '@/components/icons/mic-icon'
 import { SendIcon } from '@/components/icons/send-icon'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
@@ -11,6 +12,8 @@ import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useMediaMessageSender } from '@/features/conversation/hooks/use-media-message-sender'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
+import { useVoiceMessageSender } from '@/features/conversation/hooks/use-voice-message-sender'
+import { VoiceRecorder } from '@/features/conversation/components/voice-recorder'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { useLayoutEffect } from '@tanstack/react-router'
@@ -27,6 +30,7 @@ interface ConversationTextboxProps {
 function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   const [message, setMessage] = useState('')
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
+  const [isVoiceMode, setIsVoiceMode] = useState(false)
   const textEditorRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -40,6 +44,11 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   const { widgetConfig } = useWidgetConfigContext()
   const { subscribeToConversation } = useUnreadMessages()
   const { handleFileSelect, isProcessing } = useMediaMessageSender({ conversationId })
+  const {
+    sendVoiceMessage,
+    isProcessing: isVoiceProcessing,
+    progress: voiceProgress,
+  } = useVoiceMessageSender({ conversationId })
 
   // Check if emoji picker feature is enabled
   const isEmojiPickerEnabled = widgetConfig.selectedFeatureFlags?.includes('emoji_picker') ?? false
@@ -143,6 +152,26 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   }
 
   const hasMessage = message.trim().length > 0
+  const canRecordVoice = !hasMessage && !isSendMessagePending && !isProcessing
+
+  // ─── Voice mode ────────────────────────────────────────────────────────────
+
+  if (isVoiceMode) {
+    return (
+      <div className="px-4 pt-4 pb-2">
+        <VoiceRecorder
+          primaryColor={widgetConfig.primaryColor}
+          isUploading={isVoiceProcessing}
+          uploadProgress={voiceProgress}
+          onSend={async (payload) => {
+            await sendVoiceMessage(payload.segments, payload.totalDurationMs)
+            setIsVoiceMode(false)
+          }}
+          onCancel={() => setIsVoiceMode(false)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="px-4 pt-4">
@@ -212,6 +241,20 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
             disabled={hasMessage || isProcessing}
           >
             {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-4" />}
+          </Button>
+        )}
+
+        {/* Mic button — WhatsApp-style: shown when input is empty */}
+        {canRecordVoice && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            className="text-muted-foreground hover:text-foreground bg-[#FAFAFA] p-6"
+            onClick={() => setIsVoiceMode(true)}
+            aria-label="Record voice message"
+          >
+            <MicIcon className="size-4" />
           </Button>
         )}
       </form>
