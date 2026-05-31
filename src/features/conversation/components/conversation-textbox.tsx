@@ -3,31 +3,33 @@ import { AttachIcon } from '@/components/icons/attach-icon'
 import { EmojiIcon } from '@/components/icons/emoji-icon'
 import { MicIcon } from '@/components/icons/mic-icon'
 import { SendIcon } from '@/components/icons/send-icon'
-import { Button } from '@/components/ui/button'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
+import { StopIcon } from '@/components/icons/stop-icon'
 import { Spinner } from '@/components/ui/spinner'
 import { WIDGET_ALLOWED_MIME_TYPES } from '@/constants/file-upload'
-import { useUnreadMessages } from '@/contexts/unread-messages-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
-import { useMediaMessageSender } from '@/features/conversation/hooks/use-media-message-sender'
-import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
-import { useVoiceMessageSender } from '@/features/conversation/hooks/use-voice-message-sender'
 import { VoiceRecorder } from '@/features/conversation/components/voice-recorder'
+import { useMediaMessageSender } from '@/features/conversation/hooks/use-media-message-sender'
+import { useSendChatMessageFlow } from '@/features/conversation/hooks/use-send-chat-message-flow'
+import { useVoiceMessageSender } from '@/features/conversation/hooks/use-voice-message-sender'
+import { isPendingMessage } from '@/features/conversation/utils/message-utils'
+import { cn } from '@/lib/utils'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { getWidgetId } from '@/utils/widget-id'
 import { useLayoutEffect } from '@tanstack/react-router'
+import { MicOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
-import { CONVERSATION_QUERY_KEYS } from '../constants/conversation-keys'
+import type { Message } from '../types/message'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 interface ConversationTextboxProps {
   conversationId: string | null
+  messages?: Message[]
 }
 
-function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
+function ConversationTextbox({ conversationId, messages = [] }: ConversationTextboxProps) {
   const [message, setMessage] = useState('')
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const [isVoiceMode, setIsVoiceMode] = useState(false)
@@ -35,14 +37,8 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const {
-    mutateAsync: sendMessageMutation,
-    isSuccess: isSendMessageSuccess,
-    isPending: isSendMessagePending,
-  } = useSendMessage()
-  const { navigateToConversation } = useWidgetNavigation()
   const { widgetConfig } = useWidgetConfigContext()
-  const { subscribeToConversation } = useUnreadMessages()
+  const { sendMessageFlow, isPending: isSendMessagePending, isSuccess: isSendMessageSuccess } = useSendChatMessageFlow()
   const { handleFileSelect, isProcessing } = useMediaMessageSender({ conversationId })
   const {
     sendVoiceMessage,
@@ -50,8 +46,54 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
     progress: voiceProgress,
   } = useVoiceMessageSender({ conversationId })
 
+  const visibleMessages = messages.filter((msg) => msg.sender_type !== 'system')
+  const lastMessage = visibleMessages[visibleMessages.length - 1]
+  const isGenerating = lastMessage && lastMessage.sender_type === 'bot' && isPendingMessage(lastMessage)
+
+  const handleStop = () => {
+    if (!conversationId) return
+
+    logger.debug('ConversationTextbox', 'Stopping generation - deleting pending bot message', {
+      conversationId,
+    })
+
+    const widgetId = getWidgetId()
+    if (!widgetId) return
+
+    const queryKeyFilter = ['conversations', widgetId, conversationId, 'messages']
+
+    // TODO: Send API request to stop/cancel generation if endpoint is added in the future
+
+    queryClient.setQueriesData<{
+      pages: Array<{ data: Message[]; has_more: boolean; next_cursor?: string }>
+      pageParams: unknown[]
+    }>(
+      {
+        queryKey: queryKeyFilter,
+        exact: false,
+      },
+      (oldData) => {
+        if (!oldData || !oldData.pages) return oldData
+
+        const updatedPages = oldData.pages.map((page) => {
+          const filteredData = page.data.filter((msg) => !(msg.sender_type === 'bot' && isPendingMessage(msg)))
+          return {
+            ...page,
+            data: filteredData,
+          }
+        })
+
+        return {
+          ...oldData,
+          pages: updatedPages,
+        }
+      },
+    )
+  }
+
   // Check if emoji picker feature is enabled
   const isEmojiPickerEnabled = widgetConfig.selectedFeatureFlags?.includes('emoji_picker') ?? false
+  const isVoiceEnabled = widgetConfig.selectedFeatureFlags?.includes('voice_messages') ?? false
 
   useLayoutEffect(() => {
     // Use requestAnimationFrame to ensure the element is fully laid out
@@ -73,52 +115,16 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
       return
     }
 
-    if (!message.trim()) {
+    const messageContent = message.trim()
+    if (!messageContent) {
       return
     }
 
-    const messageContent = message.trim()
-    logger.debug('ConversationTextbox', 'Sending message', {
-      conversationId,
-      message: messageContent,
-    })
-
     try {
-      const response = await sendMessageMutation({
-        ...(conversationId ? { conversation_id: conversationId } : {}),
-        content: messageContent,
-        message_type: 'text',
-      })
-
-      // If we didn't have a conversation ID before, update navigation and add message to cache
-      if (!conversationId && response.conversation_id) {
-        logger.debug('ConversationTextbox', 'Received conversation ID from first message', {
-          conversationId: response.conversation_id,
-        })
-
-        logger.debug('ConversationTextbox', 'Navigating to conversation with ID', {
-          conversationId: response.conversation_id,
-        })
-        // Update navigation with the new conversation ID
-        navigateToConversation(response.conversation_id)
-
-        // Subscribe to the new conversation for real-time updates
-        logger.debug('ConversationTextbox', 'Subscribing to new conversation', {
-          conversationId: response.conversation_id,
-        })
-        subscribeToConversation(response.conversation_id)
-
-        // Invalidate conversations query
-        queryClient.invalidateQueries({ queryKey: CONVERSATION_QUERY_KEYS.CONVERSATIONS(), exact: false })
-      }
-
+      await sendMessageFlow(messageContent, conversationId)
       setMessage('')
     } catch (error) {
-      logger.debug('ConversationTextbox', 'Failed to send message', error)
-      toast.error('Failed to send message. Please try again.', {
-        position: 'top-center',
-        richColors: true,
-      })
+      // The hook handles logging and toasts, so we just catch the error to avoid crashing
     }
   }
 
@@ -152,15 +158,17 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   }
 
   const hasMessage = message.trim().length > 0
-  const canRecordVoice = !hasMessage && !isSendMessagePending && !isProcessing
+  const canRecordVoice = isVoiceEnabled && !hasMessage && !isSendMessagePending && !isProcessing && !isGenerating
+
+  const isFullWidth = widgetConfig.textboxStyle?.layout === 'full_width'
 
   // ─── Voice mode ────────────────────────────────────────────────────────────
 
   if (isVoiceMode) {
     return (
-      <div className="px-4 pt-4 pb-2">
+      <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'}>
         <VoiceRecorder
-          primaryColor={widgetConfig.primaryColor}
+          primaryColor="#3D8EDD"
           isUploading={isVoiceProcessing}
           uploadProgress={voiceProgress}
           onSend={async (payload) => {
@@ -174,7 +182,7 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
   }
 
   return (
-    <div className="px-4 pt-4">
+    <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'}>
       <input
         type="file"
         ref={fileInputRef}
@@ -182,81 +190,112 @@ function ConversationTextbox({ conversationId }: ConversationTextboxProps) {
         accept={WIDGET_ALLOWED_MIME_TYPES.join(',')}
         onChange={handleFileSelect}
       />
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <InputGroup className="border-0 bg-[#FAFAFA]">
-          <InputGroupTextarea
+      <form
+        onSubmit={handleSubmit}
+        className={cn(
+          'flex h-11.5 w-full items-center gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
+          isGenerating ? 'border-[#B8AB80]' : 'border-[#ECECED]',
+        )}
+        style={{ boxShadow: '0 8px 16px 0 rgba(3, 7, 18, 0.08)' }}
+      >
+        {/* Left attach button inside pill */}
+        {widgetConfig.selectedFeatureFlags?.includes('attachments') && !isGenerating ? (
+          <button
+            type="button"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6] disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing || hasMessage}
+            aria-label="Attach file"
+          >
+            {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-3 fill-[#474747]" />}
+          </button>
+        ) : null}
+
+        {/* Center Textarea */}
+        <div className="flex h-9 min-w-0 flex-1 items-center pl-1">
+          <textarea
             ref={textEditorRef}
-            placeholder="Type your message"
-            value={message}
+            placeholder={
+              isGenerating ? 'Generating...' : widgetConfig.textboxStyle?.placeholder || 'Ask me Anything...'
+            }
+            value={isGenerating ? '' : message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
-            disabled={isSendMessagePending || isProcessing}
-          />
-          <InputGroupAddon align="inline-end">
-            {isEmojiPickerEnabled && (
-              <div className="relative">
-                <InputGroupButton
-                  ref={emojiButtonRef}
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
-                >
-                  <EmojiIcon className="size-4" />
-                </InputGroupButton>
-                <EmojiPicker
-                  isOpen={isEmojiPickerOpen}
-                  onClose={() => setIsEmojiPickerOpen(false)}
-                  onSelect={handleEmojiSelect}
-                  buttonRef={emojiButtonRef}
-                />
-              </div>
+            disabled={isGenerating || isSendMessagePending || isProcessing}
+            className={cn(
+              'block w-full resize-none border-0 bg-transparent p-0 focus:ring-0 focus:outline-none',
+              isGenerating
+                ? "animate-pulse font-['DM_Sans'] text-[14px] leading-[150%] font-normal text-(--Text-Dark-Tertiary,#757575) placeholder:text-(--Text-Dark-Tertiary,#757575)"
+                : "font-['DM_Sans'] text-[0.875rem] leading-[150%] font-normal text-[#1A1A1A] placeholder-[#85888E]",
             )}
-            <InputGroupButton
-              type="submit"
-              variant="ghost"
-              size="icon-xs"
-              disabled={!hasMessage || isSendMessagePending}
-              className="rounded-full"
+          />
+        </div>
+
+        {/* Right actions (Emoji picker, mic, send) */}
+        <div className="mr-px flex shrink-0 items-center gap-2">
+          {isEmojiPickerEnabled && (
+            <div className="relative flex items-center">
+              <button
+                ref={emojiButtonRef}
+                type="button"
+                className="hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-[#626A6A] transition-colors hover:bg-[#F2F2F3] disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+                disabled={isGenerating}
+                aria-label="Insert emoji"
+              >
+                <EmojiIcon className="size-4" />
+              </button>
+              <EmojiPicker
+                isOpen={isEmojiPickerOpen}
+                onClose={() => setIsEmojiPickerOpen(false)}
+                onSelect={handleEmojiSelect}
+                buttonRef={emojiButtonRef}
+              />
+            </div>
+          )}
+
+          {canRecordVoice && (
+            <button
+              type="button"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full fill-white transition-colors hover:bg-[#E4E4E6]"
+              onClick={() => setIsVoiceMode(true)}
+              aria-label="Record voice message"
             >
-              {isSendMessagePending ? (
-                <Spinner style={{ color: widgetConfig.primaryColor }} />
-              ) : (
-                <SendIcon className="size-4" style={{ color: widgetConfig.primaryColor }} />
-              )}
-              <span className="sr-only">Send</span>
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
+              <MicIcon className="size-4 text-white" />
+            </button>
+          )}
 
-        {widgetConfig.selectedFeatureFlags?.includes('attachments') && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            className="text-muted-foreground hover:text-foreground bg-[#FAFAFA] p-6"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={hasMessage || isProcessing}
-          >
-            {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-4" />}
-          </Button>
-        )}
+          {!hasMessage && !isVoiceEnabled && (
+            <div
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A]"
+              title="Voice messaging is disabled"
+            >
+              <MicOff className="size-4" />
+            </div>
+          )}
 
-        {/* Mic button — WhatsApp-style: shown when input is empty */}
-        {canRecordVoice && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            className="text-muted-foreground hover:text-foreground bg-[#FAFAFA] p-6"
-            onClick={() => setIsVoiceMode(true)}
-            aria-label="Record voice message"
+          <button
+            type={isGenerating ? 'button' : 'submit'}
+            disabled={isGenerating ? false : !hasMessage || isSendMessagePending}
+            onClick={isGenerating ? handleStop : undefined}
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]',
+              !isGenerating &&
+                (!hasMessage || isSendMessagePending) &&
+                'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
+            )}
+            aria-label={isGenerating ? 'Stop generating' : 'Send message'}
           >
-            <MicIcon className="size-4" />
-          </Button>
-        )}
+            {isGenerating ? (
+              <StopIcon className="size-3 text-white" />
+            ) : isSendMessagePending ? (
+              <Spinner className="size-4 text-white" />
+            ) : (
+              <SendIcon className="size-3 text-white" />
+            )}
+          </button>
+        </div>
       </form>
     </div>
   )

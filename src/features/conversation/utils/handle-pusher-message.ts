@@ -1,3 +1,4 @@
+import { env } from '@/core/env'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
@@ -150,6 +151,7 @@ function parsePusherMessageData(data: unknown): { message: Message; conversation
  * Handles incoming Pusher message and updates React Query cache
  */
 export function handleIncomingPusherMessage(conversationId: string, data: unknown): void {
+  console.log('[Debugging] handleIncomingPusherMessage called', { conversationId, dataType: typeof data })
   logger.debug('🟢 MESSAGE:RENDER', 'handleIncomingPusherMessage called', {
     conversationId,
     dataType: typeof data,
@@ -157,6 +159,7 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
 
   const parsed = parsePusherMessageData(data)
   if (!parsed) {
+    console.error('[Debugging] handleIncomingPusherMessage failed to parse message data!')
     logger.debug('🔴 MESSAGE:RENDER', 'Failed to parse message data - message will NOT render', {
       conversationId,
       dataPreview: typeof data === 'string' ? data.substring(0, 200) : JSON.stringify(data).substring(0, 200),
@@ -169,6 +172,12 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
   // Use the conversationId from the parsed data if available, otherwise use the one passed in
   const targetConversationId = parsedConversationId || conversationId
 
+  console.log('[Debugging] handleIncomingPusherMessage successfully parsed', {
+    messageId: message.ulid,
+    conversationId: targetConversationId,
+    senderType: message.sender_type,
+    status: message.status,
+  })
   logger.debug('🟢 MESSAGE:RENDER', 'Message parsed successfully, adding to React Query cache', {
     messageId: message.ulid,
     conversationId: targetConversationId,
@@ -178,6 +187,7 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
 
   const widgetId = getWidgetId()
   if (!widgetId) {
+    console.error('[Debugging] handleIncomingPusherMessage error: widgetId not found!')
     logger.debug('🔴 MESSAGE:RENDER', 'Widget ID not found - message will NOT render', {
       conversationId: targetConversationId,
       messageId: message.ulid,
@@ -187,6 +197,7 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
 
   // Get the query key filter - match all queries for this conversation regardless of params
   const queryKeyFilter = ['conversations', widgetId, targetConversationId, 'messages']
+  console.log('[Debugging] handleIncomingPusherMessage queryKeyFilter:', queryKeyFilter)
 
   logger.debug('🟢 MESSAGE:RENDER', 'Updating React Query Infinite cache for all matching queries', {
     widgetId,
@@ -206,6 +217,7 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
       exact: false, // Match any query that starts with this key
     },
     (oldData) => {
+      console.log('[Debugging] handleIncomingPusherMessage setQueriesData callback executing. hasOldData:', !!oldData, 'messageId:', message.ulid)
       logger.debug('🟢 MESSAGE:RENDER', 'setQueryData callback executing', {
         hasOldData: !!oldData,
         pagesCount: oldData?.pages?.length || 0,
@@ -243,6 +255,7 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
         const existingIndex = page.data.findIndex((m) => m.ulid === message.ulid)
 
         if (existingIndex !== -1) {
+          console.log('[Debugging] handleIncomingPusherMessage found existing message to update at pageIndex:', pageIndex, 'existingIndex:', existingIndex, 'newStatus:', message.status)
           // Update existing message
           const updatedPages = [...oldData.pages]
           const updatedMessages = [...page.data]
@@ -333,6 +346,14 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
     conversationId: targetConversationId,
     queryKeyFilter,
   })
+
+  if (env.useMock) {
+    console.log('[Debugging] handleIncomingPusherMessage in mock mode, invalidating queries:', queryKeyFilter)
+    queryClient.invalidateQueries({
+      queryKey: queryKeyFilter,
+      exact: false,
+    })
+  }
 }
 
 /**

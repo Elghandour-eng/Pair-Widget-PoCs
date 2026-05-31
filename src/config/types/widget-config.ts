@@ -1,4 +1,12 @@
-export type FeatureFlag = 'attachments' | 'emoji_picker' | 'end_conversation' | 'use_inbox_avatar_for_bot'
+import type { CSSProperties } from 'react'
+
+export type FeatureFlag =
+  | 'attachments'
+  | 'emoji_picker'
+  | 'end_conversation'
+  | 'use_inbox_avatar_for_bot'
+  // TODO: Placeholder Replace with actual values
+  | 'voice_messages'
 
 export interface PairAiWidgetSettings {
   position: 'left' | 'right'
@@ -7,6 +15,7 @@ export interface PairAiWidgetSettings {
   widgetId?: string
   sdkMode?: boolean // When true, SDK handles bubble button, widget just shows panel
   beBaseUrl?: string
+  openAutomatically?: boolean
 }
 
 declare global {
@@ -38,6 +47,213 @@ export interface WidgetConfig {
   baseUrl?: string
   reply_time: 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day'
   sdkMode: boolean // When true, SDK handles bubble button
+  // TODO: Placeholder Replace with actual values
+  introScreen?: IntroScreenConfig
+  quickLinks?: QuickLinksConfig
+  trendingPrompts?: TrendingPromptsConfig
+  textboxStyle?: {
+    layout: 'standard' | 'full_width'
+    placeholder?: string
+  }
+  widgetBgColor?: string
+  hideMessageTime?: boolean
+  hideHeader?: boolean
+  hideFooter?: boolean
+  chatInput?: ChatInputConfig
+  messagesConfig?: MessagesConfig
+}
+
+// TODO: Placeholder Replace with actual values
+export interface QuickLinksConfig {
+  show: {
+    value: boolean
+  }
+  position?: string
+  cardStyle: {
+    layout: 'column' | 'row'
+  }
+  cardStyles?: CSSProperties
+  textStyle?: CSSProperties
+  carouselLoop?: boolean
+  links: QuickLinkData[]
+}
+
+// TODO: Placeholder Replace with actual values
+export interface QuickLinkData {
+  id: string | number
+  text: string
+  image?: string
+  displayOrder?: number
+  active?: boolean
+  subtitle?: string
+  media_ulid?: string
+}
+
+// TODO: Placeholder Replace with actual values
+export interface TrendingPromptsConfig {
+  show: {
+    value: boolean
+  }
+  title?: string
+  showIcon: {
+    value: boolean
+  }
+  chipStyles?: CSSProperties
+  textStyle?: CSSProperties
+  prompts: TrendingPromptData[]
+}
+
+// TODO: Placeholder Replace with actual values
+export interface TrendingPromptData {
+  id: string | number
+  text: string
+  displayOrder?: number
+  iconUrl?: string
+}
+
+// TODO: Placeholder Replace with actual values
+export interface IntroScreenConfig {
+  showIntroScreen: {
+    value: boolean
+    styles: CSSProperties
+  }
+  welcomeTitle: {
+    text: string
+    styles: CSSProperties
+  }
+  welcomeSubtitle: {
+    text: string
+    styles: CSSProperties
+  }
+  heroSection: {
+    enabled: {
+      value: boolean
+      styles: CSSProperties
+    }
+    heroImage: {
+      url?: string
+      position: string
+      styles: CSSProperties
+    }
+  }
+  loadingState: {
+    type: string
+    styles: CSSProperties
+  }
+}
+
+// TODO: Placeholder Replace with actual values
+export interface QuickLinksConfigV2 {
+  showQuickLinks: {
+    value: boolean
+  }
+  displaySettings?: {
+    position?: string
+    carouselLoop?: boolean
+  }
+  cardStyle?: CSSProperties & {
+    cardShadow?: string
+    imageTextGap?: string
+  }
+  textStyle?: CSSProperties
+  quickLinkCards: QuickLinkCardV2[]
+}
+
+// TODO: Placeholder Replace with actual values
+export interface QuickLinkCardV2 {
+  id: string | number
+  url?: string
+  title: string
+  active: boolean
+  subtitle?: string
+  media_ulid?: string
+}
+
+// TODO: Placeholder Replace with actual values
+export interface TrendingPromptsConfigV2 {
+  showTrendingPrompts: {
+    value: boolean
+  }
+  promptChips: TrendingPromptCardV2[]
+  displaySettings?: {
+    sectionTitle?: string
+    showIcons?: boolean
+    styles?: CSSProperties
+  }
+  chipStyle?: CSSProperties
+  textStyle?: CSSProperties
+}
+
+// TODO: Placeholder Replace with actual values
+export interface TrendingPromptCardV2 {
+  id: string | number
+  text: string
+  displayOrder?: number
+  iconUrl?: string
+}
+
+// TODO: Placeholder Replace with actual values
+export interface ChatInputConfig {
+  styles?: CSSProperties
+  inputLayout?: {
+    type?: string
+  }
+  inputActions?: {
+    stickers?: boolean
+    fileUpload?: boolean
+    voiceMessages?: boolean
+    attachmentMenu?: boolean
+  }
+  placeholderText?: {
+    text?: string
+    styles?: CSSProperties
+  }
+}
+
+// TODO: Placeholder Replace with actual values
+export interface MessagesConfig {
+  feedback?: {
+    style?: CSSProperties & {
+      iconSize?: string
+      iconColor?: string | null
+    }
+    toastMessage?: string
+    iconColorType?: string
+    showFeedbackButtons?: boolean
+  }
+  aiMessages?: {
+    iconId?: string
+    CardStyles?: CSSProperties
+    TextStyles?: CSSProperties
+    showAiIcon?: boolean
+    messageStyle?: string
+  }
+  customerMessages?: {
+    TextStyles?: CSSProperties
+    bubbleType?: string
+    bubbleStyle?: CSSProperties
+    useBrandColor?: boolean
+  }
+}
+
+// TODO: Placeholder Replace with actual values
+export interface WorkingHoursConfig {
+  enabled: boolean
+  schedule: Array<{
+    day: string
+    enabled: boolean
+    startTime: string
+    endTime: string
+  }>
+}
+
+// TODO: Placeholder Replace with actual values
+export interface WidgetV2Config {
+  intro_screen?: IntroScreenConfig
+  quick_links?: QuickLinksConfigV2
+  trending_prompts?: TrendingPromptsConfigV2
+  chat_input?: ChatInputConfig
+  messages?: MessagesConfig
 }
 
 export interface WidgetConfigResponse {
@@ -63,6 +279,20 @@ export interface WidgetConfigResponse {
   enable_email_collect: boolean
   continuity_via_email: boolean
   csat_survey_enabled: boolean
+  // TODO: Placeholder Replace with actual values
+  intro_screen?: IntroScreenConfig
+  quick_links?: QuickLinksConfig
+  trending_prompts?: TrendingPromptsConfig
+  textbox_style?: {
+    layout: 'standard' | 'full_width'
+    placeholder?: string
+  }
+  widget_bg_color?: string
+  hide_message_time?: boolean
+  hide_header?: boolean
+  hide_footer?: boolean
+  widget_v2_config?: WidgetV2Config
+  working_hours?: WorkingHoursConfig
 }
 
 export interface CsatConfig {}
@@ -92,22 +322,5 @@ export interface PreChatField {
   enabled: boolean
   required: boolean
   field_type: string
-  placeholder: string
+  placeholder?: string
 }
-
-// <script>
-//   window.pairAiWidgetSettings = {"position":"right","type":"expanded_bubble","launcherTitle":"Widget Bubble Launcher Title", "widgetId": "01KCHXF0CXA1Q5EWDY8GKFMDVK"};
-//   (function(d,t) {
-//     var BASE_URL="https://app.chatwoot.com";
-//     var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-//     g.src=BASE_URL+"/packs/js/sdk.js";
-//     g.async = true;
-//     s.parentNode.insertBefore(g,s);
-//     g.onload=function(){
-//       window.pairAiWidgetSDK.run({
-//         websiteToken: 'DqDmR4VKw9Kxm7xojX1SLXuE',
-//         baseUrl: BASE_URL
-//       })
-//     }
-//   })(document,"script");
-// </script>

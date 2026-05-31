@@ -14,8 +14,10 @@ import { WidgetUIProvider } from '@/contexts/widget-ui-context'
 import { tokenStorage } from '@/core/token-storage'
 import { ConversationPage } from '@/features/conversation/pages/conversation-page'
 import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
+import { IntroPage } from '@/features/intro/pages/intro-page'
 import { PreChatFormPage } from '@/features/pre-chat-form/pages/pre-chat-form-page'
 import { WelcomePage } from '@/features/welcome/pages/welcome-page'
+import { loadAllFontsFromConfigAsync } from '@/lib/font-loader'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
@@ -65,6 +67,21 @@ function WidgetRouter() {
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <AnimatePresence custom={navigationDirection}>
+        {currentScreen === 'intro' && (
+          <motion.div
+            key="intro"
+            custom={navigationDirection}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={transition}
+            className="absolute inset-0 flex h-full w-full flex-col"
+          >
+            <IntroPage />
+          </motion.div>
+        )}
+
         {currentScreen === 'welcome' && (
           <motion.div
             key="welcome"
@@ -136,6 +153,15 @@ export const Route = createFileRoute('/')({
     logger.debug('loader', 'Route loader started, ensuring widget config query data')
     const data = await queryClient.ensureQueryData(WidgetConfigQueryOptions())
     logger.debug('loader', 'Widget config query data ensured', data)
+
+    // Load fonts before the widget is initialized to prevent flash of unstyled text
+    logger.debug('loader', 'Loading dynamic fonts from config')
+    try {
+      await loadAllFontsFromConfigAsync(data)
+      logger.debug('loader', 'Dynamic fonts loaded successfully')
+    } catch (err) {
+      logger.debug('loader', 'Failed to load dynamic fonts', err)
+    }
 
     // Check if there's a token and fetch conversations (subscription happens in WidgetRouter component)
     const widgetId = getWidgetId()

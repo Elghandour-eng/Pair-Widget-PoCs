@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
 /* Pair AI Widget SDK Styles */
 
 /* Bubble holder - handles fixed positioning */
@@ -44,7 +46,7 @@
   cursor: pointer;
   border: none;
   font-family:
-    'Outfit',
+    'DM Sans',
     system-ui,
     -apple-system,
     sans-serif;
@@ -126,7 +128,7 @@
 
 .pair-ai-preview-header-name {
   font-family:
-    'Outfit',
+    'DM Sans',
     system-ui,
     -apple-system,
     sans-serif;
@@ -139,7 +141,7 @@
 .pair-ai-preview-body {
   padding: 0;
   font-family:
-    'Outfit',
+    'DM Sans',
     system-ui,
     -apple-system,
     sans-serif;
@@ -162,7 +164,7 @@
   padding: 0;
   margin-top: 16px;
   font-family:
-    'Outfit',
+    'DM Sans',
     system-ui,
     -apple-system,
     sans-serif;

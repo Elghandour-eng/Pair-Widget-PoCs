@@ -382,6 +382,9 @@
           // Inject CSS now (widget is ready, will receive color soon)
           injectCSS(null, function () {
             showBubble()
+            if (config.openAutomatically) {
+              toggleWidget(true)
+            }
           })
           // Send config to widget
           sendMessageToWidget('sdk:config', config)
@@ -464,6 +467,7 @@
       type: settings.type || 'standard',
       launcherTitle: settings.launcherTitle || 'Chat with us!',
       user: options.user,
+      openAutomatically: settings.openAutomatically || options.openAutomatically || false,
     }
 
     console.log('[PairAI SDK] Initializing with config:', config)

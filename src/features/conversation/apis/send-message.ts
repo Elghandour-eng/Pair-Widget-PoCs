@@ -1,3 +1,5 @@
+import { env } from '@/core/env'
+import { mockState } from '../mocks/mock-state'
 import { apiClient } from '@/core/http'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
@@ -9,6 +11,11 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 export async function sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
   logger.debug('sendMessage', 'Sending message', data)
+
+  if (env.useMock) {
+    logger.debug('sendMessage', 'Using mocked send message')
+    return mockState.sendMessage(data)
+  }
 
   const widgetId = getWidgetId()
   if (!widgetId) {

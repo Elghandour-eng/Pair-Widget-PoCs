@@ -11,6 +11,10 @@ import { useConversations } from '@/features/conversation/queries/use-conversati
 import { usePreChat } from '@/features/pre-chat-form/hooks/use-pre-chat'
 import { getWidgetId } from '@/utils/widget-id'
 
+/**
+ * @deprecated WelcomeContent is deprecated and will be removed alongside WelcomePage.
+ * Please use IntroPage instead.
+ */
 const WelcomeContent = () => {
   // TODO: implement online and offline status of the host
   const isHostOnline = true

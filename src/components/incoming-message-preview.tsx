@@ -45,7 +45,7 @@ export function IncomingMessagePreview() {
           {/* Close button pill — 16px gap from message card */}
           <button
             onClick={handleClose}
-            className="flex h-[30px] flex-row items-center gap-2 rounded-[38px] bg-[#F9FAFB] px-4 py-1 font-['Outfit'] text-[16px] leading-[140%] font-medium text-[#475467] transition-colors hover:text-[#1E1E1E]"
+            className="flex h-[30px] flex-row items-center gap-2 rounded-[38px] bg-[#F9FAFB] px-4 py-1 font-['DM_Sans'] text-[16px] leading-[140%] font-medium text-[#475467] transition-colors hover:text-[#1E1E1E]"
           >
             <X size={16} className="text-[#475467]" />
             Close
@@ -65,13 +65,13 @@ export function IncomingMessagePreview() {
               <div className="h-6 w-6 flex-shrink-0">
                 <WidgetAvatar showIconFallback={true} useURL={false} />
               </div>
-              <span className="font-['Outfit'] text-[16px] leading-[150%] font-normal text-[#85888E]">
+              <span className="font-['DM_Sans'] text-[16px] leading-[150%] font-normal text-[#85888E]">
                 From {widgetConfig.name || 'Agent'}
               </span>
             </div>
 
             {/* Body */}
-            <div className="line-clamp-3 px-4 py-3 font-['Outfit'] text-[14px] leading-[140%] font-normal text-[#1E1E1E]">
+            <div className="line-clamp-3 px-4 py-3 font-['DM_Sans'] text-[14px] leading-[140%] font-normal text-[#1E1E1E]">
               {lastIncomingMessage.content}
             </div>
           </div>
@@ -79,7 +79,7 @@ export function IncomingMessagePreview() {
           {/* "See new messages" — 16px below the card (gap-4 on parent) */}
           <button
             onClick={handleSeeMessages}
-            className="flex flex-row items-center gap-2 self-start font-['Outfit'] text-[16px] leading-[140%] font-medium text-[#4D98E2] transition-colors hover:opacity-80"
+            className="flex flex-row items-center gap-2 self-start font-['DM_Sans'] text-[16px] leading-[140%] font-medium text-[#4D98E2] transition-colors hover:opacity-80"
           >
             <ArrowRight size={20} className="text-[#4D98E2]" />
             See new messages

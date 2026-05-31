@@ -10,6 +10,8 @@ import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { ConversationHeader } from '../components/conversation-header'
 import { ConversationMessages } from '../components/conversation-messages'
 import { ConversationTextbox } from '../components/conversation-textbox'
+import { QuestionInput } from '../components/question-input'
+import { QuestionProvider, useQuestionContext } from '../contexts/question-context'
 import { useMessages } from '../queries/use-messages-queries'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
@@ -18,13 +20,14 @@ interface ConversationPageProps {
   conversationId: string | null
 }
 
-function ConversationPage({ conversationId }: ConversationPageProps) {
-  logger.debug('ConversationPage', 'Component rendered', { conversationId })
+function ConversationPageContent({ conversationId }: ConversationPageProps) {
+  logger.debug('ConversationPageContent', 'Component rendered', { conversationId })
 
   const { widgetConfig } = useWidgetConfigContext()
   const { currentScreen } = useWidgetNavigation()
   const { isOpen } = useWidgetUIContext()
   const { setViewingConversation } = useUnreadMessages()
+  const { activeQuestionGroup } = useQuestionContext()
 
   // Only fetch messages if we have a conversation ID
   logger.debug('🟣 MESSAGE:RENDER', 'ConversationPage calling useMessages hook', {
@@ -55,11 +58,13 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
   // Each page's messages are already reversed (oldest first, newest last)
   const allMessages = messagesData?.pages.slice().flatMap((page) => page.data) || []
 
+  console.log('[Debugging] ConversationPage rendering messages count:', allMessages.length, allMessages.map(m => ({ id: m.ulid, sender: m.sender_type, status: m.status })))
+
   // Update viewing state for badge visibility logic
   useEffect(() => {
     setViewingConversation(conversationId, isOpen, currentScreen)
 
-    logger.debug('ConversationPage', 'Updated viewing state', {
+    logger.debug('ConversationPageContent', 'Updated viewing state', {
       conversationId,
       isOpen,
       currentScreen,
@@ -74,7 +79,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
   return (
     <>
-      <ConversationHeader />
+      {!widgetConfig.hideHeader && <ConversationHeader />}
       {!conversationId ? (
         <ConversationMessages
           messages={[]}
@@ -99,9 +104,21 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
           isLoadingMore={isFetchingPreviousPage}
         />
       )}
-      <ConversationTextbox conversationId={conversationId} />
-      <WidgetFooter />
+      {activeQuestionGroup ? (
+        <QuestionInput conversationId={conversationId} messages={allMessages} />
+      ) : (
+        <ConversationTextbox conversationId={conversationId} messages={allMessages} />
+      )}
+      {!widgetConfig.hideFooter && <WidgetFooter />}
     </>
+  )
+}
+
+function ConversationPage({ conversationId }: ConversationPageProps) {
+  return (
+    <QuestionProvider>
+      <ConversationPageContent conversationId={conversationId} />
+    </QuestionProvider>
   )
 }
 

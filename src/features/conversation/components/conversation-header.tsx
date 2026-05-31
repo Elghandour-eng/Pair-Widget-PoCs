@@ -13,11 +13,11 @@ interface ConversationHeaderProps {
 
 function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
   const { widgetConfig } = useWidgetConfigContext()
-  const { navigateToWelcome } = useWidgetNavigation()
+  const { navigateToIntro } = useWidgetNavigation()
   const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time || 'in_a_few_hours']
 
   const handleBack = () => {
-    navigateToWelcome()
+    navigateToIntro()
   }
 
   return (

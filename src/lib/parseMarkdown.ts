@@ -13,6 +13,17 @@ export function parseMarkdown(text: string): ReactNode[] {
 
   // Split text into lines to handle block-level elements (lists)
   const lines = text.split('\n')
+
+  // Trim leading and trailing empty lines to prevent extra spacing at top/bottom
+  while (lines.length > 0 && !lines[0].trim()) {
+    lines.shift()
+  }
+  while (lines.length > 0 && !lines[lines.length - 1].trim()) {
+    lines.pop()
+  }
+
+  if (lines.length === 0) return []
+
   const processedLines: ReactNode[] = []
 
   // Process inline markdown patterns
@@ -276,8 +287,10 @@ export function parseMarkdown(text: string): ReactNode[] {
     if (line.trim()) {
       const processed = processInlineMarkdown(line)
       processedLines.push(createElement('div', { key: `line-${keyCounter++}` }, ...processed))
+    } else {
+      // Empty lines are rendered with vertical spacing (h-4) to simulate paragraph breaks
+      processedLines.push(createElement('div', { key: `line-${keyCounter++}`, className: 'h-5' }))
     }
-    // Empty lines are ignored (breaks removed)
     i++
   }
 

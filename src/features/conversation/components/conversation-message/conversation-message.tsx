@@ -1,3 +1,4 @@
+import { AiAssistantMessage } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message'
 import { TextMessage } from '@/features/conversation/components/conversation-message/text-message'
 import type { Message } from '@/features/conversation/types/message'
 
@@ -6,6 +7,7 @@ interface ConversationMessageProps {
   isUnread: boolean
   primaryColor: string
   websiteName: string
+  isLastMessage?: boolean
 }
 
 import { ImageMessage } from '@/features/conversation/components/conversation-message/image-message'
@@ -47,7 +49,13 @@ function isAudioMessage(message: Message): boolean {
   return false
 }
 
-function ConversationMessage({ message, isUnread, primaryColor, websiteName }: ConversationMessageProps) {
+function ConversationMessage({
+  message,
+  isUnread,
+  primaryColor,
+  websiteName,
+  isLastMessage,
+}: ConversationMessageProps) {
   // Determine message type and render appropriate component
   // Audio detection runs first — the API currently returns voice messages as message_type "text"
   if (isAudioMessage(message)) {
@@ -80,6 +88,8 @@ function ConversationMessage({ message, isUnread, primaryColor, websiteName }: C
       }
       // Fallback for other interactive types or unknown
       return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
+    case 'widget_message':
+      return <AiAssistantMessage message={message} isLastMessage={isLastMessage} />
     default:
       // Fallback to text message for unknown types
       return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />

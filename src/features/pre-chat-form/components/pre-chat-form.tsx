@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,7 @@ import type { PreChatFormPayload } from '@/features/pre-chat-form/types/pre-chat
 import { parseMarkdown } from '@/lib/parseMarkdown'
 
 export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
-  const { navigateToConversation } = useWidgetNavigation()
+  const { navigateToConversation, initialMessage, setInitialMessage } = useWidgetNavigation()
   const { widgetConfig } = useWidgetConfigContext()
   const { subscribeToConversation } = useUnreadMessages()
   const preChatMutation = usePreChat()
@@ -44,9 +44,15 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
         acc[field.name] = ''
         return acc
       },
-      { message: '' } as PreChatFormValues,
+      { message: initialMessage || '' } as PreChatFormValues,
     ),
   })
+
+  useEffect(() => {
+    return () => {
+      setInitialMessage(null)
+    }
+  }, [setInitialMessage])
 
   const handleSubmit = async (values: PreChatFormValues) => {
     try {

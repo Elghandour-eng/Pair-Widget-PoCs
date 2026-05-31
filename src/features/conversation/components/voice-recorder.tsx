@@ -1,9 +1,12 @@
+import { InfoCircleIcon } from '@/components/icons/info-circle-icon'
+import { ReloadIcon } from '@/components/icons/reload-icon'
+import { SendIcon } from '@/components/icons/send-icon'
 import { Spinner } from '@/components/ui/spinner'
-import { useVoiceRecorder } from '@/features/conversation/hooks/use-voice-recorder'
 import type { VoiceRecorderPayload } from '@/features/conversation/hooks/use-voice-recorder'
+import { useVoiceRecorder } from '@/features/conversation/hooks/use-voice-recorder'
 import { cn } from '@/lib/utils'
-import { Check, MicOff, Pause, Play, Trash2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { Mic, Play, Square, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -66,13 +69,7 @@ function WaveformCanvas({ waveformData, primaryColor, isPaused }: WaveformCanvas
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function VoiceRecorder({
-  primaryColor = '#3b82f6',
-  isUploading = false,
-  uploadProgress,
-  onSend,
-  onCancel,
-}: VoiceRecorderProps) {
+export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onCancel }: VoiceRecorderProps) {
   const {
     isRecording,
     isPaused,
@@ -89,6 +86,7 @@ export function VoiceRecorder({
     cancel,
   } = useVoiceRecorder()
 
+  const [readyPayload, setReadyPayload] = useState<VoiceRecorderPayload | null>(null)
   const hasStarted = useRef(false)
 
   // Auto-start recording when component mounts
@@ -101,48 +99,8 @@ export function VoiceRecorder({
 
   const isBusy = isConverting || isUploading
 
-  // ─── Permission denied ────────────────────────────────────────────────────
-
-  if (permissionDenied) {
-    return (
-      <div className="flex w-full items-center gap-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        <MicOff className="size-4 shrink-0" />
-        <span>You need to allow microphone access to send a voice message. Check your browser settings.</span>
-        <button
-          type="button"
-          className="ml-auto shrink-0 text-red-400 transition-colors hover:text-red-600"
-          onClick={() => {
-            cancel()
-            onCancel()
-          }}
-        >
-          ✕
-        </button>
-      </div>
-    )
-  }
-
-  // ─── Send handler ─────────────────────────────────────────────────────────
-
-  const handleSend = async () => {
-    if (isBusy) return
-    const payload = await stopAndSend()
-    if (payload && payload.segments.length > 0) {
-      onSend(payload)
-    } else {
-      onCancel()
-    }
-  }
-
-  const handleCancel = () => {
-    cancel()
-    onCancel()
-  }
-
-  // ─── Upload progress label ────────────────────────────────────────────────
-
   const progressLabel = (() => {
-    if (isConverting) return 'Converting…'
+    if (isConverting) return 'Processing audio…'
     if (isUploading && uploadProgress && uploadProgress.total > 1) {
       return `Sending ${uploadProgress.current}/${uploadProgress.total}…`
     }
@@ -150,102 +108,205 @@ export function VoiceRecorder({
     return null
   })()
 
+  const handleCancel = () => {
+    setReadyPayload(null)
+    cancel()
+    onCancel()
+  }
+
+  const handleStop = async () => {
+    const payload = await stopAndSend()
+    if (payload && payload.segments.length > 0) {
+      setReadyPayload(payload)
+    } else {
+      handleCancel()
+    }
+  }
+
+  const handleSend = () => {
+    if (isBusy || !readyPayload) return
+    onSend(readyPayload)
+  }
+
+  const handleWaveformClick = () => {
+    if (readyPayload || isBusy) return
+    if (isPaused) {
+      resume()
+    } else {
+      pause()
+    }
+  }
+
+  const formattedFinalTime = (() => {
+    if (!readyPayload) return '00:00'
+    const s = Math.floor(readyPayload.totalDurationMs / 1000)
+    const mm = String(Math.floor(s / 60)).padStart(2, '0')
+    const ss = String(s % 60).padStart(2, '0')
+    return `${mm}:${ss}`
+  })()
+
+  // ─── Permission denied ────────────────────────────────────────────────────
+
+  if (permissionDenied) {
+    return (
+      <div className="flex h-11.5 w-full items-center gap-2 rounded-full border border-[#FEF3F2] bg-white p-1.25 select-none">
+        {/* Left info button: clicking exits voice recorder mode */}
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#FEF3F2] text-[#BF2C25] transition-colors hover:bg-red-100"
+          aria-label="Exit voice recorder"
+        >
+          <InfoCircleIcon className="size-4" />
+        </button>
+
+        {/* Center error text */}
+        <div className="min-w-0 flex-1 px-1">
+          <span className="block truncate text-[12px] font-normal text-[#BF2C25]">
+            Permission denied. Check settings & reload.
+          </span>
+        </div>
+
+        {/* Right reload button: clicking retries permission request */}
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#BF2C25] text-white transition-colors hover:bg-[#A9221C]"
+          aria-label="Retry permission"
+        >
+          <ReloadIcon className="size-4" />
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
-      className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 select-none"
+      className="flex h-11.5 w-full items-center gap-2 rounded-full border border-[#ECECED] bg-white p-1.25 select-none"
       role="group"
       aria-label="Voice recorder"
     >
-      {/* Cancel button */}
-      <button
-        type="button"
-        disabled={isBusy || isUploading}
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-full p-2 transition-colors',
-          'text-muted-foreground hover:bg-red-50 hover:text-red-500',
-          (isBusy || isUploading) && 'pointer-events-none opacity-40',
-        )}
-        aria-label="Cancel recording"
-        onClick={handleCancel}
-      >
-        <Trash2 className="size-4" />
-      </button>
+      {/* Left button circle */}
+      {progressLabel ? (
+        <div className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] opacity-40">
+          <X className="size-4" />
+        </div>
+      ) : readyPayload ? (
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6]"
+          aria-label="Discard recording"
+        >
+          <X className="size-4" />
+        </button>
+      ) : isPaused ? (
+        <button
+          type="button"
+          onClick={resume}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6]"
+          aria-label="Resume recording"
+        >
+          <Play className="size-4 fill-current" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleCancel}
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-full text-[#626A6A] transition-colors',
+            isRecording ? 'bg-[#4D98E2] hover:bg-[#3D8EDD]' : 'bg-[#F2F2F3] hover:bg-[#E4E4E6]',
+          )}
+          aria-label="Cancel recording"
+        >
+          <X className={cn('size-4', isRecording ? 'text-white' : 'text-[#626A6A]')} />
+        </button>
+      )}
 
-      {/* Timer + recording indicator */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        {isRecording && !isPaused && (
-          <span className="relative flex size-2.5">
-            <span
-              className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-              style={{ backgroundColor: primaryColor }}
-            />
-            <span className="relative inline-flex size-2.5 rounded-full" style={{ backgroundColor: primaryColor }} />
-          </span>
-        )}
-        {isPaused && (
-          <span className="relative flex size-2.5">
-            <span
-              className="relative inline-flex size-2.5 rounded-full opacity-50"
-              style={{ backgroundColor: primaryColor }}
-            />
-          </span>
-        )}
-        <span className="text-foreground min-w-10 text-sm tabular-nums">{formattedTime}</span>
-      </div>
-
-      {/* Waveform */}
-      <div className="relative min-w-0 flex-1">
+      {/* Waveform and Timer */}
+      <div className="relative flex min-w-0 flex-1 items-center gap-2">
         {progressLabel ? (
-          <div className="flex h-8 items-center">
-            <span className="text-muted-foreground text-xs">{progressLabel}</span>
+          <div className="flex h-8 flex-1 items-center px-2">
+            <span className="animate-pulse text-[12px] font-normal text-[#85888E]">{progressLabel}</span>
           </div>
         ) : (
-          <WaveformCanvas waveformData={waveformData} primaryColor={primaryColor} isPaused={isPaused} />
+          <>
+            {/* Pulsing red dot for active recording */}
+            {isRecording && !isPaused && (
+              <span className="relative flex size-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4D98E2] opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-[#4D98E2]" />
+              </span>
+            )}
+            {/* Static dot for paused state */}
+            {isRecording && isPaused && <span className="size-2 shrink-0 rounded-full bg-[#4D98E2]/50" />}
+
+            {/* Waveform Canvas (clicks to pause/resume) */}
+            <div className={cn('min-w-0 flex-1', !readyPayload && 'cursor-pointer')} onClick={handleWaveformClick}>
+              <WaveformCanvas
+                waveformData={readyPayload ? readyPayload.waveform : waveformData}
+                primaryColor={readyPayload ? '#797B86' : '#3D8EDD'}
+                isPaused={isPaused}
+              />
+            </div>
+
+            {/* Timer display */}
+            <span
+              className={cn(
+                'min-w-10 px-1 text-center text-[10px] font-medium tabular-nums select-none',
+                readyPayload ? 'text-[#85888E]' : 'text-[#3D8EDD]',
+              )}
+            >
+              {readyPayload ? formattedFinalTime : formattedTime}
+            </span>
+          </>
         )}
 
-        {/* Size-approaching-limit warning */}
+        {/* Size limits / warnings */}
         {sizeWarning && !isConverting && (
-          <div className="absolute -top-5 right-0 left-0 text-center text-[10px] text-amber-500">
+          <div className="absolute -top-5 right-0 left-0 text-center text-[9px] text-amber-500">
             Saving chunk, recording continues…
           </div>
         )}
 
-        {/* Multi-segment badge */}
-        {segmentIndex > 0 && (
-          <div className="text-muted-foreground absolute -bottom-5 left-0 text-[10px]">Part {segmentIndex + 1}</div>
+        {segmentIndex > 0 && !readyPayload && (
+          <div className="text-muted-foreground absolute -bottom-5 left-0 text-[9px]">Part {segmentIndex + 1}</div>
         )}
       </div>
 
-      {/* Pause / Resume */}
-      <button
-        type="button"
-        disabled={isBusy}
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-full p-2 transition-colors',
-          'hover:bg-accent',
-          isBusy && 'pointer-events-none opacity-40',
-        )}
-        aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
-        style={{ color: primaryColor }}
-        onClick={isPaused ? resume : pause}
-      >
-        {isPaused ? <Play className="size-4" /> : <Pause className="size-4" />}
-      </button>
-
-      {/* Send */}
-      <button
-        type="button"
-        disabled={isBusy}
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-full p-2 text-white transition-colors',
-          isBusy ? 'opacity-70' : 'hover:opacity-90',
-        )}
-        style={{ backgroundColor: primaryColor }}
-        aria-label="Send voice message"
-        onClick={handleSend}
-      >
-        {isBusy ? <Spinner className="size-4 text-white" /> : <Check className="size-4" />}
-      </button>
+      {/* Right button circle */}
+      {progressLabel ? (
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white">
+          <Spinner className="size-4 text-white" />
+        </div>
+      ) : readyPayload ? (
+        <button
+          type="button"
+          onClick={handleSend}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]"
+          aria-label="Send voice message"
+        >
+          <SendIcon className="size-3 text-white" />
+        </button>
+      ) : isPaused ? (
+        <button
+          type="button"
+          onClick={resume}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white transition-colors hover:bg-[#2A7BC6]"
+          aria-label="Resume recording"
+        >
+          <Mic className="size-4" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleStop}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white transition-colors hover:bg-[#2A7BC6]"
+          aria-label="Stop recording"
+        >
+          <Square className="size-3.5 fill-current" />
+        </button>
+      )}
     </div>
   )
 }

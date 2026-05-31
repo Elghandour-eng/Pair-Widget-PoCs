@@ -41,7 +41,12 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       >
-        <Card className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0">{children}</Card>
+        <Card
+          className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0"
+          style={widgetConfig.widgetBgColor ? { backgroundColor: widgetConfig.widgetBgColor } : undefined}
+        >
+          {children}
+        </Card>
       </motion.div>
     )
   }
@@ -79,7 +84,10 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
             }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           >
-            <Card className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0 shadow-[0_5px_40px_rgba(0,0,0,.16)] min-[668px]:rounded-xl">
+            <Card
+              className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0 shadow-[0_5px_40px_rgba(0,0,0,.16)] min-[668px]:rounded-xl"
+              style={widgetConfig.widgetBgColor ? { backgroundColor: widgetConfig.widgetBgColor } : undefined}
+            >
               {children}
             </Card>
           </motion.div>

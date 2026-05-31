@@ -1,8 +1,8 @@
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { MessageLayout } from '@/features/conversation/components/conversation-message/message-layout'
 import type { Message } from '@/features/conversation/types/message'
 import {
   formatMessageTime,
-  hexToRgba,
   isFailedMessage,
   isPendingMessage,
   isUserMessage,
@@ -19,6 +19,7 @@ interface TextMessageProps {
 }
 
 function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', websiteName }: TextMessageProps) {
+  const { widgetConfig } = useWidgetConfigContext()
   const isUser = isUserMessage(message)
   const isPending = isPendingMessage(message)
   const isFailed = isFailedMessage(message)
@@ -32,35 +33,33 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
       hideTime={true}
     >
       <div
-        className={cn('relative flex min-w-25 flex-col rounded-2xl pt-3 pr-4 pb-3 pl-4', {
-          'rounded-br-none text-white': isUser && !isPending && !isFailed,
-          'rounded-br-none text-white/90': isUser && isPending,
-          'rounded-br-none text-white/70': isUser && isFailed,
-          'text-foreground rounded-bl-none bg-[#F0F1F1]': !isUser && !isPending && !isFailed,
-          'text-foreground/90 rounded-bl-none bg-[#F0F1F1]/90': !isUser && isPending,
-          'text-foreground/70 rounded-bl-none bg-[#F0F1F1]/70': !isUser && isFailed,
+        className={cn('relative flex min-w-25 flex-col', {
+          'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
+          'rounded-2xl rounded-bl-none pt-3 pr-4 pb-3 pl-4': !isUser,
+          'text-foreground bg-[#F0F1F1]': !isUser && !isPending && !isFailed,
+          'text-foreground/90 bg-[#F0F1F1]/90': !isUser && isPending,
+          'text-foreground/70 bg-[#F0F1F1]/70': !isUser && isFailed,
         })}
-        style={
-          isUser
-            ? {
-                backgroundColor: isPending
-                  ? hexToRgba(primaryColor, 0.7) // 70% opacity
-                  : isFailed
-                    ? hexToRgba(primaryColor, 0.5) // 50% opacity
-                    : primaryColor,
-              }
-            : undefined
-        }
       >
-        <div className="text-sm leading-relaxed">{parseMarkdown(message.content)}</div>
         <div
-          className={cn('text-right text-[12px] leading-4.5 font-normal tracking-[-0.01em]', {
-            'text-white/70': isUser,
-            'text-[#60676E]': !isUser,
+          className={cn({
+            'text-sm leading-relaxed': !isUser,
+            "font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Primary,#1A1A1A)":
+              isUser,
           })}
         >
-          {formatMessageTime(message.sent_at)}
+          {parseMarkdown(message.content)}
         </div>
+        {!widgetConfig.hideMessageTime && (
+          <div
+            className={cn('text-right text-[12px] leading-4.5 font-normal tracking-[-0.01em]', {
+              'text-[#1A1A1A]/70': isUser,
+              'text-[#60676E]': !isUser,
+            })}
+          >
+            {formatMessageTime(message.sent_at)}
+          </div>
+        )}
 
         {/* Pending indicator - show spinner for pending messages */}
         {isPending && (

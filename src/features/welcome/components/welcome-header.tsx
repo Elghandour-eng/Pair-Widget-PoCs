@@ -4,6 +4,10 @@ import { WidgetHeader } from '@/components/widget-header'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { parseMarkdown } from '@/lib/parseMarkdown'
 
+/**
+ * @deprecated WelcomeHeader is deprecated and will be removed alongside WelcomePage.
+ * Please use IntroPage instead.
+ */
 function WelcomeHeader() {
   const { widgetConfig } = useWidgetConfigContext()
 

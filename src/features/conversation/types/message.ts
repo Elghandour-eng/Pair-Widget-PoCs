@@ -33,11 +33,17 @@ export interface ApiMessage {
   content_attributes: {
     in_reply_to?: number | null
     csat_survey_data?: CSATSurveyData
+    next_messages?: NextMessageItem[]
+    next_msg_type?: string
+    next_msg?: NextMessageItem
     [key: string]: unknown
   }
   created_at: number // Unix timestamp
   conversation_id: number
   sender?: ApiMessageSender
+  next_messages?: NextMessageItem[]
+  next_msg_type?: string
+  next_msg?: NextMessageItem
 }
 
 /**
@@ -84,6 +90,91 @@ export interface ListConfig {
   button_text: string
 }
 
+export interface ProductCardButton {
+  type: 'button' | string
+  label: string
+  action_name: 'add_to_cart' | string
+  action_ulid: string
+  parameters: {
+    product_id: string
+    quantity: number
+    [key: string]: unknown
+  }
+}
+
+export interface ProductCard {
+  image_url?: string
+  title: string
+  sub_text?: string
+  old_price?: string
+  current_price: string
+  tag?: string
+  buttons?: ProductCardButton[]
+}
+
+export interface ProductCardSetHeader {
+  title: string
+  action_text?: string
+  action_underline?: boolean
+  click_action_name?: string
+}
+
+export interface Pagination {
+  page_size: number
+  current_page: number
+}
+
+export interface SortOption {
+  key: string
+  label: string
+}
+
+export interface FilterOption {
+  key: string
+  type: 'enum' | string
+  label: string
+  values: string[]
+}
+
+export interface ProductCardSetViewAll {
+  pagination?: Pagination
+  sort_options?: SortOption[]
+  filter_options?: FilterOption[]
+  base_parameters?: Record<string, unknown>
+  source_action_name?: string
+}
+
+export interface ProductCardSet {
+  type: 'product_card_set'
+  header?: ProductCardSetHeader
+  cards: ProductCard[]
+  view_all?: ProductCardSetViewAll
+}
+
+export interface QuestionMessage {
+  type: 'question'
+  question: string
+  input_type: 'single' | 'multi' | string
+  options: string[]
+}
+
+export interface SuggestionAction {
+  type: 'action'
+  label: string
+  action_name: string
+  parameters?: Record<string, unknown>
+}
+
+export type SuggestionOption = string | SuggestionAction
+
+export interface SuggestionsMessage {
+  type: 'suggestions'
+  text?: string
+  options: SuggestionOption[]
+}
+
+export type NextMessageItem = ProductCardSet | QuestionMessage | SuggestionsMessage | Record<string, unknown>
+
 export interface InteractiveMetadata {
   body_text?: string
   header_text?: string
@@ -91,6 +182,7 @@ export interface InteractiveMetadata {
   csat_config?: CsatConfig
   list_config?: ListConfig
   interactive_type?: 'list' | string
+  next_messages?: NextMessageItem[]
   [key: string]: unknown
 }
 
@@ -102,7 +194,7 @@ export interface Message {
   ulid: string
   type: 'message' | string
   content: string
-  message_type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'interactive'
+  message_type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'interactive' | 'widget_message'
   sender_type: 'contact' | 'agent' | 'bot' | 'human_agent' | 'ai_agent' | string
   media_url?: string
   sent_at: string // ISO string
@@ -123,6 +215,9 @@ export interface Message {
   }
   interactive_metadata?: InteractiveMetadata
   is_csat_survey: boolean
+  next_messages?: NextMessageItem[]
+  next_msg_type?: string
+  next_msg?: NextMessageItem
 }
 
 /**

@@ -403,8 +403,11 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
       <div
         ref={wrapperRef}
-        className={cn('flex w-full max-w-70 min-w-50 flex-col rounded-2xl px-3 py-2.5')}
-        style={{ backgroundColor: `${primaryColor}12` }}
+        className={cn('flex w-full min-w-50 flex-col', {
+          'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
+          'max-w-70 rounded-2xl px-3 py-2.5': !isUser,
+        })}
+        style={!isUser ? { backgroundColor: `${primaryColor}12` } : undefined}
       >
         {/* Hidden audio element */}
         <audio

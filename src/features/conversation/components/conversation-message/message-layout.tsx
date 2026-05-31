@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { MessageFooter } from '@/features/conversation/components/conversation-message/message-footer'
 import type { Message } from '@/features/conversation/types/message'
 import {
@@ -27,10 +28,12 @@ function MessageLayout({
   hideTime,
   children,
 }: MessageLayoutProps) {
+  const { widgetConfig } = useWidgetConfigContext()
   const isUser = isUserMessage(message)
   // const isOutgoing = isOutgoingMessage(message)
   const isPending = isPendingMessage(message)
   const isFailed = isFailedMessage(message)
+  const effectiveHideTime = hideTime || widgetConfig.hideMessageTime
 
   return (
     <div
@@ -70,11 +73,11 @@ function MessageLayout({
         })}
       >
         {children}
-        <MessageFooter message={message} websiteName={websiteName} hideTime={hideTime} />
+        <MessageFooter message={message} websiteName={websiteName} hideTime={effectiveHideTime} />
       </div>
 
       {/* Spacer for user messages to maintain alignment */}
-      {isUser && <div className="size-2" />}
+      {isUser && !effectiveHideTime && <div className="size-2" />}
     </div>
   )
 }

@@ -8,7 +8,8 @@ import { EmptyMessage } from '@/features/conversation/components/empty-message'
 import { LoadMore } from '@/features/conversation/components/load-more'
 import { UnreadIndicator } from '@/features/conversation/components/unread-indicator'
 import { useConversationScroll } from '@/features/conversation/hooks/use-conversation-scroll'
-import type { Message } from '@/features/conversation/types/message'
+import type { Message, QuestionMessage } from '@/features/conversation/types/message'
+import { useQuestionContext } from '@/features/conversation/contexts/question-context'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { scrollToBottom } from '../utils/scroll-utils'
 
@@ -33,6 +34,44 @@ function ConversationMessages({
   const messages = allMessages.filter((msg) => msg.sender_type !== 'system')
   const { widgetConfig } = useWidgetConfigContext()
   const { unreadMessages, getFirstUnreadMessageId, markConversationAsRead, markAsRead } = useUnreadMessages()
+  const { activeQuestionGroup, setActiveQuestionGroup, dismissedQuestions } = useQuestionContext()
+
+  const lastMessage = messages[messages.length - 1]
+
+  // Track if the latest message has an active question group
+  useEffect(() => {
+    if (lastMessage) {
+      const questions: QuestionMessage[] = []
+      if (lastMessage.next_msg?.type === 'question') {
+        questions.push(lastMessage.next_msg as QuestionMessage)
+      }
+      if (lastMessage.next_messages) {
+        lastMessage.next_messages.forEach((item) => {
+          if (item.type === 'question') {
+            questions.push(item as QuestionMessage)
+          }
+        })
+      }
+
+      if (questions.length > 0 && !dismissedQuestions.includes(lastMessage.ulid)) {
+        if (activeQuestionGroup?.messageUlid !== lastMessage.ulid) {
+          setActiveQuestionGroup({
+            messageUlid: lastMessage.ulid,
+            questions,
+            activeQuestionIndex: 0,
+          })
+        }
+      } else {
+        if (activeQuestionGroup) {
+          setActiveQuestionGroup(null)
+        }
+      }
+    } else {
+      if (activeQuestionGroup) {
+        setActiveQuestionGroup(null)
+      }
+    }
+  }, [lastMessage, setActiveQuestionGroup, activeQuestionGroup?.messageUlid, dismissedQuestions])
 
   // Inject greeting message if enabled and we're at the beginning of the conversation history
   if (widgetConfig.greetingEnabled && widgetConfig.greetingMessage && !hasMore) {
@@ -189,10 +228,21 @@ function ConversationMessages({
   }, [conversationId, getFirstUnreadMessageId, handleScrollToBottom, scrollContainerRef])
 
   return (
-    <WidgetContent className="relative flex-1 overflow-hidden bg-[#FAFAFA] p-0">
+    <WidgetContent
+      className="relative flex-1 overflow-hidden p-0"
+      props={{
+        style: widgetConfig.widgetBgColor
+          ? { backgroundColor: widgetConfig.widgetBgColor }
+          : { backgroundColor: '#FAFAFA' },
+      }}
+    >
       {isLoadingMore && <LoadMore />}
 
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex h-full w-full flex-col overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex h-full w-full flex-col overflow-y-auto px-4 py-6"
+      >
         <div className="flex flex-col gap-3 py-4">
           {messages.length === 0 ? (
             <EmptyMessage />
@@ -221,6 +271,7 @@ function ConversationMessages({
                       isUnread={isUnread}
                       primaryColor={widgetConfig.primaryColor}
                       websiteName={widgetConfig.name}
+                      isLastMessage={index === messages.length - 1}
                     />
                   </div>
                 )

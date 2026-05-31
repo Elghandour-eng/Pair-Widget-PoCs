@@ -1,5 +1,5 @@
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
-import type { ApiMessage, Message } from '../types/message'
+import type { ApiMessage, Message, InteractiveMetadata, NextMessageItem } from '../types/message'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
@@ -58,6 +58,17 @@ export function mapApiMessageToMessage(apiMessage: ApiMessage): Message {
                 ? 'interactive'
                 : 'text'
 
+  const interactiveMetadata = apiMessage.content_attributes?.interactive_metadata as InteractiveMetadata | undefined
+
+  const nextMessages =
+    apiMessage.next_messages ||
+    (apiMessage.content_attributes?.next_messages as NextMessageItem[] | undefined) ||
+    interactiveMetadata?.next_messages
+
+  const nextMsgType = apiMessage.next_msg_type || (apiMessage.content_attributes?.next_msg_type as string | undefined)
+
+  const nextMsg = apiMessage.next_msg || (apiMessage.content_attributes?.next_msg as NextMessageItem | undefined)
+
   const message: Message = {
     ulid,
     type: 'message',
@@ -69,8 +80,11 @@ export function mapApiMessageToMessage(apiMessage: ApiMessage): Message {
     sender_name: senderName,
     sender_avatar: senderAvatar,
     metadata: apiMessage.content_attributes,
-    interactive_metadata: apiMessage.content_attributes.interactive_metadata as Record<string, unknown> | undefined,
-    is_csat_survey: !!apiMessage.content_attributes.csat_survey_data,
+    interactive_metadata: interactiveMetadata,
+    is_csat_survey: !!apiMessage.content_attributes?.csat_survey_data,
+    next_messages: nextMessages,
+    next_msg_type: nextMsgType,
+    next_msg: nextMsg,
   }
 
   logger.debug('mapApiMessageToMessage', 'Mapped API message to internal format', {

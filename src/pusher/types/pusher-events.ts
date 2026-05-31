@@ -1,5 +1,5 @@
 import type { Conversation } from '@/features/conversation/types/conversation'
-import type { Message } from '@/features/conversation/types/message'
+import type { Message, InteractiveMetadata } from '@/features/conversation/types/message'
 
 /**
  * Pusher subscription event data
@@ -54,7 +54,7 @@ export interface PusherNewMessageEventData {
       ulid: Message['ulid']
       type: string
       content: string
-      message_type: 'text' | 'image' | 'file' | 'audio' | 'video'
+      message_type: Message['message_type']
       sender_type: 'contact' | 'agent' | 'human_agent' | string
       sent_at: string
       status: 'sent' | 'pending' | 'failed' | string
@@ -63,7 +63,10 @@ export interface PusherNewMessageEventData {
       is_csat_survey: boolean
       media_url?: string
       metadata?: Record<string, unknown>
-      interactive_metadata?: Record<string, unknown>
+      interactive_metadata?: InteractiveMetadata
+      next_messages?: Message['next_messages']
+      next_msg_type?: Message['next_msg_type']
+      next_msg?: Message['next_msg']
     }
     conversationUlid: Conversation['ulid']
     timestamp: string

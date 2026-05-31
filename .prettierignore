@@ -8,3 +8,8 @@ coverage
 .agent
 .specify
 .prettierignore
+routeTree.gen.ts
+
+*.svg
+*.png
+*.jpg

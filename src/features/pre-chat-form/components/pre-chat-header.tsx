@@ -9,14 +9,14 @@ import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 
 function PreChatHeader() {
   const { widgetConfig } = useWidgetConfigContext()
-  const { navigateToWelcome } = useWidgetNavigation()
+  const { navigateToIntro } = useWidgetNavigation()
   const isHostOnline = true
   const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time]
 
   return (
     // Add shadow bottom
     <WidgetHeader className="flex-row items-center gap-2 ps-2 pt-5 pb-1 shadow-xs">
-      <Button variant="ghost" size="icon-sm" onClick={navigateToWelcome}>
+      <Button variant="ghost" size="icon-sm" onClick={navigateToIntro}>
         <BackIcon className="h-5 w-auto" />
       </Button>
       <div className="flex items-center gap-2">

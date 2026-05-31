@@ -1,10 +1,10 @@
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 // Define the possible screens
-export type WidgetScreen = 'welcome' | 'pre-chat' | 'conversation'
+export type WidgetScreen = 'intro' | 'welcome' | 'pre-chat' | 'conversation'
 
 export type NavigationDirection = 'forward' | 'backward'
 
@@ -12,19 +12,41 @@ interface WidgetNavigationContextType {
   currentScreen: WidgetScreen
   conversationId: string | null
   navigationDirection: NavigationDirection
+  initialMessage: string | null
+  navigateToIntro: () => void
   navigateToWelcome: () => void
   navigateToPreChat: () => void
   navigateToConversation: (conversationId: string | null) => void
+  setInitialMessage: (msg: string | null) => void
   goBack: () => void
 }
 
 const WidgetNavigationContext = createContext<WidgetNavigationContextType | undefined>(undefined)
 
 export function WidgetNavigationProvider({ children }: { children: ReactNode }) {
-  // Start with 'welcome' screen
-  const [currentScreen, setCurrentScreen] = useState<WidgetScreen>('welcome')
+  // Start with 'intro' screen
+  const [currentScreen, setCurrentScreen] = useState<WidgetScreen>('intro')
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [navigationDirection, setNavigationDirection] = useState<NavigationDirection>('forward')
+  const [initialMessage, setInitialMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).mockNavigateToIntro = navigateToIntro
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).mockNavigateToIntro
+      }
+    }
+  }, [])
+
+  const navigateToIntro = () => {
+    logger.debug('WidgetNavigationProvider', 'Navigating to intro screen')
+    setNavigationDirection('backward') // Intro is a backward/start screen
+    setCurrentScreen('intro')
+    setConversationId(null)
+  }
 
   const navigateToWelcome = () => {
     logger.debug('WidgetNavigationProvider', 'Navigating to welcome screen')
@@ -50,12 +72,12 @@ export function WidgetNavigationProvider({ children }: { children: ReactNode }) 
   const goBack = () => {
     logger.debug('WidgetNavigationProvider', 'Going back')
     setNavigationDirection('backward') // goBack is always backward
-    // Simple back navigation: conversation -> pre-chat -> welcome
+    // Simple back navigation: conversation -> pre-chat -> intro
     if (currentScreen === 'conversation') {
       setCurrentScreen('pre-chat')
       setConversationId(null)
     } else if (currentScreen === 'pre-chat') {
-      setCurrentScreen('welcome')
+      setCurrentScreen('intro')
       setConversationId(null)
     }
   }
@@ -66,9 +88,12 @@ export function WidgetNavigationProvider({ children }: { children: ReactNode }) 
         currentScreen,
         conversationId,
         navigationDirection,
+        initialMessage,
+        navigateToIntro,
         navigateToWelcome,
         navigateToPreChat,
         navigateToConversation,
+        setInitialMessage,
         goBack,
       }}
     >

@@ -12,7 +12,13 @@ function WidgetContent({
   className?: string
 }) {
   return (
-    <CardContent className={cn('widget-content-container relative flex flex-1 flex-col p-4', className)} {...props}>
+    <CardContent
+      className={cn(
+        'widget-content-container relative flex flex-1 flex-col bg-[url(/shell.png)] bg-size-[60%_217px] bg-position-[left_1rem_top_1.25rem] bg-no-repeat p-4 pt-8',
+        className,
+      )}
+      {...props}
+    >
       {children}
       <Toaster />
     </CardContent>
