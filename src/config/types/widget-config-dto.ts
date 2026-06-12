@@ -198,6 +198,8 @@ export interface AiMessages {
   TextStyles: CSSProperties
   showAiIcon: boolean
   messageStyle: MessageStyle
+  // TODO: update this when BE supports it
+  iconUrl?: string
 }
 
 export interface CustomerMessages {

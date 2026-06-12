@@ -120,7 +120,7 @@ export interface ChatInputConfig {
   sendButtonIcon: 'arrow-up' | 'send'
 }
 
-// TODO: Placeholder Replace with actual values
+// TODO: Start consuming this configuration in the message and feedback UI components
 export interface MessagesConfig {
   feedback?: {
     style?: CSSProperties & {
