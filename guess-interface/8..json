@@ -1,0 +1,261 @@
+{
+  "widget_id": "01KTXHCCYNGMZZ9NDK2RK87R4F",
+  "name": "New widget",
+  "widget_color": "#374247",
+  "welcome_title": "New UI Welcome Heading",
+  "welcome_tagline": "*New UI* *_Welcome Tagline_*",
+  "reply_time": "in_a_day",
+  "avatar_url": "",
+  "pre_chat_form_enabled": false,
+  "pre_chat_form_options": {
+    "pre_chat_fields": [
+      {
+        "name": "emailAddress",
+        "type": "email",
+        "label": "Email Id",
+        "order": 1,
+        "enabled": false,
+        "required": true,
+        "field_type": "standard"
+      },
+      {
+        "name": "fullName",
+        "type": "text",
+        "label": "Full name",
+        "order": 2,
+        "enabled": false,
+        "required": false,
+        "field_type": "standard"
+      },
+      {
+        "name": "phoneNumber",
+        "type": "text",
+        "label": "Phone number",
+        "order": 3,
+        "enabled": false,
+        "required": false,
+        "field_type": "standard"
+      }
+    ],
+    "pre_chat_message": "Share your queries or comments here."
+  },
+  "selected_feature_flags": ["attachments", "emoji_picker", "end_conversation"],
+  "enable_greeting": true,
+  "greeting_message_en": "*_New UI_* *Welcome Tagline*",
+  "greeting_message_ar": null,
+  "locale": "en",
+  "website_url": "https://system.trypair.ai/",
+  "business_name": null,
+  "sender_name_type": "friendly",
+  "allow_messages_after_resolved": true,
+  "lock_to_single_conversation": false,
+  "enable_email_collect": true,
+  "continuity_via_email": true,
+  "csat_survey_enabled": false,
+  "working_hours": {
+    "enabled": true,
+    "schedule": [
+      {
+        "day": "saturday",
+        "enabled": true,
+        "endTime": "11:59 PM",
+        "startTime": "12:00 AM"
+      },
+      {
+        "day": "sunday",
+        "enabled": true,
+        "endTime": "11:59 PM",
+        "startTime": "12:00 AM"
+      }
+    ]
+  },
+  "widget_v2_config": {
+    "intro_screen": {
+      "heroSection": {
+        "enabled": {
+          "value": false,
+          "styles": {}
+        },
+        "heroImage": {
+          "styles": {}
+        }
+      },
+      "loadingState": {
+        "type": "shimmer",
+        "styles": {}
+      },
+      "welcomeTitle": {
+        "text": "How can we help?",
+        "styles": {
+          "fontSize": "1.5rem",
+          "fontWeight": 600
+        }
+      },
+      "showIntroScreen": {
+        "value": true,
+        "styles": {}
+      },
+      "welcomeSubtitle": {
+        "text": "How can we help?",
+        "styles": {
+          "fontSize": "0.75rem",
+          "fontWeight": 400
+        }
+      }
+    },
+    "quick_links": {
+      "cardStyle": {
+        "cardSurface": "soft",
+        "borderRadius": "medium"
+      },
+      "textStyle": {
+        "color": "#1E1E1E",
+        "fontSize": "1rem",
+        "fontFamily": "default",
+        "fontWeight": 600
+      },
+      "quickLinkCards": [],
+      "showQuickLinks": {
+        "value": false
+      },
+      "displaySettings": {
+        "position": "under_welcome",
+        "carouselLoop": true
+      }
+    },
+    "trending_prompts": {
+      "chipStyle": {
+        "gap": "0.5rem",
+        "borderWidth": "1px",
+        "backgroundColor": "#fff"
+      },
+      "textStyle": {
+        "color": "#1E1E1E",
+        "fontFamily": "default",
+        "fontWeight": 400
+      },
+      "promptChips": [
+        {
+          "text": "Hi",
+          "iconId": "01KTY2S8F7FC256GK3GRTNP5ZH",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/b5fbe1be-22c1-4126-8d9c-1827c95140c4.png"
+        },
+        {
+          "text": "Hi2",
+          "iconId": "01KTY2S8G5ZDDEZ3YKNN2BDN6E",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/fe6ed84c-f6e3-4bcd-9cc3-12d9a2e535cf.png"
+        },
+        {
+          "text": "HI3",
+          "iconId": "01KTY2S8HM7JZ38ND9FYFF303F",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/d742c2da-1036-4dfc-85bb-9dc20f9dde9b.png"
+        },
+        {
+          "text": "HI4",
+          "iconId": "01KTY2S8K658KD1VN05DZFYFKV",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/9a7dfece-99b3-4676-8e9c-c9a6791c8d0a.png"
+        },
+        {
+          "text": "Hi5",
+          "iconId": "01KTY2S8M5QA0QF9NWSEGJ4R7J",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/eda44641-a2cd-4a2e-8337-dfafdb4e3760.png"
+        },
+        {
+          "text": "Hi6",
+          "iconId": "01KTY2S8NH2NGTA46RXWT41J9M",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/835b0501-95f3-4449-92c0-a5ee6a2ecbe8.png"
+        },
+        {
+          "text": "HI7",
+          "iconId": "01KTY2S8PQEM2NJ09W2CT78TTS",
+          "iconUrl": "https://pair-storage.fra1.cdn.digitaloceanspaces.com/pair-storage/conversations/e180e305-6f76-49ea-afc6-0c305090d4c2.png"
+        }
+      ],
+      "displaySettings": {
+        "styles": {
+          "color": "#616161",
+          "fontSize": "1rem",
+          "fontWeight": "600"
+        },
+        "showIcons": true,
+        "sectionTitle": "Products"
+      },
+      "showTrendingPrompts": {
+        "value": true
+      }
+    },
+    "chat_input": {
+      "styles": {
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.1)",
+        "borderColor": "#E5E7EB",
+        "borderWidth": "1px",
+        "borderRadius": "0.75rem"
+      },
+      "inputLayout": {
+        "type": "full_width_bar"
+      },
+      "inputActions": {
+        "stickers": true,
+        "fileUpload": true,
+        "voiceMessages": true,
+        "attachmentMenu": true
+      },
+      "placeholderText": {
+        "text": "Place holder text",
+        "styles": {
+          "color": "#9CA3AF",
+          "fontSize": "1rem",
+          "fontFamily": "default",
+          "fontWeight": "400"
+        }
+      }
+    },
+    "messages": {
+      "feedback": {
+        "style": {
+          "iconSize": "1.5rem",
+          "iconColor": null
+        },
+        "toastMessage": "Thanks for your feedback.",
+        "iconColorType": "widget",
+        "showFeedbackButtons": true
+      },
+      "aiMessages": {
+        "iconId": "",
+        "CardStyles": {
+          "boxShadow": "none",
+          "borderColor": "#000000",
+          "borderWidth": "1px",
+          "borderRadius": "0.5rem",
+          "backgroundColor": "#ffffff"
+        },
+        "TextStyles": {
+          "color": "#000000",
+          "fontSize": "1rem",
+          "fontFamily": "inter",
+          "fontWeight": "400"
+        },
+        "showAiIcon": true,
+        "messageStyle": "plain"
+      },
+      "customerMessages": {
+        "TextStyles": {
+          "color": "#000000",
+          "fontSize": "1rem",
+          "fontFamily": "inter",
+          "fontWeight": "400"
+        },
+        "bubbleType": "filled",
+        "bubbleStyle": {
+          "boxShadow": "none",
+          "borderColor": "#000000",
+          "borderWidth": "1px",
+          "borderRadius": "0.5rem",
+          "backgroundColor": "#ffffff"
+        },
+        "useBrandColor": false
+      }
+    }
+  },
+  "visitor_credentials": []
+}

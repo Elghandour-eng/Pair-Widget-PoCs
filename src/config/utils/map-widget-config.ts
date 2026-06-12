@@ -1,9 +1,5 @@
-import type {
-  PairAiWidgetSettings,
-  WidgetConfig,
-  WidgetConfigResponse,
-  WorkingHour,
-} from '@/config/types/widget-config'
+import type { IntroScreenConfig, PairAiWidgetSettings, WidgetConfig, WorkingHour } from '@/config/types/widget-config'
+import type { WidgetConfigDto } from '../types/widget-config-dto'
 
 /**
  * Check if widget is running in SDK mode (embedded via SDK)
@@ -60,15 +56,29 @@ function parseTime(timeStr: string): { hour: number; minute: number } {
 /**
  * Maps API response and window settings to WidgetConfig
  */
-export function mapToWidgetConfig(
-  apiResponse: WidgetConfigResponse,
-  windowSettings?: PairAiWidgetSettings,
-): WidgetConfig {
-  let introScreen = apiResponse.intro_screen
-  if (apiResponse.widget_v2_config?.intro_screen) {
-    introScreen = apiResponse.widget_v2_config.intro_screen
-  }
+export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?: PairAiWidgetSettings): WidgetConfig {
+  // intro screen
+  const rawIntro = apiResponse.widget_v2_config?.intro_screen
+  const introScreen: IntroScreenConfig | undefined = rawIntro
+    ? {
+        show: rawIntro.showIntroScreen.value,
+        welcomeTitle: rawIntro.welcomeTitle?.text ?? apiResponse.welcome_title ?? '',
+        welcomeTitleStyles: rawIntro.welcomeTitle?.styles,
+        welcomeSubtitle: rawIntro.welcomeSubtitle?.text ?? apiResponse.welcome_tagline ?? '',
+        welcomeSubtitleStyles: rawIntro.welcomeSubtitle?.styles,
+        heroImage:
+          rawIntro.heroSection?.enabled?.value && rawIntro.heroSection?.heroImage?.url
+            ? {
+                url: rawIntro.heroSection.heroImage.url,
+                position: rawIntro.heroSection.heroImage.position ?? 'top',
+                styles: rawIntro.heroSection.heroImage.styles,
+                containerStyles: rawIntro.heroSection.enabled.styles,
+              }
+            : undefined,
+      }
+    : undefined
 
+  // quick links
   let quickLinks = apiResponse.quick_links
   if (apiResponse.widget_v2_config?.quick_links) {
     const v2 = apiResponse.widget_v2_config.quick_links

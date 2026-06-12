@@ -111,35 +111,20 @@ export interface TrendingPromptData {
   iconUrl?: string
 }
 
-// TODO: Placeholder Replace with actual values
+export interface IntroHeroImage {
+  url: string
+  position: 'top' | 'bottom'
+  styles?: CSSProperties
+  containerStyles?: CSSProperties
+}
+
 export interface IntroScreenConfig {
-  showIntroScreen: {
-    value: boolean
-    styles: CSSProperties
-  }
-  welcomeTitle: {
-    text: string
-    styles: CSSProperties
-  }
-  welcomeSubtitle: {
-    text: string
-    styles: CSSProperties
-  }
-  heroSection: {
-    enabled: {
-      value: boolean
-      styles: CSSProperties
-    }
-    heroImage: {
-      url?: string
-      position: string
-      styles: CSSProperties
-    }
-  }
-  loadingState: {
-    type: string
-    styles: CSSProperties
-  }
+  show: boolean
+  welcomeTitle: string
+  welcomeTitleStyles?: CSSProperties
+  welcomeSubtitle: string
+  welcomeSubtitleStyles?: CSSProperties
+  heroImage?: IntroHeroImage
 }
 
 // TODO: Placeholder Replace with actual values
@@ -254,45 +239,6 @@ export interface WidgetV2Config {
   trending_prompts?: TrendingPromptsConfigV2
   chat_input?: ChatInputConfig
   messages?: MessagesConfig
-}
-
-export interface WidgetConfigResponse {
-  widget_id: string
-  name: string
-  widget_color: string
-  welcome_title: string | null
-  welcome_tagline: string | null
-  reply_time: string
-  avatar_url: string
-  pre_chat_form_enabled: boolean
-  pre_chat_form_options: PreChatFormOptions
-  selected_feature_flags: FeatureFlag[]
-  enable_greeting: boolean
-  greeting_message_en: string | null
-  greeting_message_ar: string | null
-  locale: string
-  website_url: string
-  business_name: string | null
-  sender_name_type: string
-  allow_messages_after_resolved: boolean
-  lock_to_single_conversation: boolean
-  enable_email_collect: boolean
-  continuity_via_email: boolean
-  csat_survey_enabled: boolean
-  // TODO: Placeholder Replace with actual values
-  intro_screen?: IntroScreenConfig
-  quick_links?: QuickLinksConfig
-  trending_prompts?: TrendingPromptsConfig
-  textbox_style?: {
-    layout: 'standard' | 'full_width'
-    placeholder?: string
-  }
-  widget_bg_color?: string
-  hide_message_time?: boolean
-  hide_header?: boolean
-  hide_footer?: boolean
-  widget_v2_config?: WidgetV2Config
-  working_hours?: WorkingHoursConfig
 }
 
 export interface CsatConfig {}

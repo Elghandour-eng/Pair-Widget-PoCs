@@ -1,11 +1,11 @@
 import { publicApiClient } from '@/core/http'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
-import type { WidgetConfigResponse } from '../types/widget-config'
+import type { WidgetConfigDto } from '../types/widget-config-dto'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
-export async function WidgetConfig(): Promise<WidgetConfigResponse> {
+export async function WidgetConfig(): Promise<WidgetConfigDto> {
   logger.debug('WidgetConfig', 'Fetching widget configuration')
 
   const widgetId = getWidgetId()
