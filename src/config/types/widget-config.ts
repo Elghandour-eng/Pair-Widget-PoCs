@@ -28,9 +28,6 @@ export interface WidgetConfig {
   welcomeTagline?: string
   greetingEnabled: boolean
   greetingMessage: string
-  workingHoursEnabled: boolean
-  workingHours: WorkingHour[]
-  timezone: string
   preChatFormOptions?: PreChatFormOptions
   businessName?: string
   avatarUrl?: string
@@ -38,7 +35,6 @@ export interface WidgetConfig {
   baseUrl?: string
   reply_time: 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day'
   sdkMode: boolean // When true, SDK handles bubble button
-  // TODO: Placeholder Replace with actual values
   introScreen?: IntroScreenConfig
   quickLinks?: QuickLinksConfig
   trendingPrompts?: TrendingPromptsConfig
@@ -73,10 +69,10 @@ export interface QuickLinkData {
   media_ulid?: string
 }
 
-// TODO: Placeholder Replace with actual values
 export interface TrendingPromptsConfig {
   show: boolean
   title?: string
+  titleStyle: CSSProperties
   showIcon: boolean
   chipStyles: CSSProperties
   textStyle: CSSProperties
@@ -105,7 +101,6 @@ export interface IntroScreenConfig {
   heroImage?: IntroHeroImage
 }
 
-// TODO: Placeholder Replace with actual values
 export interface ChatInputConfig {
   styles: CSSProperties
   layout: 'floating_pill' | 'full_width_bar'
@@ -150,16 +145,6 @@ export interface MessagesConfig {
 export interface CsatConfig {}
 
 export interface AutoAssignmentConfig {}
-
-export interface WorkingHour {
-  day_of_week: number
-  closed_all_day: boolean
-  open_hour: number | null
-  open_minutes: number | null
-  close_hour: number | null
-  close_minutes: number | null
-  open_all_day: boolean
-}
 
 export interface PreChatFormOptions {
   pre_chat_fields: PreChatField[]

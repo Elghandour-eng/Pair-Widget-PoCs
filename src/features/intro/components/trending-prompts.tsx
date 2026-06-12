@@ -18,7 +18,7 @@ export function TrendingPrompts() {
     return null
   }
 
-  const { showIcon, chipStyles, textStyle, prompts } = config
+  const { showIcon, chipStyles, textStyle, prompts, titleStyle } = config
   const title = config.title ?? 'Trending prompts'
 
   const isPending = isConversationsLoading || isSendPending
@@ -38,7 +38,7 @@ export function TrendingPrompts() {
 
   return (
     <section className="mt-2 flex flex-col gap-3">
-      <h2 className="text-[0.875rem] leading-[150%] font-semibold text-[#616161]" style={chipStyles}>
+      <h2 className="text-[0.875rem] leading-[150%] font-semibold text-[#616161]" style={titleStyle}>
         {title}
       </h2>
       <ul className="flex flex-wrap gap-2">

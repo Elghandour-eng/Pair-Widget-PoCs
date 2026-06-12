@@ -5,7 +5,6 @@ import type {
   QuickLinksConfig,
   TrendingPromptsConfig,
   WidgetConfig,
-  WorkingHour,
 } from '@/config/types/widget-config'
 import type { WidgetConfigDto } from '../types/widget-config-dto'
 
@@ -36,29 +35,6 @@ function isSdkMode(): boolean {
   })
 
   return sdkMode
-}
-
-function getDayOfWeekNumber(day: string): number {
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-  return days.indexOf(day.toLowerCase())
-}
-
-function parseTime(timeStr: string): { hour: number; minute: number } {
-  try {
-    const [time, modifier] = timeStr.split(' ')
-    const [hoursStr, minutesStr] = time.split(':')
-    let hours = parseInt(hoursStr, 10)
-    const minutes = parseInt(minutesStr, 10)
-    if (modifier === 'PM' && hours < 12) {
-      hours += 12
-    }
-    if (modifier === 'AM' && hours === 12) {
-      hours = 0
-    }
-    return { hour: hours, minute: minutes }
-  } catch {
-    return { hour: 0, minute: 0 }
-  }
 }
 
 /**
@@ -111,6 +87,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     ? {
         show: v2Trending.showTrendingPrompts.value,
         title: v2Trending.displaySettings?.sectionTitle,
+        titleStyle: v2Trending.displaySettings?.styles ?? {},
         showIcon: v2Trending.displaySettings?.showIcons ?? false,
         chipStyles: v2Trending.chipStyle ?? {},
         textStyle: v2Trending.textStyle ?? {},
@@ -142,35 +119,16 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   const messagesConfig = apiResponse.widget_v2_config?.messages
 
-  const workingHoursEnabled = apiResponse.working_hours?.enabled ?? false
-  const workingHours: WorkingHour[] =
-    apiResponse.working_hours?.schedule.map((s) => {
-      const parsedStart = parseTime(s.startTime)
-      const parsedEnd = parseTime(s.endTime)
-      return {
-        day_of_week: getDayOfWeekNumber(s.day),
-        closed_all_day: !s.enabled,
-        open_hour: parsedStart.hour,
-        open_minutes: parsedStart.minute,
-        close_hour: parsedEnd.hour,
-        close_minutes: parsedEnd.minute,
-        open_all_day: s.startTime === '12:00 AM' && s.endTime === '11:59 PM',
-      }
-    }) || []
-
   return {
     name: apiResponse.name,
     enabled: true, // Widget is enabled if config is returned
-    position: windowSettings?.position || 'right',
+    position: windowSettings?.openAutomatically ? 'right' : windowSettings?.position || 'right',
     type: windowSettings?.type,
     launcherTitle: windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
     requiresPreChat: apiResponse.pre_chat_form_enabled,
     greetingEnabled: apiResponse.enable_greeting,
     greetingMessage: apiResponse.greeting_message_en || apiResponse.greeting_message_ar || '',
-    workingHoursEnabled,
-    workingHours,
-    timezone: 'UTC', // Default timezone fallback
     preChatFormOptions: apiResponse.pre_chat_form_options,
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
