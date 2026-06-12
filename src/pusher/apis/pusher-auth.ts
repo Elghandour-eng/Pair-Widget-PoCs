@@ -2,8 +2,6 @@ import { apiClient } from '@/core/http'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 
-import { env } from '@/core/env'
-import { mockPusherAuthResponse } from '@/features/conversation/mocks/mock-pusher-auth'
 import type { PusherAuthRequest, PusherAuthResponse } from '../types/pusher-auth'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
@@ -23,11 +21,6 @@ export async function authenticatePusherChannel(data: PusherAuthRequest): Promis
   if (!widgetId) {
     logger.debug('authenticatePusherChannel', 'Widget ID is required to authenticate Pusher channel')
     throw new Error('Widget ID is required to authenticate Pusher channel')
-  }
-
-  if (env.useMock) {
-    logger.debug('authenticatePusherChannel', 'Using mock Pusher authentication', mockPusherAuthResponse)
-    return mockPusherAuthResponse
   }
 
   const response = await apiClient.post<PusherAuthResponse>(`v1/widget/${widgetId}/auth/pusher`, data)

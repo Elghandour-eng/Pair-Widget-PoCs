@@ -13,3 +13,4 @@ routeTree.gen.ts
 *.svg
 *.png
 *.jpg
+.env*

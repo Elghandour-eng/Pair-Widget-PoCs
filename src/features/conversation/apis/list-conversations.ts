@@ -1,8 +1,6 @@
-import { env } from '@/core/env'
 import { apiClient } from '@/core/http'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
-import { mockState } from '../mocks/mock-state'
 
 import type { ConversationsListResponse } from '@/features/conversation/types/conversation'
 
@@ -35,12 +33,6 @@ export async function listConversations(params?: ListConversationsParams): Promi
 
   const queryString = queryParams.toString()
   const url = `/v1/widget/${widgetId}/conversations${queryString ? `?${queryString}` : ''}`
-
-  if (env.useMock) {
-    const response = mockState.getConversations()
-    logger.debug('listConversations', 'Using conversations list mock', response)
-    return response
-  }
 
   const response = await apiClient.get<ConversationsListResponse>(url)
 

@@ -1,4 +1,3 @@
-import { env } from '@/core/env'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
@@ -217,7 +216,12 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
       exact: false, // Match any query that starts with this key
     },
     (oldData) => {
-      console.log('[Debugging] handleIncomingPusherMessage setQueriesData callback executing. hasOldData:', !!oldData, 'messageId:', message.ulid)
+      console.log(
+        '[Debugging] handleIncomingPusherMessage setQueriesData callback executing. hasOldData:',
+        !!oldData,
+        'messageId:',
+        message.ulid,
+      )
       logger.debug('🟢 MESSAGE:RENDER', 'setQueryData callback executing', {
         hasOldData: !!oldData,
         pagesCount: oldData?.pages?.length || 0,
@@ -255,7 +259,14 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
         const existingIndex = page.data.findIndex((m) => m.ulid === message.ulid)
 
         if (existingIndex !== -1) {
-          console.log('[Debugging] handleIncomingPusherMessage found existing message to update at pageIndex:', pageIndex, 'existingIndex:', existingIndex, 'newStatus:', message.status)
+          console.log(
+            '[Debugging] handleIncomingPusherMessage found existing message to update at pageIndex:',
+            pageIndex,
+            'existingIndex:',
+            existingIndex,
+            'newStatus:',
+            message.status,
+          )
           // Update existing message
           const updatedPages = [...oldData.pages]
           const updatedMessages = [...page.data]
@@ -346,14 +357,6 @@ export function handleIncomingPusherMessage(conversationId: string, data: unknow
     conversationId: targetConversationId,
     queryKeyFilter,
   })
-
-  if (env.useMock) {
-    console.log('[Debugging] handleIncomingPusherMessage in mock mode, invalidating queries:', queryKeyFilter)
-    queryClient.invalidateQueries({
-      queryKey: queryKeyFilter,
-      exact: false,
-    })
-  }
 }
 
 /**

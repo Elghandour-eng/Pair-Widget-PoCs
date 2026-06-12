@@ -37,12 +37,10 @@ export const env = {
   baseURL: getBaseURL(),
   pusherAppKey: getEnvVariable('VITE_PUSHER_APP_KEY'),
   pusherCluster: getEnvVariable('VITE_PUSHER_CLUSTER'),
-  useMock: getEnvVariable('VITE_USE_MOCK') === 'true',
 }
 
 logger.debug('env', 'Environment configuration initialized', {
   baseURL: env.baseURL,
   pusherAppKey: env.pusherAppKey,
   pusherCluster: env.pusherCluster,
-  useMock: env.useMock,
 })

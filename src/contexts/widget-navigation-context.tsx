@@ -1,5 +1,5 @@
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
@@ -29,17 +29,6 @@ export function WidgetNavigationProvider({ children }: { children: ReactNode }) 
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [navigationDirection, setNavigationDirection] = useState<NavigationDirection>('forward')
   const [initialMessage, setInitialMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).mockNavigateToIntro = navigateToIntro
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        delete (window as any).mockNavigateToIntro
-      }
-    }
-  }, [])
 
   const navigateToIntro = () => {
     logger.debug('WidgetNavigationProvider', 'Navigating to intro screen')
