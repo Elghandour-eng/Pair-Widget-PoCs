@@ -29,7 +29,7 @@ export function IntroPage() {
       <IntroContent />
 
       <ConversationTextbox conversationId={conversationId} />
-      {!widgetConfig.hideFooter && <WidgetFooter />}
+      {widgetConfig.showFooter && <WidgetFooter />}
     </div>
   )
 }

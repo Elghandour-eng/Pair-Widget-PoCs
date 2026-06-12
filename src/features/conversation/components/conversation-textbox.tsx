@@ -24,6 +24,16 @@ import type { Message } from '../types/message'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
+const cssPropertiesToString = (styles?: React.CSSProperties) => {
+  if (!styles) return ''
+  return Object.entries(styles)
+    .map(([key, value]) => {
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase()
+      return `${cssKey}: ${value};`
+    })
+    .join('\n')
+}
+
 interface ConversationTextboxProps {
   conversationId: string | null
   messages?: Message[]
@@ -91,9 +101,9 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
     )
   }
 
-  // Check if emoji picker feature is enabled
-  const isEmojiPickerEnabled = widgetConfig.selectedFeatureFlags?.includes('emoji_picker') ?? false
-  const isVoiceEnabled = widgetConfig.selectedFeatureFlags?.includes('voice_messages') ?? false
+  // Check if emoji picker and voice features are enabled from chatInput actions
+  const isEmojiPickerEnabled = widgetConfig.chatInput.actions.showEmojiPicker
+  const isVoiceEnabled = widgetConfig.chatInput.actions.showVoiceMessages
 
   useLayoutEffect(() => {
     // Use requestAnimationFrame to ensure the element is fully laid out
@@ -160,7 +170,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   const hasMessage = message.trim().length > 0
   const canRecordVoice = isVoiceEnabled && !hasMessage && !isSendMessagePending && !isProcessing && !isGenerating
 
-  const isFullWidth = widgetConfig.textboxStyle?.layout === 'full_width'
+  const isFullWidth = widgetConfig.chatInput.layout === 'full_width_bar'
 
   // ─── Voice mode ────────────────────────────────────────────────────────────
 
@@ -196,10 +206,13 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
           'flex h-11.5 w-full items-center gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
           isGenerating ? 'border-[#B8AB80]' : 'border-[#ECECED]',
         )}
-        style={{ boxShadow: '0 8px 16px 0 rgba(3, 7, 18, 0.08)' }}
+        style={{
+          boxShadow: '0 8px 16px 0 rgba(3, 7, 18, 0.08)',
+          ...widgetConfig.chatInput.styles,
+        }}
       >
         {/* Left attach button inside pill */}
-        {widgetConfig.selectedFeatureFlags?.includes('attachments') && !isGenerating ? (
+        {widgetConfig.chatInput.actions.showFileUpload && !isGenerating ? (
           <button
             type="button"
             className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6] disabled:cursor-not-allowed disabled:opacity-40"
@@ -213,21 +226,24 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
 
         {/* Center Textarea */}
         <div className="flex h-9 min-w-0 flex-1 items-center pl-1">
+          <style>{`
+            .custom-chat-textarea::placeholder {
+              ${cssPropertiesToString(widgetConfig.chatInput.placeholder.styles)}
+            }
+          `}</style>
           <textarea
             ref={textEditorRef}
-            placeholder={
-              isGenerating ? 'Generating...' : widgetConfig.textboxStyle?.placeholder || 'Ask me Anything...'
-            }
+            placeholder={isGenerating ? 'Generating...' : widgetConfig.chatInput.placeholder.text}
             value={isGenerating ? '' : message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={isGenerating || isSendMessagePending || isProcessing}
             className={cn(
-              'block w-full resize-none border-0 bg-transparent p-0 focus:ring-0 focus:outline-none',
+              'custom-chat-textarea block w-full resize-none border-0 bg-transparent p-0 focus:ring-0 focus:outline-none',
               isGenerating
                 ? "animate-pulse font-['DM_Sans'] text-[14px] leading-[150%] font-normal text-(--Text-Dark-Tertiary,#757575) placeholder:text-(--Text-Dark-Tertiary,#757575)"
-                : "font-['DM_Sans'] text-[0.875rem] leading-[150%] font-normal text-[#1A1A1A] placeholder-[#85888E]",
+                : "font-['DM_Sans'] text-[0.875rem] leading-[150%] font-normal text-[#1A1A1A]",
             )}
           />
         </div>

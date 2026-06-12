@@ -58,7 +58,11 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
   // Each page's messages are already reversed (oldest first, newest last)
   const allMessages = messagesData?.pages.slice().flatMap((page) => page.data) || []
 
-  console.log('[Debugging] ConversationPage rendering messages count:', allMessages.length, allMessages.map(m => ({ id: m.ulid, sender: m.sender_type, status: m.status })))
+  console.log(
+    '[Debugging] ConversationPage rendering messages count:',
+    allMessages.length,
+    allMessages.map((m) => ({ id: m.ulid, sender: m.sender_type, status: m.status })),
+  )
 
   // Update viewing state for badge visibility logic
   useEffect(() => {
@@ -79,7 +83,7 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
 
   return (
     <>
-      {!widgetConfig.hideHeader && <ConversationHeader />}
+      {widgetConfig.showHeader && <ConversationHeader />}
       {!conversationId ? (
         <ConversationMessages
           messages={[]}
@@ -109,7 +113,7 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
       ) : (
         <ConversationTextbox conversationId={conversationId} messages={allMessages} />
       )}
-      {!widgetConfig.hideFooter && <WidgetFooter />}
+      {widgetConfig.showFooter && <WidgetFooter />}
     </>
   )
 }

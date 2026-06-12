@@ -1,13 +1,5 @@
 import type { CSSProperties } from 'react'
 
-export type FeatureFlag =
-  | 'attachments'
-  | 'emoji_picker'
-  | 'end_conversation'
-  | 'use_inbox_avatar_for_bot'
-  // TODO: Placeholder Replace with actual values
-  | 'voice_messages'
-
 export interface PairAiWidgetSettings {
   position: 'left' | 'right'
   type: 'expanded_bubble' | 'standard'
@@ -40,7 +32,6 @@ export interface WidgetConfig {
   workingHours: WorkingHour[]
   timezone: string
   preChatFormOptions?: PreChatFormOptions
-  selectedFeatureFlags: FeatureFlag[]
   businessName?: string
   avatarUrl?: string
   websiteToken?: string
@@ -57,9 +48,9 @@ export interface WidgetConfig {
   }
   widgetBgColor?: string
   hideMessageTime?: boolean
-  hideHeader?: boolean
-  hideFooter?: boolean
-  chatInput?: ChatInputConfig
+  showHeader?: boolean
+  showFooter?: boolean
+  chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
 }
 
@@ -116,19 +107,17 @@ export interface IntroScreenConfig {
 
 // TODO: Placeholder Replace with actual values
 export interface ChatInputConfig {
-  styles?: CSSProperties
-  inputLayout?: {
-    type?: string
+  styles: CSSProperties
+  layout: 'floating_pill' | 'full_width_bar'
+  actions: {
+    showEmojiPicker: boolean
+    showFileUpload: boolean
+    showVoiceMessages: boolean
+    showAttachmentMenu: boolean
   }
-  inputActions?: {
-    stickers?: boolean
-    fileUpload?: boolean
-    voiceMessages?: boolean
-    attachmentMenu?: boolean
-  }
-  placeholderText?: {
-    text?: string
-    styles?: CSSProperties
+  placeholder: {
+    text: string
+    styles: CSSProperties
   }
 }
 

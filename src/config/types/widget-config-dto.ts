@@ -146,7 +146,7 @@ export interface TrendingPrompts {
 // widget_v2_config — chat_input
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type InputLayoutType = 'floating_pill' | 'full_width_bar' | string
+export type InputLayoutType = 'floating_pill' | 'full_width_bar'
 
 export interface InputActions {
   stickers: boolean
@@ -225,6 +225,8 @@ export interface WidgetV2Config {
 // Top-level widget DTO
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type FeatureFlag = 'attachments' | 'emoji_picker' | 'end_conversation' | 'use_inbox_avatar_for_bot'
+
 export type ReplyTime = 'in_a_few_minutes' | 'in_a_few_hours' | 'in_a_day'
 
 export type SenderNameType = 'friendly' | string
@@ -241,7 +243,7 @@ export interface WidgetConfigDto {
   pre_chat_form_enabled: boolean
   pre_chat_form_options: PreChatFormOptions
 
-  selected_feature_flags: string[]
+  selected_feature_flags: FeatureFlag[]
 
   enable_greeting: boolean
   greeting_message_en: string | null

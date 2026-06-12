@@ -1,4 +1,5 @@
 import type {
+  ChatInputConfig,
   IntroScreenConfig,
   PairAiWidgetSettings,
   QuickLinksConfig,
@@ -121,7 +122,24 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       }
     : undefined
 
-  const chatInput = apiResponse.widget_v2_config?.chat_input
+  // chat input
+  const rawChatInput = apiResponse.widget_v2_config.chat_input
+  const featureFlags = apiResponse.selected_feature_flags
+  const chatInput: ChatInputConfig = {
+    styles: rawChatInput.styles ?? {},
+    layout: rawChatInput.inputLayout?.type,
+    actions: {
+      showEmojiPicker: rawChatInput.inputActions?.stickers || featureFlags.includes('emoji_picker') || false,
+      showFileUpload: rawChatInput.inputActions?.fileUpload || featureFlags.includes('attachments') || false,
+      showVoiceMessages: rawChatInput.inputActions?.voiceMessages || false,
+      showAttachmentMenu: rawChatInput.inputActions?.attachmentMenu || featureFlags.includes('attachments') || false,
+    },
+    placeholder: {
+      text: rawChatInput.placeholderText?.text ?? 'Ask me Anything...',
+      styles: rawChatInput.placeholderText?.styles ?? {},
+    },
+  }
+
   const messagesConfig = apiResponse.widget_v2_config?.messages
 
   const workingHoursEnabled = apiResponse.working_hours?.enabled ?? false
@@ -148,15 +166,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     launcherTitle: windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
     requiresPreChat: apiResponse.pre_chat_form_enabled,
-    welcomeTitle: apiResponse.welcome_title || undefined,
-    welcomeTagline: apiResponse.welcome_tagline || undefined,
     greetingEnabled: apiResponse.enable_greeting,
     greetingMessage: apiResponse.greeting_message_en || apiResponse.greeting_message_ar || '',
     workingHoursEnabled,
     workingHours,
     timezone: 'UTC', // Default timezone fallback
     preChatFormOptions: apiResponse.pre_chat_form_options,
-    selectedFeatureFlags: apiResponse.selected_feature_flags,
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
     websiteToken: apiResponse.widget_id,
@@ -166,12 +181,16 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     introScreen,
     quickLinks,
     trendingPrompts,
-    textboxStyle: apiResponse.textbox_style,
-    widgetBgColor: apiResponse.widget_bg_color,
-    hideMessageTime: apiResponse.hide_message_time || false,
-    hideHeader: apiResponse.hide_header || false,
-    hideFooter: apiResponse.hide_footer || false,
     chatInput,
     messagesConfig,
+    // TODO: Discuss with the PM if we need to have these styles in the config
+    textboxStyle: undefined,
+    widgetBgColor: '#FAFAFA',
+    hideMessageTime: true,
+    showHeader: false,
+    showFooter: false,
+    // Deprecated used for Welcome Screen
+    welcomeTitle: apiResponse.welcome_title || undefined,
+    welcomeTagline: apiResponse.welcome_tagline || undefined,
   }
 }

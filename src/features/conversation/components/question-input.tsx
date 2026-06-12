@@ -91,13 +91,11 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
   }
 
   const isLastQuestion = activeQuestionIndex === totalQuestions - 1
-  const isButtonDisabled = isLastQuestion 
-    ? (!hasSelection || !allAnswered || isSending) 
-    : !hasSelection
+  const isButtonDisabled = isLastQuestion ? !hasSelection || !allAnswered || isSending : !hasSelection
 
   const handleButtonClick = isLastQuestion ? handleAction : handleNext
 
-  const isFullWidth = widgetConfig.textboxStyle?.layout === 'full_width'
+  const isFullWidth = widgetConfig.chatInput.layout === 'full_width_bar'
 
   return (
     <div className={isFullWidth ? 'w-full p-4' : 'w-full px-4 pt-4 pb-6'}>
@@ -221,7 +219,11 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
             aria-label={isLastQuestion ? 'Send message' : 'Next question'}
           >
             {isLastQuestion ? (
-              isSending ? <Spinner className="size-4 text-white" /> : <SendIcon className="size-3 text-white" />
+              isSending ? (
+                <Spinner className="size-4 text-white" />
+              ) : (
+                <SendIcon className="size-3 text-white" />
+              )
             ) : (
               <ChevronRight className="size-4 text-white" />
             )}
