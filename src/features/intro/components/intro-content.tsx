@@ -4,9 +4,9 @@ import { QuickLinksList } from '@/features/intro/components/quick-links-list'
 import { TrendingPrompts } from '@/features/intro/components/trending-prompts'
 
 export function IntroContent() {
-  const {
-    widgetConfig: { introScreen: introConfig },
-  } = useWidgetConfigContext()
+  const { widgetConfig } = useWidgetConfigContext()
+  const introConfig = widgetConfig.introScreen
+  const quickLinksConfig = widgetConfig.quickLinks
 
   const heroImage = introConfig?.heroImage && (
     <div className="w-full" style={introConfig.heroImage.containerStyles}>
@@ -19,9 +19,14 @@ export function IntroContent() {
     </div>
   )
 
+  const showQuickLinksAbove = quickLinksConfig?.show && quickLinksConfig?.position === 'above_welcome'
+  const showQuickLinksUnder = quickLinksConfig?.show && quickLinksConfig?.position !== 'above_welcome'
+
   return (
     <WidgetContent className="flex h-full flex-col gap-6 overflow-auto">
       {introConfig?.heroImage?.position === 'top' && heroImage}
+
+      {showQuickLinksAbove && <QuickLinksList />}
 
       <div>
         <h1
@@ -41,7 +46,7 @@ export function IntroContent() {
 
       {introConfig?.heroImage?.position === 'bottom' && heroImage}
 
-      <QuickLinksList />
+      {showQuickLinksUnder && <QuickLinksList />}
       <TrendingPrompts />
     </WidgetContent>
   )
