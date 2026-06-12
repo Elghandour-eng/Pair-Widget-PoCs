@@ -12,27 +12,18 @@ export function TrendingPrompts() {
   const { data: conversations, isFetching: isConversationsLoading } = useConversations()
   const { sendMessageFlow, isPending: isSendPending } = useSendChatMessageFlow()
 
-  const [loadingPromptId, setLoadingPromptId] = useState<string | number | null>(null)
+  const [loadingPromptId, setLoadingPromptId] = useState<string | null>(null)
 
-  if (!config || !config.show.value) {
+  if (!config || !config.show) {
     return null
   }
 
+  const { showIcon, chipStyles, textStyle, prompts } = config
   const title = config.title ?? 'Trending prompts'
-  const showIcon = config.showIcon?.value ?? false
-  const chipStyles = config.chipStyles ?? {}
-  const textStyle = config.textStyle ?? {}
 
   const isPending = isConversationsLoading || isSendPending
 
-  // Sort prompts by displayOrder
-  const sortedPrompts = [...(config.prompts || [])].sort((a, b) => {
-    const orderA = a.displayOrder ?? 9999
-    const orderB = b.displayOrder ?? 9999
-    return orderA - orderB
-  })
-
-  const handlePromptClick = async (promptId: string | number, promptText: string) => {
+  const handlePromptClick = async (promptId: string, promptText: string) => {
     if (isPending) return
 
     setLoadingPromptId(promptId)
@@ -51,7 +42,7 @@ export function TrendingPrompts() {
         {title}
       </h2>
       <ul className="flex flex-wrap gap-2">
-        {sortedPrompts.map((prompt) => (
+        {prompts.map((prompt) => (
           <li key={prompt.id}>
             <TrendingPromptItem
               prompt={prompt}

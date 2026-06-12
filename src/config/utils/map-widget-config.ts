@@ -2,6 +2,7 @@ import type {
   IntroScreenConfig,
   PairAiWidgetSettings,
   QuickLinksConfig,
+  TrendingPromptsConfig,
   WidgetConfig,
   WorkingHour,
 } from '@/config/types/widget-config'
@@ -103,27 +104,22 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     })),
   }
 
-  let trendingPrompts = apiResponse.trending_prompts
-  if (apiResponse.widget_v2_config?.trending_prompts) {
-    const v2 = apiResponse.widget_v2_config.trending_prompts
-    trendingPrompts = {
-      show: {
-        value: v2.showTrendingPrompts.value,
-      },
-      title: v2.displaySettings?.sectionTitle,
-      showIcon: {
-        value: v2.displaySettings?.showIcons ?? false,
-      },
-      chipStyles: v2.chipStyle,
-      textStyle: v2.textStyle,
-      prompts: (v2.promptChips || []).map((chip, idx) => ({
-        id: chip.id,
-        text: chip.text,
-        displayOrder: chip.displayOrder ?? idx + 1,
-        iconUrl: chip.iconUrl,
-      })),
-    }
-  }
+  // trending prompts
+  const v2Trending = apiResponse.widget_v2_config?.trending_prompts
+  const trendingPrompts: TrendingPromptsConfig | undefined = v2Trending
+    ? {
+        show: v2Trending.showTrendingPrompts.value,
+        title: v2Trending.displaySettings?.sectionTitle,
+        showIcon: v2Trending.displaySettings?.showIcons ?? false,
+        chipStyles: v2Trending.chipStyle ?? {},
+        textStyle: v2Trending.textStyle ?? {},
+        prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
+          id: `trending-prompt-${idx}`,
+          text: chip.text,
+          iconUrl: chip.iconUrl,
+        })),
+      }
+    : undefined
 
   const chatInput = apiResponse.widget_v2_config?.chat_input
   const messagesConfig = apiResponse.widget_v2_config?.messages

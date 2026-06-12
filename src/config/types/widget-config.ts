@@ -84,23 +84,17 @@ export interface QuickLinkData {
 
 // TODO: Placeholder Replace with actual values
 export interface TrendingPromptsConfig {
-  show: {
-    value: boolean
-  }
+  show: boolean
   title?: string
-  showIcon: {
-    value: boolean
-  }
-  chipStyles?: CSSProperties
-  textStyle?: CSSProperties
+  showIcon: boolean
+  chipStyles: CSSProperties
+  textStyle: CSSProperties
   prompts: TrendingPromptData[]
 }
 
-// TODO: Placeholder Replace with actual values
 export interface TrendingPromptData {
-  id: string | number
+  id: string
   text: string
-  displayOrder?: number
   iconUrl?: string
 }
 
@@ -118,56 +112,6 @@ export interface IntroScreenConfig {
   welcomeSubtitle: string
   welcomeSubtitleStyles?: CSSProperties
   heroImage?: IntroHeroImage
-}
-
-// TODO: Placeholder Replace with actual values
-export interface QuickLinksConfigV2 {
-  showQuickLinks: {
-    value: boolean
-  }
-  displaySettings?: {
-    position?: string
-    carouselLoop?: boolean
-  }
-  cardStyle?: CSSProperties & {
-    cardShadow?: string
-    imageTextGap?: string
-  }
-  textStyle?: CSSProperties
-  quickLinkCards: QuickLinkCardV2[]
-}
-
-// TODO: Placeholder Replace with actual values
-export interface QuickLinkCardV2 {
-  id: string | number
-  url?: string
-  title: string
-  active: boolean
-  subtitle?: string
-  media_ulid?: string
-}
-
-// TODO: Placeholder Replace with actual values
-export interface TrendingPromptsConfigV2 {
-  showTrendingPrompts: {
-    value: boolean
-  }
-  promptChips: TrendingPromptCardV2[]
-  displaySettings?: {
-    sectionTitle?: string
-    showIcons?: boolean
-    styles?: CSSProperties
-  }
-  chipStyle?: CSSProperties
-  textStyle?: CSSProperties
-}
-
-// TODO: Placeholder Replace with actual values
-export interface TrendingPromptCardV2 {
-  id: string | number
-  text: string
-  displayOrder?: number
-  iconUrl?: string
 }
 
 // TODO: Placeholder Replace with actual values
@@ -212,26 +156,6 @@ export interface MessagesConfig {
     bubbleStyle?: CSSProperties
     useBrandColor?: boolean
   }
-}
-
-// TODO: Placeholder Replace with actual values
-export interface WorkingHoursConfig {
-  enabled: boolean
-  schedule: Array<{
-    day: string
-    enabled: boolean
-    startTime: string
-    endTime: string
-  }>
-}
-
-// TODO: Placeholder Replace with actual values
-export interface WidgetV2Config {
-  intro_screen?: IntroScreenConfig
-  quick_links?: QuickLinksConfigV2
-  trending_prompts?: TrendingPromptsConfigV2
-  chat_input?: ChatInputConfig
-  messages?: MessagesConfig
 }
 
 export interface CsatConfig {}
