@@ -54,6 +54,7 @@ interface UnreadMessagesContextType {
   isPreviewDismissed: boolean
   // Dismiss preview function
   dismissPreview: () => void
+  typingStates: Map<string, { isTyping: boolean; senderName?: string; senderType?: string }>
 }
 
 const UnreadMessagesContext = createContext<UnreadMessagesContextType | undefined>(undefined)
@@ -75,6 +76,9 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
   })
   const [lastIncomingMessage, setLastIncomingMessage] = useState<LastIncomingMessage | null>(null)
   const [isPreviewDismissed, setIsPreviewDismissed] = useState(true)
+  const [typingStates, setTypingStates] = useState<
+    Map<string, { isTyping: boolean; senderName?: string; senderType?: string }>
+  >(new Map())
 
   // Calculate total unread count
   const totalUnreadCount = Array.from(unreadMessages.values()).reduce((total, messages) => total + messages.length, 0)
@@ -290,6 +294,13 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
             // Parse data if it's a string
             const parsedData: PusherNewMessageEventData = typeof data === 'string' ? JSON.parse(data) : data
 
+            // Clear typing state when message is received
+            setTypingStates((prev) => {
+              const newMap = new Map(prev)
+              newMap.delete(conversationId)
+              return newMap
+            })
+
             logger.debug('🔵 MESSAGE:RENDER', 'Parsed Pusher data', {
               conversationId,
               hasData: !!parsedData.data,
@@ -357,6 +368,46 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
         // Bind to both event name formats
         channel.bind('new_message', handleNewMessage)
         channel.bind('new-message', handleNewMessage)
+
+        const handleTyping = (data: any) => {
+          logger.debug('🔵 TYPING:EVENT', 'Pusher typing event received in subscribeToConversation', {
+            conversationId,
+            dataType: typeof data,
+          })
+          try {
+            const parsedData = typeof data === 'string' ? JSON.parse(data) : data
+            const typingData = parsedData.data
+            if (typingData && typingData.conversation_id) {
+              const isTyping = typingData.status === 'start'
+              const senderName = typingData.sender_name
+              const senderType = typingData.sender_type
+              setTypingStates((prev) => {
+                const newMap = new Map(prev)
+                newMap.set(typingData.conversation_id, { isTyping, senderName, senderType })
+                return newMap
+              })
+
+              if (isTyping) {
+                setTimeout(() => {
+                  setTypingStates((prev) => {
+                    const current = prev.get(typingData.conversation_id)
+                    if (current && current.isTyping && current.senderName === senderName) {
+                      const newMap = new Map(prev)
+                      newMap.delete(typingData.conversation_id)
+                      return newMap
+                    }
+                    return prev
+                  })
+                }, 15000)
+              }
+            }
+          } catch (error) {
+            logger.debug('🔵 TYPING:EVENT', 'Error in handleTyping', { error })
+          }
+        }
+
+        channel.bind('widget.typing', handleTyping)
+        channel.bind('widget_typing', handleTyping)
 
         // Update channels map
         setChannels((prev) => {
@@ -493,6 +544,13 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
                 // Parse data if it's a string
                 const parsedData: PusherNewMessageEventData = typeof data === 'string' ? JSON.parse(data) : data
 
+                // Clear typing state when message is received
+                setTypingStates((prev) => {
+                  const newMap = new Map(prev)
+                  newMap.delete(conversation.ulid)
+                  return newMap
+                })
+
                 logger.debug('🔵 MESSAGE:RENDER', 'Calling handleIncomingPusherMessage from provider', {
                   conversationId: conversation.ulid,
                 })
@@ -539,6 +597,46 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
             // Bind to both event name formats
             channel.bind('new_message', handleNewMessage)
             channel.bind('new-message', handleNewMessage)
+
+            const handleTyping = (data: any) => {
+              logger.debug('🔵 TYPING:EVENT', 'Pusher typing event received in provider init', {
+                conversationId: conversation.ulid,
+                dataType: typeof data,
+              })
+              try {
+                const parsedData = typeof data === 'string' ? JSON.parse(data) : data
+                const typingData = parsedData.data
+                if (typingData && typingData.conversation_id) {
+                  const isTyping = typingData.status === 'start'
+                  const senderName = typingData.sender_name
+                  const senderType = typingData.sender_type
+                  setTypingStates((prev) => {
+                    const newMap = new Map(prev)
+                    newMap.set(typingData.conversation_id, { isTyping, senderName, senderType })
+                    return newMap
+                  })
+
+                  if (isTyping) {
+                    setTimeout(() => {
+                      setTypingStates((prev) => {
+                        const current = prev.get(typingData.conversation_id)
+                        if (current && current.isTyping && current.senderName === senderName) {
+                          const newMap = new Map(prev)
+                          newMap.delete(typingData.conversation_id)
+                          return newMap
+                        }
+                        return prev
+                      })
+                    }, 15000)
+                  }
+                }
+              } catch (error) {
+                logger.debug('🔵 TYPING:EVENT', 'Error in handleTyping in provider init', { error })
+              }
+            }
+
+            channel.bind('widget.typing', handleTyping)
+            channel.bind('widget_typing', handleTyping)
 
             newChannels.set(conversation.ulid, channel)
           } catch (error) {
@@ -606,6 +704,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
         lastIncomingMessage,
         isPreviewDismissed,
         dismissPreview,
+        typingStates,
       }}
     >
       {children}

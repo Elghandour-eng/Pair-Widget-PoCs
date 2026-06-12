@@ -203,7 +203,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'flex h-11.5 w-full items-center gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
+          'flex min-h-11.5 w-full items-center gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
           isGenerating ? 'border-[#B8AB80]' : 'border-[#ECECED]',
         )}
         style={{
@@ -225,7 +225,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
         ) : null}
 
         {/* Center Textarea */}
-        <div className="flex h-9 min-w-0 flex-1 items-center pl-1">
+        <div className="flex min-h-9 min-w-0 flex-1 items-center pl-1">
           <style>{`
             .custom-chat-textarea::placeholder {
               ${cssPropertiesToString(widgetConfig.chatInput.placeholder.styles)}

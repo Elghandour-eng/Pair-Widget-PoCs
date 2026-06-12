@@ -6,10 +6,11 @@ import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { ConversationMessage } from '@/features/conversation/components/conversation-message/conversation-message'
 import { EmptyMessage } from '@/features/conversation/components/empty-message'
 import { LoadMore } from '@/features/conversation/components/load-more'
+import { TypingIndicator } from '@/features/conversation/components/typing-indicator'
 import { UnreadIndicator } from '@/features/conversation/components/unread-indicator'
+import { useQuestionContext } from '@/features/conversation/contexts/question-context'
 import { useConversationScroll } from '@/features/conversation/hooks/use-conversation-scroll'
 import type { Message, QuestionMessage } from '@/features/conversation/types/message'
-import { useQuestionContext } from '@/features/conversation/contexts/question-context'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { scrollToBottom } from '../utils/scroll-utils'
 
@@ -33,7 +34,10 @@ function ConversationMessages({
   // Filter out system messages
   const messages = allMessages.filter((msg) => msg.sender_type !== 'system')
   const { widgetConfig } = useWidgetConfigContext()
-  const { unreadMessages, getFirstUnreadMessageId, markConversationAsRead, markAsRead } = useUnreadMessages()
+  const { unreadMessages, getFirstUnreadMessageId, markConversationAsRead, markAsRead, typingStates } =
+    useUnreadMessages()
+  const typingState = conversationId ? typingStates.get(conversationId) : undefined
+  const isTyping = typingState?.isTyping ?? false
   const { activeQuestionGroup, setActiveQuestionGroup, dismissedQuestions } = useQuestionContext()
 
   const lastMessage = messages[messages.length - 1]
@@ -192,6 +196,13 @@ function ConversationMessages({
     }
   }, [conversationId, conversationUnreadMessages, markAsRead, scrollContainerRef])
 
+  // Scroll to bottom when typing starts
+  useEffect(() => {
+    if (isTyping) {
+      scrollToBottom(scrollContainerRef.current, 'smooth')
+    }
+  }, [isTyping, scrollContainerRef])
+
   // Callback to register message elements
   const registerMessageRef = useCallback((messageId: string, element: HTMLDivElement | null) => {
     if (element) {
@@ -244,7 +255,7 @@ function ConversationMessages({
         className="flex h-full w-full flex-col overflow-y-auto px-4 py-6"
       >
         <div className="flex flex-col gap-3 py-4">
-          {messages.length === 0 ? (
+          {messages.length === 0 && !isTyping ? (
             <EmptyMessage />
           ) : (
             <div className="flex flex-col gap-5">
@@ -276,6 +287,9 @@ function ConversationMessages({
                   </div>
                 )
               })}
+              {isTyping && (
+                <TypingIndicator senderName={typingState?.senderName} senderType={typingState?.senderType} />
+              )}
             </div>
           )}
         </div>
