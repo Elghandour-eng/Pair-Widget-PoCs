@@ -132,6 +132,8 @@ export interface TrendingPromptDisplaySettings {
   styles?: CSSProperties
   showIcons: boolean
   sectionTitle: string
+  // TODO: update this when BE supports it
+  showTitle?: boolean
 }
 
 export interface TrendingPrompts {
@@ -165,6 +167,8 @@ export interface ChatInput {
   inputLayout: { type: InputLayoutType }
   inputActions: InputActions
   placeholderText: PlaceholderText
+  // TODO: update this when BE supports it
+  sendButtonIcon?: 'arrow-up' | 'send'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

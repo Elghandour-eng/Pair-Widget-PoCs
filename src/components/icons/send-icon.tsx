@@ -1,6 +1,26 @@
 import type { SVGProps } from 'react'
 
-export function SendIcon(props: SVGProps<SVGSVGElement>) {
+export interface SendIconProps extends SVGProps<SVGSVGElement> {
+  /**
+   * The variant of the send icon to render:
+   * - 'arrow-up': maps to Boutiqaat style
+   * - 'send': maps to Hero style
+   */
+  variant?: 'arrow-up' | 'send'
+}
+
+export function SendIcon({ variant = 'arrow-up', ...props }: SendIconProps) {
+  if (variant === 'send') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path
+          d="M0.681117 0.0216549C0.588834 -0.00580306 0.491016 -0.00717445 0.398034 0.0176863C0.305052 0.0425471 0.22037 0.0927135 0.152967 0.162867C0.0855633 0.233021 0.0379496 0.320547 0.0151735 0.416168C-0.00760251 0.511788 -0.00469207 0.611939 0.0235962 0.706002L1.75048 6.45496H7.79739C7.93863 6.45496 8.07409 6.51242 8.17396 6.61471C8.27384 6.717 8.32994 6.85574 8.32994 7.0004C8.32994 7.14506 8.27384 7.28379 8.17396 7.38608C8.07409 7.48837 7.93863 7.54584 7.79739 7.54584H1.75048L0.0235962 13.2948C-0.00452493 13.3888 -0.00730738 13.4889 0.0155434 13.5844C0.0383943 13.6799 0.0860283 13.7673 0.153405 13.8373C0.220781 13.9074 0.305395 13.9575 0.39829 13.9823C0.491186 14.0072 0.588908 14.0058 0.681117 13.9784C5.37818 12.5794 9.80754 10.3693 13.7783 7.4433C13.8469 7.39279 13.9028 7.32627 13.9413 7.24926C13.9799 7.17225 14 7.08695 14 7.0004C14 6.91385 13.9799 6.82855 13.9413 6.75154C13.9028 6.67452 13.8469 6.60801 13.7783 6.5575C9.8076 3.63124 5.37823 1.42086 0.681117 0.0216549Z"
+          fill="white"
+        />
+      </svg>
+    )
+  }
+
   return (
     <svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
       <path

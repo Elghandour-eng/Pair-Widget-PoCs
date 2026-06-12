@@ -222,7 +222,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
               isSending ? (
                 <Spinner className="size-4 text-white" />
               ) : (
-                <SendIcon className="size-3 text-white" />
+                <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon} />
               )
             ) : (
               <ChevronRight className="size-4 text-white" />

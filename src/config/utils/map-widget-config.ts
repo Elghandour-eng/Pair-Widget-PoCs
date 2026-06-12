@@ -87,6 +87,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     ? {
         show: v2Trending.showTrendingPrompts.value,
         title: v2Trending.displaySettings?.sectionTitle,
+        // TODO: This showTitle property is mocked for now. Sync with BE when they support showTitle in displaySettings.
+        showTitle: v2Trending.displaySettings?.showTitle ?? true,
         titleStyle: v2Trending.displaySettings?.styles ?? {},
         showIcon: v2Trending.displaySettings?.showIcons ?? false,
         chipStyles: v2Trending.chipStyle ?? {},
@@ -105,6 +107,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const chatInput: ChatInputConfig = {
     styles: rawChatInput.styles ?? {},
     layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
+    sendButtonIcon: rawChatInput.sendButtonIcon ?? 'arrow-up',
     actions: {
       showEmojiPicker: rawChatInput.inputActions?.stickers || featureFlags.includes('emoji_picker') || false,
       showFileUpload: rawChatInput.inputActions?.fileUpload || featureFlags.includes('attachments') || false,

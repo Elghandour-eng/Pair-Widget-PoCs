@@ -77,6 +77,8 @@ export interface TrendingPromptsConfig {
   chipStyles: CSSProperties
   textStyle: CSSProperties
   prompts: TrendingPromptData[]
+  // TODO: update this when BE supports it
+  showTitle?: boolean
 }
 
 export interface TrendingPromptData {
@@ -114,6 +116,8 @@ export interface ChatInputConfig {
     text: string
     styles: CSSProperties
   }
+  // TODO: update this when BE supports it
+  sendButtonIcon: 'arrow-up' | 'send'
 }
 
 // TODO: Placeholder Replace with actual values

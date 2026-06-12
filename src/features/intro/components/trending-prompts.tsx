@@ -36,11 +36,15 @@ export function TrendingPrompts() {
     }
   }
 
+  const showTitle = config.showTitle ?? true
+
   return (
     <section className="mt-2 flex flex-col gap-3">
-      <h2 className="text-[0.875rem] leading-[150%] font-semibold text-[#616161]" style={titleStyle}>
-        {title}
-      </h2>
+      {showTitle && (
+        <h2 className="text-[0.875rem] leading-[150%] font-semibold text-[#616161]" style={titleStyle}>
+          {title}
+        </h2>
+      )}
       <ul className="flex flex-wrap gap-2">
         {prompts.map((prompt) => (
           <li key={prompt.id}>

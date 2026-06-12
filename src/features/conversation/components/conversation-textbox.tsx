@@ -308,7 +308,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             ) : isSendMessagePending ? (
               <Spinner className="size-4 text-white" />
             ) : (
-              <SendIcon className="size-3 text-white" />
+              <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon} />
             )}
           </button>
         </div>
