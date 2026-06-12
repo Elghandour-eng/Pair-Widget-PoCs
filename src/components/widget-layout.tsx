@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
 
-import { Card } from '@/components/ui/card'
 import { IncomingMessagePreview } from '@/components/incoming-message-preview'
+import { Card } from '@/components/ui/card'
 import { WidgetEye } from '@/components/widget-eye/components/widget-eye'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetUIContext } from '@/contexts/widget-ui-context'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { Toaster } from './ui/sonner'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
@@ -69,7 +70,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
         {isOpen && (
           <motion.div
             key="widget-panel"
-            className={`fixed inset-0 z-50 min-[668px]:h-full min-[668px]:max-h-[700px] min-[668px]:w-full min-[668px]:max-w-[400px] ${panelPositionClasses[position as keyof typeof panelPositionClasses]} `}
+            className={`min-[668px]:max-h-175-[668px]:w-full min-min-[668px]:max-w-100 ${panelPositionClasses[position as keyof typeof panelPositionClasses]} fixed inset-0 z-50 min-[668px]:h-full`}
             initial={{
               opacity: 0,
               y: slideDistance,
@@ -104,7 +105,12 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 function WidgetLayout({ children }: { children: React.ReactNode }) {
-  return <WidgetLayoutContent>{children}</WidgetLayoutContent>
+  return (
+    <>
+      <WidgetLayoutContent>{children}</WidgetLayoutContent>
+      <Toaster position="top-center" richColors />
+    </>
+  )
 }
 
 export { WidgetLayout }

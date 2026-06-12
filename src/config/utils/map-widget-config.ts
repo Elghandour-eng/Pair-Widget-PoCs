@@ -66,8 +66,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const rawQL = apiResponse.widget_v2_config.quick_links
   const quickLinks: QuickLinksConfig = {
     show: rawQL.showQuickLinks.value,
-    position: rawQL.displaySettings.position,
-    carouselLoop: rawQL.displaySettings.carouselLoop,
+    position: rawQL.displaySettings?.position ?? 'under_welcome',
+    carouselLoop: rawQL.displaySettings?.carouselLoop ?? false,
     cardStyles: rawQL.cardStyle,
     textStyle: rawQL.textStyle,
     links: (rawQL.quickLinkCards ?? []).map((card, idx) => ({
@@ -101,10 +101,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   // chat input
   const rawChatInput = apiResponse.widget_v2_config.chat_input
-  const featureFlags = apiResponse.selected_feature_flags
+  const featureFlags = apiResponse.selected_feature_flags || []
   const chatInput: ChatInputConfig = {
     styles: rawChatInput.styles ?? {},
-    layout: rawChatInput.inputLayout?.type,
+    layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
     actions: {
       showEmojiPicker: rawChatInput.inputActions?.stickers || featureFlags.includes('emoji_picker') || false,
       showFileUpload: rawChatInput.inputActions?.fileUpload || featureFlags.includes('attachments') || false,
