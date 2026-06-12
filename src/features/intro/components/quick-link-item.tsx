@@ -2,13 +2,11 @@ import type { QuickLinkData, QuickLinksConfig } from '@/config/types/widget-conf
 
 interface QuickLinkItemProps {
   item: QuickLinkData
-  config: QuickLinksConfig
+  cardStyles?: QuickLinksConfig['cardStyles']
+  textStyle?: QuickLinksConfig['textStyle']
 }
 
-export function QuickLinkItem({ item, config }: QuickLinkItemProps) {
-  const cardStyles = config?.cardStyles ?? {}
-  const textStyles = config?.textStyle ?? {}
-
+export function QuickLinkItem({ item, cardStyles, textStyle }: QuickLinkItemProps) {
   return (
     <button
       className="flex h-full w-full min-w-[5.71rem] flex-[1_0_0] flex-col items-start justify-start gap-2 rounded-xl border border-[#E5E4E1] bg-[#FFF] p-1 transition-colors hover:bg-gray-50"
@@ -23,7 +21,7 @@ export function QuickLinkItem({ item, config }: QuickLinkItemProps) {
       )}
       <span
         className="w-full p-1 text-left text-[0.75rem] leading-[150%] font-semibold text-[#1A1A1A]"
-        style={textStyles}
+        style={textStyle}
       >
         {item.text}
       </span>

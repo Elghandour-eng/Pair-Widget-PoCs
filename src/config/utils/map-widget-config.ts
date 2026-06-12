@@ -1,4 +1,10 @@
-import type { IntroScreenConfig, PairAiWidgetSettings, WidgetConfig, WorkingHour } from '@/config/types/widget-config'
+import type {
+  IntroScreenConfig,
+  PairAiWidgetSettings,
+  QuickLinksConfig,
+  WidgetConfig,
+  WorkingHour,
+} from '@/config/types/widget-config'
 import type { WidgetConfigDto } from '../types/widget-config-dto'
 
 /**
@@ -79,30 +85,22 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     : undefined
 
   // quick links
-  let quickLinks = apiResponse.quick_links
-  if (apiResponse.widget_v2_config?.quick_links) {
-    const v2 = apiResponse.widget_v2_config.quick_links
-    quickLinks = {
-      show: {
-        value: v2.showQuickLinks.value,
-      },
-      position: v2.displaySettings?.position,
-      cardStyle: {
-        layout: v2.displaySettings?.position === 'under_welcome' ? 'row' : 'column',
-      },
-      cardStyles: v2.cardStyle,
-      textStyle: v2.textStyle,
-      carouselLoop: v2.displaySettings?.carouselLoop,
-      links: (v2.quickLinkCards || []).map((card, idx) => ({
-        id: card.id,
-        text: card.title,
-        image: card.url,
-        displayOrder: idx + 1,
-        active: card.active,
-        subtitle: card.subtitle,
-        media_ulid: card.media_ulid,
-      })),
-    }
+  const rawQL = apiResponse.widget_v2_config.quick_links
+  const quickLinks: QuickLinksConfig = {
+    show: rawQL.showQuickLinks.value,
+    position: rawQL.displaySettings.position,
+    carouselLoop: rawQL.displaySettings.carouselLoop,
+    cardStyles: rawQL.cardStyle,
+    textStyle: rawQL.textStyle,
+    links: (rawQL.quickLinkCards ?? []).map((card, idx) => ({
+      id: card.id,
+      text: card.title,
+      image: card.url,
+      displayOrder: idx + 1,
+      active: card.active,
+      subtitle: card.subtitle,
+      media_ulid: card.media_ulid,
+    })),
   }
 
   let trendingPrompts = apiResponse.trending_prompts

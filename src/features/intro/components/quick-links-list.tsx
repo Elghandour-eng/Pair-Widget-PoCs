@@ -7,15 +7,14 @@ import { QuickLinkItem } from '@/features/intro/components/quick-link-item'
 
 export function QuickLinksList() {
   const { widgetConfig } = useWidgetConfigContext()
-  const config = widgetConfig.quickLinks
+  const quickLinksConfig = widgetConfig.quickLinks
 
-  // Hide the component if config doesn't exist or show.value is false
-  if (!config || !config.show.value) {
+  if (!quickLinksConfig || !quickLinksConfig.show) {
     return null
   }
 
   // Sort the links by displayOrder
-  const sortedLinks = [...(config.links || [])].sort((a, b) => {
+  const sortedLinks = [...quickLinksConfig.links].sort((a, b) => {
     const orderA = a.displayOrder ?? 9999
     const orderB = b.displayOrder ?? 9999
     return orderA - orderB
@@ -46,11 +45,12 @@ export function QuickLinksList() {
   const itemsPerView = Math.max(1, Math.min(maxItemsPerView, sortedLinks.length))
   const basisPercentage = 100 / itemsPerView
 
-  // Initialize Embla Carousel for 'row' layout
+  // Carousel is active when layout is NOT column (i.e. flexDirection !== 'column')
+  const isCarousel = quickLinksConfig.cardStyles?.flexDirection !== 'column'
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: config.carouselLoop,
+    loop: quickLinksConfig.carouselLoop,
     align: 'start',
-    active: config.cardStyle.layout === 'row',
+    active: isCarousel,
   })
 
   // Re-initialize Embla when slide sizes change
@@ -62,7 +62,7 @@ export function QuickLinksList() {
 
   // Autoplay effect when carouselLoop is enabled
   useEffect(() => {
-    if (!emblaApi || !config.carouselLoop || config.cardStyle.layout !== 'row') return
+    if (!emblaApi || !quickLinksConfig.carouselLoop || !isCarousel) return
 
     let intervalId: NodeJS.Timeout
 
@@ -88,16 +88,20 @@ export function QuickLinksList() {
       emblaApi.off('pointerDown', stopAutoplay)
       emblaApi.off('pointerUp', startAutoplay)
     }
-  }, [emblaApi, config.carouselLoop, config.cardStyle.layout])
+  }, [emblaApi, quickLinksConfig.carouselLoop, isCarousel])
 
   return (
     <div ref={containerRef} className="w-full">
-      {config.cardStyle.layout === 'row' ? (
+      {isCarousel ? (
         <div className="w-full cursor-grab overflow-hidden active:cursor-grabbing" ref={emblaRef}>
           <div className="-ms-2 flex">
             {sortedLinks.map((item) => (
               <div key={item.id} className="flex min-w-0 ps-2" style={{ flex: `0 0 ${basisPercentage}%` }}>
-                <QuickLinkItem item={item} config={config} />
+                <QuickLinkItem
+                  item={item}
+                  cardStyles={quickLinksConfig.cardStyles}
+                  textStyle={quickLinksConfig.textStyle}
+                />
               </div>
             ))}
           </div>
@@ -105,7 +109,12 @@ export function QuickLinksList() {
       ) : (
         <div className="flex w-full flex-col gap-2">
           {sortedLinks.map((item) => (
-            <QuickLinkItem key={item.id} item={item} config={config} />
+            <QuickLinkItem
+              key={item.id}
+              item={item}
+              cardStyles={quickLinksConfig.cardStyles}
+              textStyle={quickLinksConfig.textStyle}
+            />
           ))}
         </div>
       )}

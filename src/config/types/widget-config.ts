@@ -63,24 +63,17 @@ export interface WidgetConfig {
   messagesConfig?: MessagesConfig
 }
 
-// TODO: Placeholder Replace with actual values
 export interface QuickLinksConfig {
-  show: {
-    value: boolean
-  }
-  position?: string
-  cardStyle: {
-    layout: 'column' | 'row'
-  }
+  show: boolean
+  position: 'under_welcome' | 'above_welcome'
+  carouselLoop: boolean
   cardStyles?: CSSProperties
   textStyle?: CSSProperties
-  carouselLoop?: boolean
   links: QuickLinkData[]
 }
 
-// TODO: Placeholder Replace with actual values
 export interface QuickLinkData {
-  id: string | number
+  id: string
   text: string
   image?: string
   displayOrder?: number
