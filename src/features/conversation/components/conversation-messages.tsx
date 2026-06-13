@@ -242,9 +242,7 @@ function ConversationMessages({
     <WidgetContent
       className="relative flex-1 overflow-hidden p-0"
       props={{
-        style: widgetConfig.widgetBgColor
-          ? { backgroundColor: widgetConfig.widgetBgColor }
-          : { backgroundColor: '#FAFAFA' },
+        style: widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : { backgroundColor: '#FAFAFA' },
       }}
     >
       {isLoadingMore && <LoadMore />}

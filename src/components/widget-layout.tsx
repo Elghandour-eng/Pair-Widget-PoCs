@@ -44,7 +44,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
       >
         <Card
           className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0"
-          style={widgetConfig.widgetBgColor ? { backgroundColor: widgetConfig.widgetBgColor } : undefined}
+          style={widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : undefined}
         >
           {children}
         </Card>
@@ -87,7 +87,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
           >
             <Card
               className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0 shadow-[0_5px_40px_rgba(0,0,0,.16)] min-[668px]:rounded-xl"
-              style={widgetConfig.widgetBgColor ? { backgroundColor: widgetConfig.widgetBgColor } : undefined}
+              style={widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : undefined}
             >
               {children}
             </Card>

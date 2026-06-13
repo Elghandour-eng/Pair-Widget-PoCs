@@ -22,8 +22,7 @@ export function IntroPage() {
     <div
       className="flex h-full w-full flex-col"
       style={{
-        background:
-          'linear-gradient(180deg, var(--Surface-Base, #FFF) -19.27%, var(--Surface-Tertiary, #EEECE1) 99.71%)',
+        background: widgetConfig.widgetBgColor,
       }}
     >
       <IntroContent />
