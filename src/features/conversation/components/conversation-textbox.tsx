@@ -17,7 +17,6 @@ import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 import { useLayoutEffect } from '@tanstack/react-router'
-import { MicOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Message } from '../types/message'
@@ -280,15 +279,6 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             >
               <MicIcon className="size-4 text-white" />
             </button>
-          )}
-
-          {!hasMessage && !isVoiceEnabled && (
-            <div
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A]"
-              title="Voice messaging is disabled"
-            >
-              <MicOff className="size-4" />
-            </div>
           )}
 
           <button

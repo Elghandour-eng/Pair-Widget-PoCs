@@ -2,6 +2,7 @@ import type {
   ChatInputConfig,
   IntroScreenConfig,
   PairAiWidgetSettings,
+  MessagesConfig,
   QuickLinksConfig,
   TrendingPromptsConfig,
   WidgetConfig,
@@ -120,7 +121,38 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     },
   }
 
-  const messagesConfig = apiResponse.widget_v2_config?.messages
+  const rawMessages = apiResponse.widget_v2_config?.messages
+  const messagesConfig: MessagesConfig = {
+    feedback: rawMessages?.feedback
+      ? {
+          showFeedbackButtons: rawMessages.feedback.showFeedbackButtons ?? true,
+          toastMessage: rawMessages.feedback.toastMessage ?? 'Thanks for your feedback.',
+          iconColorType: rawMessages.feedback.iconColorType ?? 'widget',
+          style: {
+            iconSize: rawMessages.feedback.style?.iconSize ?? '1.5rem',
+            iconColor: rawMessages.feedback.style?.iconColor ?? null,
+          },
+        }
+      : undefined,
+    aiMessages: rawMessages?.aiMessages
+      ? {
+          iconId: rawMessages.aiMessages.iconId ?? '',
+          iconUrl: rawMessages.aiMessages.iconUrl,
+          CardStyles: rawMessages.aiMessages.CardStyles ?? {},
+          TextStyles: rawMessages.aiMessages.TextStyles ?? {},
+          showAiIcon: rawMessages.aiMessages.showAiIcon ?? true,
+          messageStyle: rawMessages.aiMessages.messageStyle ?? 'plain',
+        }
+      : undefined,
+    customerMessages: rawMessages?.customerMessages
+      ? {
+          TextStyles: rawMessages.customerMessages.TextStyles ?? {},
+          bubbleType: rawMessages.customerMessages.bubbleType ?? 'filled',
+          bubbleStyle: rawMessages.customerMessages.bubbleStyle ?? {},
+          useBrandColor: rawMessages.customerMessages.useBrandColor ?? false,
+        }
+      : undefined,
+  }
 
   return {
     name: apiResponse.name,

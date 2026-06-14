@@ -67,9 +67,9 @@ function MessageLayout({
       {/* <MessageAvatar show={isOutgoing} /> */}
 
       <div
-        className={cn('flex max-w-[70%] flex-col gap-1', {
-          'items-end': isUser,
-          'items-start': !isUser,
+        className={cn('flex flex-col gap-1', {
+          'max-w-[70%] items-end': isUser,
+          'w-full flex-1 items-start': !isUser,
         })}
       >
         {children}

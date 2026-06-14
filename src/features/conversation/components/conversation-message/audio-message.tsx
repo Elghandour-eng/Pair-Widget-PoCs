@@ -6,6 +6,7 @@ import { Pause, Play } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MessageLayout } from './message-layout'
 import { TextMessage } from './text-message'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -229,6 +230,7 @@ function WaveformBars({
 const HIGH_RES_PEAKS = 512 // stored high-res, downsampled to fit container width
 
 export function AudioMessage({ message, isUnread, primaryColor, websiteName }: AudioMessageProps) {
+  const { widgetConfig } = useWidgetConfigContext()
   const audioRef = useRef<HTMLAudioElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -399,15 +401,23 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
 
   const isLoading = loadingStage !== 'ready' && loadingStage !== 'error'
 
+  const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const cardStyles = aiConfig?.CardStyles
+  const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
+
+  const customContainerStyle =
+    !isUser && hasCardStyles ? cardStyles : !isUser ? { backgroundColor: `${primaryColor}12` } : undefined
+
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
       <div
         ref={wrapperRef}
         className={cn('flex w-full min-w-50 flex-col', {
           'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
-          'max-w-70 rounded-2xl px-3 py-2.5': !isUser,
+          'w-full rounded-2xl px-3 py-2.5': !isUser && !hasCardStyles,
+          'w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm': !isUser && hasCardStyles,
         })}
-        style={!isUser ? { backgroundColor: `${primaryColor}12` } : undefined}
+        style={customContainerStyle}
       >
         {/* Hidden audio element */}
         <audio

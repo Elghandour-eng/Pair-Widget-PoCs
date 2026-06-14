@@ -11,8 +11,44 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | void> {
 export function loadFontFamilyAsync(fontFamily?: string): Promise<void> {
   if (!fontFamily || typeof window === 'undefined') return Promise.resolve()
 
+  // Normalize common lowercase fonts to their exact Google Fonts casing
+  const commonFontsMap: Record<string, string> = {
+    inter: 'Inter',
+    'dm sans': 'DM Sans',
+    'pt sans': 'PT Sans',
+    'pt serif': 'PT Serif',
+    'open sans': 'Open Sans',
+    roboto: 'Roboto',
+    lato: 'Lato',
+    montserrat: 'Montserrat',
+    'source sans pro': 'Source Sans Pro',
+    'playfair display': 'Playfair Display',
+    merriweather: 'Merriweather',
+    'noto sans': 'Noto Sans',
+    'noto serif': 'Noto Serif',
+    oswald: 'Oswald',
+    raleway: 'Raleway',
+    poppins: 'Poppins',
+    nunito: 'Nunito',
+    ubuntu: 'Ubuntu',
+    lora: 'Lora',
+    quicksand: 'Quicksand',
+    outfit: 'Outfit',
+  }
+
   // Extract the primary font name (e.g. "Outfit" from "Outfit, sans-serif")
-  const primaryFont = fontFamily.split(',')[0].replace(/['"]/g, '').trim()
+  const rawPrimary = fontFamily.split(',')[0].replace(/['"]/g, '').trim()
+  const lowercaseName = rawPrimary.toLowerCase()
+
+  const primaryFont =
+    commonFontsMap[lowercaseName] ||
+    rawPrimary
+      .split(/\s+/)
+      .map((word) => {
+        if (!word) return ''
+        return word.charAt(0).toUpperCase() + word.slice(1)
+      })
+      .join(' ')
 
   // Standard web-safe/system fonts that do not require loading
   const webSafeFonts = new Set([

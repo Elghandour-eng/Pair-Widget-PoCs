@@ -6,6 +6,7 @@ import { AiAssistantMessageShimmer } from './ai-assistant-message-shimmer'
 import { FeedbackSection } from './feedback-section'
 import { ProductSection } from './product-section'
 import { SuggestionsSection } from './suggestions-section'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 interface AiAssistantMessageProps {
   message: Message
@@ -15,6 +16,10 @@ interface AiAssistantMessageProps {
 export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessageProps) {
   const isPending = isPendingMessage(message)
   console.log('isPending:', isPending)
+
+  const { widgetConfig } = useWidgetConfigContext()
+  const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const cardStyles = aiConfig?.CardStyles
 
   // Find suggestions option in next_messages / next_msg
   const suggestionsItem = message.next_messages?.find((item) => item.type === 'suggestions') as
@@ -36,15 +41,15 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
 
   if (isPending) {
     return (
-      <div className="flex w-full flex-col items-start gap-4 bg-transparent py-2 pl-4">
+      <div className="flex w-full flex-col items-start gap-4 bg-transparent px-4 py-2">
         <AiAssistantMessageHeader isPending={true} />
-        <AiAssistantMessageShimmer />
+        <AiAssistantMessageShimmer cardStyles={cardStyles} />
       </div>
     )
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-6 bg-transparent py-2 pl-4">
+    <div className="flex w-full flex-col items-start gap-6 bg-transparent px-4 py-2">
       <AiAssistantMessageHeader isPending={false} />
       <AiAssistantMessageBody content={message.content} />
 

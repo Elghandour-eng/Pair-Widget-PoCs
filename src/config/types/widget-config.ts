@@ -137,6 +137,7 @@ export interface MessagesConfig {
     TextStyles?: CSSProperties
     showAiIcon?: boolean
     messageStyle?: string
+    iconUrl?: string
   }
   customerMessages?: {
     TextStyles?: CSSProperties

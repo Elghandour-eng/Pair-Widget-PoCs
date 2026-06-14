@@ -1,7 +1,10 @@
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import type { Message } from '@/features/conversation/types/message'
+import { cn } from '@/lib/utils'
 import { Play, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { isUserMessage } from '../../utils/message-utils'
 import { MessageLayout } from './message-layout'
 import { TextMessage } from './text-message'
 
@@ -104,9 +107,20 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
     return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
   }
 
+  const { widgetConfig } = useWidgetConfigContext()
+  const isUser = isUserMessage(message)
+  const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const cardStyles = aiConfig?.CardStyles
+  const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
+
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
-      <div className="flex max-w-full flex-col items-start gap-1">
+      <div
+        className={cn('flex w-full flex-col items-start gap-1', {
+          'rounded-lg border border-gray-200 bg-white p-4 shadow-sm': !isUser && hasCardStyles,
+        })}
+        style={!isUser && hasCardStyles ? cardStyles : undefined}
+      >
         <div
           className="group relative cursor-pointer overflow-hidden rounded-xl border border-gray-100 bg-black/5 dark:border-gray-800"
           onClick={() => setIsOpen(true)}
@@ -115,7 +129,7 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
           <video
             ref={videoRef}
             src={videoUrl}
-            className="h-auto max-h-[200px] w-full max-w-[280px] rounded-xl object-cover"
+            className="h-auto max-h-50 w-full max-w-70 rounded-xl object-cover"
             preload="metadata"
             muted
             playsInline
@@ -152,7 +166,7 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
         {isOpen &&
           createPortal(
             <div
-              className="animate-in fade-in fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 duration-200"
+              className="animate-in fade-in fixed inset-0 z-9999 flex items-center justify-center bg-black/80 duration-200"
               onClick={() => setIsOpen(false)}
             >
               <div className="absolute top-4 right-4 z-50">
