@@ -291,6 +291,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
                 (!hasMessage || isSendMessagePending) &&
                 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
             )}
+            style={widgetConfig.chatInput.sendButtonIcon.styles}
             aria-label={isGenerating ? 'Stop generating' : 'Send message'}
           >
             {isGenerating ? (
@@ -298,7 +299,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             ) : isSendMessagePending ? (
               <Spinner className="size-4 text-white" />
             ) : (
-              <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon} />
+              <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
             )}
           </button>
         </div>

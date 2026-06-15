@@ -108,6 +108,11 @@ export interface IntroScreenConfig {
   heroImage?: IntroHeroImage
 }
 
+export interface SendButtonIconConfig {
+  variant: 'arrow-up' | 'send'
+  styles?: CSSProperties
+}
+
 export interface ChatInputConfig {
   styles: CSSProperties
   layout: 'floating_pill' | 'full_width_bar'
@@ -122,7 +127,7 @@ export interface ChatInputConfig {
     styles: CSSProperties
   }
   // TODO: update this when BE supports it
-  sendButtonIcon: 'arrow-up' | 'send'
+  sendButtonIcon: SendButtonIconConfig
 }
 
 // TODO: Start consuming this configuration in the message and feedback UI components

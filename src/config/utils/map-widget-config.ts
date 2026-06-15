@@ -107,10 +107,16 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   // chat input
   const rawChatInput = apiResponse.widget_v2_config.chat_input
   const featureFlags = apiResponse.selected_feature_flags || []
+  const rawSendIcon = rawChatInput.sendButtonIcon
+  const sendButtonIcon = {
+    variant: rawSendIcon?.variant ?? 'send',
+    styles: rawSendIcon?.styles,
+  }
+
   const chatInput: ChatInputConfig = {
     styles: rawChatInput.styles ?? {},
     layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
-    sendButtonIcon: rawChatInput.sendButtonIcon ?? 'arrow-up',
+    sendButtonIcon,
     actions: {
       showEmojiPicker: rawChatInput.inputActions?.stickers || featureFlags.includes('emoji_picker') || false,
       showFileUpload: rawChatInput.inputActions?.fileUpload || featureFlags.includes('attachments') || false,

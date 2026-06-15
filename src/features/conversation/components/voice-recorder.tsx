@@ -7,6 +7,7 @@ import { useVoiceRecorder } from '@/features/conversation/hooks/use-voice-record
 import { cn } from '@/lib/utils'
 import { Mic, Play, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ function WaveformCanvas({ waveformData, primaryColor, isPaused }: WaveformCanvas
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onCancel }: VoiceRecorderProps) {
+  const { widgetConfig } = useWidgetConfigContext()
   const {
     isRecording,
     isPaused,
@@ -284,9 +286,10 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
           type="button"
           onClick={handleSend}
           className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]"
+          style={widgetConfig.chatInput.sendButtonIcon.styles}
           aria-label="Send voice message"
         >
-          <SendIcon className="size-3 text-white" />
+          <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
         </button>
       ) : isPaused ? (
         <button

@@ -216,13 +216,14 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
               'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]',
               (isButtonDisabled || isSending) && 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
             )}
+            style={isLastQuestion ? widgetConfig.chatInput.sendButtonIcon.styles : undefined}
             aria-label={isLastQuestion ? 'Send message' : 'Next question'}
           >
             {isLastQuestion ? (
               isSending ? (
                 <Spinner className="size-4 text-white" />
               ) : (
-                <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon} />
+                <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
               )
             ) : (
               <ChevronRight className="size-4 text-white" />

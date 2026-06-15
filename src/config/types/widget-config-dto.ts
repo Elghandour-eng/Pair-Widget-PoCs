@@ -163,13 +163,18 @@ export interface PlaceholderText {
   styles: CSSProperties
 }
 
+export interface SendButtonIconDto {
+  variant: 'arrow-up' | 'send'
+  styles?: CSSProperties
+}
+
 export interface ChatInput {
   styles: CSSProperties
   inputLayout: { type: InputLayoutType }
   inputActions: InputActions
   placeholderText: PlaceholderText
   // TODO: update this when BE supports it
-  sendButtonIcon?: 'arrow-up' | 'send'
+  sendButtonIcon?: SendButtonIconDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
