@@ -44,22 +44,18 @@ function MessageLayout({
         'opacity-50': isFailed, // Further reduce opacity for failed messages
       })}
     >
-      {/* Unread indicator - only show for non-user messages */}
-      {!isUser && (
+      {/* Unread indicator - only show for unread non-user messages */}
+      {!isUser && isUnread && (
         <div className="relative mt-2 flex shrink-0 items-center">
           <div
-            className={cn('size-3 shrink-0 rounded-full transition-opacity duration-500', {
-              'opacity-100': isUnread,
-              'opacity-0': !isUnread,
-              'pointer-events-none': !isUnread,
-            })}
+            className="size-3 shrink-0 rounded-full"
             style={{
-              backgroundColor: isUnread ? primaryColor : 'transparent',
-              boxShadow: isUnread ? `0 0 0 3px ${primaryColor}15, 0 0 8px ${primaryColor}30` : 'none',
+              backgroundColor: primaryColor,
+              boxShadow: `0 0 0 3px ${primaryColor}15, 0 0 8px ${primaryColor}30`,
               minWidth: '12px',
               minHeight: '12px',
             }}
-            aria-label={isUnread ? 'New message' : undefined}
+            aria-label="New message"
           />
         </div>
       )}
