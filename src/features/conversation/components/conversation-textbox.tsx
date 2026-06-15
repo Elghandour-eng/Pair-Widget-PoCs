@@ -18,7 +18,7 @@ import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 import { useLayoutEffect } from '@tanstack/react-router'
-import { useRef, useState, useEffect, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Message } from '../types/message'
 
@@ -75,6 +75,23 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
     }
   }, [attachedFile])
 
+  const visibleMessages = messages.filter((msg) => msg.sender_type !== 'system')
+  const lastMessage = visibleMessages[visibleMessages.length - 1]
+  const isGenerating = lastMessage && lastMessage.sender_type === 'bot' && isPendingMessage(lastMessage)
+
+  // Auto-grow textarea height
+  useEffect(() => {
+    const textarea = textEditorRef.current
+    if (textarea) {
+      if (!message.trim()) {
+        textarea.style.height = ''
+      } else {
+        textarea.style.height = '0px'
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 80)}px`
+      }
+    }
+  }, [message, isGenerating])
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = validateAndGetFile(e)
     if (file) {
@@ -88,10 +105,6 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
       fileInputRef.current.value = ''
     }
   }
-
-  const visibleMessages = messages.filter((msg) => msg.sender_type !== 'system')
-  const lastMessage = visibleMessages[visibleMessages.length - 1]
-  const isGenerating = lastMessage && lastMessage.sender_type === 'bot' && isPendingMessage(lastMessage)
 
   const handleStop = () => {
     if (!conversationId) return
@@ -302,7 +315,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'flex min-h-11.5 w-full items-center gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
+          'flex min-h-11.5 w-full items-end gap-2 rounded-full border bg-white p-1.25 transition-colors duration-200',
           isGenerating ? 'border-[#B8AB80]' : 'border-[#ECECED]',
         )}
         style={{
