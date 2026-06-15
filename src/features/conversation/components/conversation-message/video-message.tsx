@@ -161,7 +161,7 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
           )}
         </div>
 
-        {showContent && <div className="px-1 text-sm leading-relaxed">{content}</div>}
+        {showContent && <div className="px-1 text-sm leading-relaxed wrap-break-word">{content}</div>}
 
         {isOpen &&
           createPortal(

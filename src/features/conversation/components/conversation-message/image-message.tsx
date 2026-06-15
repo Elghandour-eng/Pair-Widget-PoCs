@@ -37,7 +37,7 @@ export function ImageMessage({ message, isUnread, primaryColor, websiteName }: I
           <img
             src={imageUrl}
             alt="Shared image"
-            className="h-auto w-full max-w-[280px] rounded-xl object-cover"
+            className="h-auto w-full max-w-70 rounded-xl object-cover"
             // loading="lazy"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/10 group-hover:opacity-100">
@@ -45,12 +45,12 @@ export function ImageMessage({ message, isUnread, primaryColor, websiteName }: I
           </div>
         </div>
 
-        {showContent && <div className="px-1 text-sm leading-relaxed">{content}</div>}
+        {showContent && <div className="px-1 text-sm leading-relaxed wrap-break-word">{content}</div>}
 
         {isOpen &&
           createPortal(
             <div
-              className="animate-in fade-in fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 duration-200"
+              className="animate-in fade-in fixed inset-0 z-9999 flex items-center justify-center bg-black/80 duration-200"
               onClick={() => setIsOpen(false)}
             >
               <div className="absolute top-4 right-4 flex gap-2" onClick={(e) => e.stopPropagation()}>

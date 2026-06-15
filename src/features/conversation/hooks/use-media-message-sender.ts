@@ -21,7 +21,7 @@ interface UseMediaMessageSenderProps {
 
 export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderProps) {
   const queryClient = useQueryClient()
-  const { navigateToConversation } = useWidgetNavigation()
+  const { navigateToConversation, currentScreen, conversationId: navConversationId } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
   const { mutateAsync: preChatMutation } = usePreChat()
 
@@ -103,6 +103,10 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
         navigateToConversation(response.conversation_id)
         subscribeToConversation(response.conversation_id)
         queryClient.invalidateQueries({ queryKey: CONVERSATION_QUERY_KEYS.CONVERSATIONS(), exact: false })
+      } else if (conversationId) {
+        if (currentScreen !== 'conversation' || navConversationId !== conversationId) {
+          navigateToConversation(conversationId)
+        }
       }
 
       return response

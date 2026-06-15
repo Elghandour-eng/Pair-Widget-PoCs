@@ -89,7 +89,7 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
       hideTime={true}
     >
       <div
-        className={cn('relative flex min-w-25 flex-col', {
+        className={cn('relative flex min-w-25 flex-col wrap-break-word text-ellipsis', {
           'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
           'w-full rounded-2xl rounded-bl-none pt-3 pr-4 pb-3 pl-4': !isUser && !isCard,
           'text-foreground bg-[#F0F1F1]': !isUser && !isCard && !isPending && !isFailed,
@@ -102,7 +102,7 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
         style={customBubbleStyle}
       >
         <div
-          className={cn({
+          className={cn('wrap-break-word', {
             'text-sm leading-relaxed': !isUser,
             "font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Primary,#1A1A1A)":
               isUser,
