@@ -4,6 +4,7 @@ import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useSendChatMessageFlow } from '@/features/conversation/hooks/use-send-chat-message-flow'
 import { useConversations } from '@/features/conversation/queries/use-conversations-queries'
 import { TrendingPromptItem } from '@/features/intro/components/trending-prompt-item'
+import { useCarousel } from '@/hooks/use-carousel'
 
 export function TrendingPrompts() {
   const { widgetConfig } = useWidgetConfigContext()
@@ -37,6 +38,18 @@ export function TrendingPrompts() {
   }
 
   const showTitle = config.showTitle ?? true
+  const isColumn = chipStyles?.flexDirection === 'column'
+
+  const { containerRef, emblaRef, basisPercentage } = useCarousel({
+    itemCount: prompts.length,
+    active: isColumn,
+    loop: config.carouselLoop,
+    autoplay: config.carouselLoop,
+  })
+
+  if (prompts.length === 0) {
+    return null
+  }
 
   return (
     <section className="mt-2 flex flex-col gap-3">
@@ -45,21 +58,47 @@ export function TrendingPrompts() {
           {title}
         </h2>
       )}
-      <ul className="flex flex-wrap gap-2">
-        {prompts.map((prompt) => (
-          <li key={prompt.id}>
-            <TrendingPromptItem
-              prompt={prompt}
-              showIcon={showIcon}
-              chipStyles={chipStyles}
-              textStyle={textStyle}
-              onClick={() => handlePromptClick(prompt.id, prompt.text)}
-              disabled={isPending && loadingPromptId === prompt.id}
-              isLoading={loadingPromptId === prompt.id}
-            />
-          </li>
-        ))}
-      </ul>
+      <div ref={containerRef} className="w-full">
+        {isColumn ? (
+          <div className="w-full cursor-grab overflow-hidden active:cursor-grabbing" ref={emblaRef}>
+            <div className="-ms-2 flex">
+              {prompts.map((prompt) => (
+                <div
+                  key={prompt.id}
+                  className="animate-scale-up flex min-w-0 ps-2"
+                  style={{ flex: `0 0 ${basisPercentage}%` }}
+                >
+                  <TrendingPromptItem
+                    prompt={prompt}
+                    showIcon={showIcon}
+                    chipStyles={chipStyles}
+                    textStyle={textStyle}
+                    onClick={() => handlePromptClick(prompt.id, prompt.text)}
+                    disabled={isPending && loadingPromptId === prompt.id}
+                    isLoading={loadingPromptId === prompt.id}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {prompts.map((prompt) => (
+              <li key={prompt.id}>
+                <TrendingPromptItem
+                  prompt={prompt}
+                  showIcon={showIcon}
+                  chipStyles={chipStyles}
+                  textStyle={textStyle}
+                  onClick={() => handlePromptClick(prompt.id, prompt.text)}
+                  disabled={isPending && loadingPromptId === prompt.id}
+                  isLoading={loadingPromptId === prompt.id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   )
 }

@@ -79,6 +79,7 @@ export interface TrendingPromptsConfig {
   prompts: TrendingPromptData[]
   // TODO: update this when BE supports it
   showTitle?: boolean
+  carouselLoop?: boolean
 }
 
 export interface TrendingPromptData {

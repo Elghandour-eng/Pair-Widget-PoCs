@@ -3,8 +3,8 @@ import type { SVGProps } from 'react'
 export interface SendIconProps extends SVGProps<SVGSVGElement> {
   /**
    * The variant of the send icon to render:
-   * - 'arrow-up': maps to Boutiqaat style
-   * - 'send': maps to Hero style
+   * - 'arrow-up': maps to 'Boutiqaat' style
+   * - 'send': maps to 'Hiro' style
    */
   variant?: 'arrow-up' | 'send'
 }

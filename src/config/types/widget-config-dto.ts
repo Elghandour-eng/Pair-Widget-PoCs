@@ -134,6 +134,7 @@ export interface TrendingPromptDisplaySettings {
   sectionTitle: string
   // TODO: update this when BE supports it
   showTitle?: boolean
+  carouselLoop?: boolean
 }
 
 export interface TrendingPrompts {

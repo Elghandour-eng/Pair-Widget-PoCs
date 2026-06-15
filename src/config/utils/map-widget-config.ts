@@ -1,8 +1,8 @@
 import type {
   ChatInputConfig,
   IntroScreenConfig,
-  PairAiWidgetSettings,
   MessagesConfig,
+  PairAiWidgetSettings,
   QuickLinksConfig,
   TrendingPromptsConfig,
   WidgetConfig,
@@ -89,11 +89,13 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         show: v2Trending.showTrendingPrompts.value,
         title: v2Trending.displaySettings?.sectionTitle,
         // TODO: This showTitle property is mocked for now. Sync with BE when they support showTitle in displaySettings.
-        showTitle: v2Trending.displaySettings?.showTitle ?? true,
+        showTitle: v2Trending.displaySettings?.showTitle ?? false,
         titleStyle: v2Trending.displaySettings?.styles ?? {},
         showIcon: v2Trending.displaySettings?.showIcons ?? false,
         chipStyles: v2Trending.chipStyle ?? {},
         textStyle: v2Trending.textStyle ?? {},
+        // TODO: This carouselLoop property is mocked for now. Sync with BE when they support carouselLoop in displaySettings.
+        carouselLoop: v2Trending.displaySettings?.carouselLoop ?? false,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
           id: `trending-prompt-${idx}`,
           text: chip.text,
