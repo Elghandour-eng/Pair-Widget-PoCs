@@ -5,9 +5,12 @@ import { toast } from 'sonner'
 import { WIDGET_ALLOWED_MIME_TYPES, WIDGET_MAX_FILE_SIZE } from '@/constants/file-upload'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { tokenStorage } from '@/core/token-storage'
 import { CONVERSATION_QUERY_KEYS } from '@/features/conversation/constants/conversation-keys'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import { useUploadMedia } from '@/features/conversation/hooks/use-upload-media'
+import { usePreChat } from '@/features/pre-chat-form/hooks/use-pre-chat'
+import { getWidgetId } from '@/utils/widget-id'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
@@ -20,14 +23,18 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
   const queryClient = useQueryClient()
   const { navigateToConversation } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
+  const { mutateAsync: preChatMutation } = usePreChat()
 
   const { mutateAsync: sendMessageMutation, isPending: isSendMessagePending } = useSendMessage()
 
   const { mutateAsync: uploadMediaMutation, isPending: isUploadMediaPending } = useUploadMedia()
 
-  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+  const validateAndGetFile = (e: ChangeEvent<HTMLInputElement>): File | null => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) return null
+
+    // Reset input value right after selecting so the same file can be chosen again
+    e.target.value = ''
 
     // Validate file type
     if (!WIDGET_ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -35,8 +42,7 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
         position: 'top-center',
         richColors: true,
       })
-      e.target.value = '' // Reset input
-      return
+      return null
     }
 
     // Validate file size
@@ -45,8 +51,30 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
         position: 'top-center',
         richColors: true,
       })
-      e.target.value = '' // Reset input
-      return
+      return null
+    }
+
+    return file
+  }
+
+  const sendMediaMessage = async (file: File, caption: string = '') => {
+    const widgetId = getWidgetId()
+    if (!widgetId) {
+      throw new Error('Widget ID is required')
+    }
+
+    // Auto-register if not registered yet and pre-chat form is not required
+    if (!tokenStorage.get(widgetId)) {
+      try {
+        await preChatMutation({ pre_chat_data: {} })
+      } catch (err) {
+        logger.debug('useMediaMessageSender', 'Failed to auto-register user', err)
+        toast.error('Failed to start chat. Please try again.', {
+          position: 'top-center',
+          richColors: true,
+        })
+        throw err
+      }
     }
 
     try {
@@ -60,7 +88,7 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
       // 3. Send message with media payload
       const response = await sendMessageMutation({
         ...(conversationId ? { conversation_id: conversationId } : {}),
-        content: '', // Empty content for media messages typically
+        content: caption,
         message_type: messageType,
         media_url: uploadResponse.media_url,
         metadata: {
@@ -77,19 +105,20 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
         queryClient.invalidateQueries({ queryKey: CONVERSATION_QUERY_KEYS.CONVERSATIONS(), exact: false })
       }
 
-      e.target.value = '' // Reset input
+      return response
     } catch (error) {
       logger.debug('useMediaMessageSender', 'Failed to upload/send media', error)
       toast.error('Failed to upload file. Please try again.', {
         position: 'top-center',
         richColors: true,
       })
-      e.target.value = '' // Reset input
+      throw error
     }
   }
 
   return {
-    handleFileSelect,
+    validateAndGetFile,
+    sendMediaMessage,
     isUploading: isUploadMediaPending,
     isSending: isSendMessagePending,
     isProcessing: isUploadMediaPending || isSendMessagePending,

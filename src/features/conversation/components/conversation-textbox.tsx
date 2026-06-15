@@ -7,6 +7,7 @@ import { StopIcon } from '@/components/icons/stop-icon'
 import { Spinner } from '@/components/ui/spinner'
 import { WIDGET_ALLOWED_MIME_TYPES } from '@/constants/file-upload'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { VoiceRecorder } from '@/features/conversation/components/voice-recorder'
 import { useMediaMessageSender } from '@/features/conversation/hooks/use-media-message-sender'
 import { useSendChatMessageFlow } from '@/features/conversation/hooks/use-send-chat-message-flow'
@@ -17,7 +18,7 @@ import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 import { useLayoutEffect } from '@tanstack/react-router'
-import { useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, useEffect, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Message } from '../types/message'
 
@@ -42,18 +43,51 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   const [message, setMessage] = useState('')
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const [isVoiceMode, setIsVoiceMode] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
   const textEditorRef = useRef<HTMLTextAreaElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { widgetConfig } = useWidgetConfigContext()
+  const { navigateToPreChat, setInitialMessage } = useWidgetNavigation()
   const { sendMessageFlow, isPending: isSendMessagePending, isSuccess: isSendMessageSuccess } = useSendChatMessageFlow()
-  const { handleFileSelect, isProcessing } = useMediaMessageSender({ conversationId })
+  const { validateAndGetFile, sendMediaMessage, isProcessing } = useMediaMessageSender({ conversationId })
   const {
     sendVoiceMessage,
     isProcessing: isVoiceProcessing,
     progress: voiceProgress,
   } = useVoiceMessageSender({ conversationId })
+
+  useEffect(() => {
+    if (!attachedFile) {
+      setPreviewUrl(null)
+      return
+    }
+
+    if (attachedFile.type.startsWith('image/')) {
+      const url = URL.createObjectURL(attachedFile)
+      setPreviewUrl(url)
+      return () => {
+        URL.revokeObjectURL(url)
+      }
+    }
+  }, [attachedFile])
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = validateAndGetFile(e)
+    if (file) {
+      setAttachedFile(file)
+    }
+  }
+
+  const handleRemoveAttachment = () => {
+    setAttachedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const visibleMessages = messages.filter((msg) => msg.sender_type !== 'system')
   const lastMessage = visibleMessages[visibleMessages.length - 1]
@@ -124,6 +158,30 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
       return
     }
 
+    if (attachedFile) {
+      if (!conversationId && widgetConfig.requiresPreChat) {
+        toast.warning('Please fill out the pre-chat form to start the conversation and send files.', {
+          position: 'top-center',
+          richColors: true,
+        })
+        setInitialMessage(message.trim() || 'I would like to start a chat')
+        navigateToPreChat()
+        return
+      }
+
+      try {
+        await sendMediaMessage(attachedFile, message.trim())
+        setAttachedFile(null)
+        setMessage('')
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      } catch (error) {
+        // useMediaMessageSender handles logging and toast
+      }
+      return
+    }
+
     const messageContent = message.trim()
     if (!messageContent) {
       return
@@ -167,7 +225,8 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   }
 
   const hasMessage = message.trim().length > 0
-  const canRecordVoice = isVoiceEnabled && !hasMessage && !isSendMessagePending && !isProcessing && !isGenerating
+  const canSend = hasMessage || !!attachedFile
+  const canRecordVoice = isVoiceEnabled && !canSend && !isSendMessagePending && !isProcessing && !isGenerating
 
   const isFullWidth = widgetConfig.chatInput.layout === 'full_width_bar'
 
@@ -199,6 +258,47 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
         accept={WIDGET_ALLOWED_MIME_TYPES.join(',')}
         onChange={handleFileSelect}
       />
+
+      {/* Attached file preview */}
+      {attachedFile && (
+        <div className="animate-in fade-in slide-in-from-bottom-1 mb-2 flex items-center justify-between rounded-xl border border-[#ECECED] bg-[#F8F9FA] p-2 duration-200 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center gap-2 overflow-hidden font-['DM_Sans']">
+            {attachedFile.type.startsWith('image/') && previewUrl ? (
+              <div className="dark:border-gray-850 relative size-10 shrink-0 overflow-hidden rounded-lg border border-gray-200">
+                <img src={previewUrl} alt="Attachment preview" className="h-full w-full object-cover" />
+              </div>
+            ) : (
+              <div className="text-red-650 flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20 dark:text-red-400">
+                {/* SVG/Icon for Video or generic file */}
+                <svg className="size-5 text-[#626A6A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            )}
+            <div className="flex min-w-0 flex-col">
+              <span className="text-gray-750 dark:text-gray-250 truncate text-xs font-medium">{attachedFile.name}</span>
+              <span className="text-[10px] text-gray-500">{(attachedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemoveAttachment}
+            className="flex size-7 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-[#E4E4E6] hover:text-[#1A1A1A]"
+            aria-label="Remove attachment"
+            disabled={isProcessing}
+          >
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className={cn(
@@ -216,7 +316,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             type="button"
             className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6] disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing || hasMessage}
+            disabled={isProcessing || canSend}
             aria-label="Attach file"
           >
             {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-3 fill-[#474747]" />}
@@ -283,12 +383,12 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
 
           <button
             type={isGenerating ? 'button' : 'submit'}
-            disabled={isGenerating ? false : !hasMessage || isSendMessagePending}
+            disabled={isGenerating ? false : !canSend || isSendMessagePending || isProcessing}
             onClick={isGenerating ? handleStop : undefined}
             className={cn(
               'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]',
               !isGenerating &&
-                (!hasMessage || isSendMessagePending) &&
+                (!canSend || isSendMessagePending || isProcessing) &&
                 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
             )}
             style={widgetConfig.chatInput.sendButtonIcon.styles}
@@ -296,7 +396,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
           >
             {isGenerating ? (
               <StopIcon className="size-3 text-white" />
-            ) : isSendMessagePending ? (
+            ) : isSendMessagePending || isProcessing ? (
               <Spinner className="size-4 text-white" />
             ) : (
               <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
