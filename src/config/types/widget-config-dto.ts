@@ -246,6 +246,10 @@ export interface WidgetConfigDto {
   welcome_tagline: string
   reply_time: ReplyTime
   avatar_url: string
+  widget_title?: {
+    text: string
+    styles?: CSSProperties
+  }
 
   pre_chat_form_enabled: boolean
   pre_chat_form_options: PreChatFormOptions

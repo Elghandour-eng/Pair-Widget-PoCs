@@ -31,6 +31,10 @@ export interface WidgetConfig {
   preChatFormOptions?: PreChatFormOptions
   businessName?: string
   avatarUrl?: string
+  widgetTitle?: {
+    text: string
+    styles?: CSSProperties
+  }
   websiteToken?: string
   baseUrl?: string
   reply_time: 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day'

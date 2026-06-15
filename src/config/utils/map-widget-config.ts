@@ -169,6 +169,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     preChatFormOptions: apiResponse.pre_chat_form_options,
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
+    // TODO: Discuss with the PM if we need to have these styles in the config
+    widgetTitle: apiResponse.widget_title,
     websiteToken: apiResponse.widget_id,
     baseUrl: apiResponse.website_url,
     reply_time: apiResponse.reply_time as 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day',
