@@ -9,6 +9,7 @@ import { DEV_WINDOW_SETTINGS } from '@/config/constants/dev-window-settings'
 import { WidgetConfigQueryOptions } from '@/config/queries/use-widget-config-queries'
 import { UnreadMessagesProvider } from '@/contexts/unread-messages-context'
 import { WidgetConfigProvider } from '@/contexts/widget-config-context'
+import { mapToWidgetConfig } from '@/config/utils/map-widget-config'
 import { WidgetNavigationProvider, useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { WidgetUIProvider } from '@/contexts/widget-ui-context'
 import { tokenStorage } from '@/core/token-storage'
@@ -157,7 +158,8 @@ export const Route = createFileRoute('/')({
     // Load fonts before the widget is initialized to prevent flash of unstyled text
     logger.debug('loader', 'Loading dynamic fonts from config')
     try {
-      await loadAllFontsFromConfigAsync(data)
+      const mappedConfig = mapToWidgetConfig(data, window.PairAiWidgetSettings)
+      await loadAllFontsFromConfigAsync(mappedConfig)
       logger.debug('loader', 'Dynamic fonts loaded successfully')
     } catch (err) {
       logger.debug('loader', 'Failed to load dynamic fonts', err)
