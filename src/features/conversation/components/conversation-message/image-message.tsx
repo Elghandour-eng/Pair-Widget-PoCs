@@ -1,4 +1,7 @@
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import type { Message } from '@/features/conversation/types/message'
+import { isUserMessage } from '@/features/conversation/utils/message-utils'
+import { cn } from '@/lib/utils'
 import { Download, Expand, X } from 'lucide-react'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,6 +17,12 @@ interface ImageMessageProps {
 
 export function ImageMessage({ message, isUnread, primaryColor, websiteName }: ImageMessageProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const { widgetConfig } = useWidgetConfigContext()
+  const isUser = isUserMessage(message)
+
+  const customerConfig = widgetConfig.messagesConfig?.customerMessages
+  const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const customTextStyles = isUser ? customerConfig?.TextStyles : aiConfig?.TextStyles
 
   // Extract content from message
   const metadata = message.metadata
@@ -45,7 +54,17 @@ export function ImageMessage({ message, isUnread, primaryColor, websiteName }: I
           </div>
         </div>
 
-        {showContent && <div className="px-1 text-sm leading-relaxed wrap-break-word">{content}</div>}
+        {showContent && (
+          <div
+            className={cn('px-1 text-sm leading-relaxed wrap-break-word', {
+              "font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Primary,#1A1A1A)":
+                isUser,
+            })}
+            style={customTextStyles}
+          >
+            {content}
+          </div>
+        )}
 
         {isOpen &&
           createPortal(

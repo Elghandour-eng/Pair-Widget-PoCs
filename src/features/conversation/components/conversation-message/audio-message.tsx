@@ -90,6 +90,7 @@ interface WaveformBarsProps {
   loadingStage: LoadingStage
   loadingProgress: number // 0..100
   onSeek: (percent: number) => void
+  barColor?: string
 }
 
 function WaveformBars({
@@ -102,6 +103,7 @@ function WaveformBars({
   loadingStage,
   loadingProgress,
   onSeek,
+  barColor,
 }: WaveformBarsProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
@@ -137,6 +139,8 @@ function WaveformBars({
     [isLoading, updatePosition],
   )
 
+  const activeColor = barColor || primaryColor
+
   return (
     <div
       ref={containerRef}
@@ -153,7 +157,7 @@ function WaveformBars({
                 className="h-full rounded-full transition-[width] duration-200"
                 style={{
                   width: `${loadingStage === 'loading' ? loadingProgress : 100}%`,
-                  backgroundColor: primaryColor,
+                  backgroundColor: activeColor,
                 }}
               />
             </div>
@@ -185,7 +189,7 @@ function WaveformBars({
               className="block w-0.5 rounded-t-full sm:w-0.75"
               style={{
                 height: `${Math.max(minBarPx, Math.round(p * barMaxHeight))}px`,
-                backgroundColor: primaryColor,
+                backgroundColor: activeColor,
                 opacity: played ? 1 : 0.25,
               }}
             />
@@ -203,7 +207,7 @@ function WaveformBars({
               className="block w-0.5 rounded-t-full sm:w-0.75"
               style={{
                 height: `${Math.max(minBarPx, Math.round(p * barMaxHeight))}px`,
-                backgroundColor: primaryColor,
+                backgroundColor: activeColor,
                 opacity: played ? 1 : 0.25,
               }}
             />
@@ -217,7 +221,7 @@ function WaveformBars({
           className="absolute top-1/2 z-3 size-3 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full shadow-sm active:cursor-grabbing"
           style={{
             left: `${position}%`,
-            backgroundColor: primaryColor,
+            backgroundColor: activeColor,
           }}
         />
       )}
@@ -402,11 +406,78 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
   const isLoading = loadingStage !== 'ready' && loadingStage !== 'error'
 
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const customerConfig = widgetConfig.messagesConfig?.customerMessages
   const cardStyles = aiConfig?.CardStyles
   const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
 
-  const customContainerStyle =
-    !isUser && hasCardStyles ? cardStyles : !isUser ? { backgroundColor: `${primaryColor}12` } : undefined
+  let customBubbleStyle: React.CSSProperties = {}
+  let customTextStyles: React.CSSProperties = {}
+  let timeStyle: React.CSSProperties = {}
+  let isCard = false
+
+  if (isUser) {
+    const bubbleType = customerConfig?.bubbleType ?? 'filled'
+    const useBrandColor = customerConfig?.useBrandColor ?? false
+
+    if (customerConfig) {
+      customBubbleStyle = { ...customerConfig.bubbleStyle }
+      customTextStyles = { ...customerConfig.TextStyles }
+
+      if (useBrandColor) {
+        customBubbleStyle.backgroundColor = primaryColor
+      }
+
+      if (bubbleType === 'outline') {
+        customBubbleStyle.backgroundColor = 'transparent'
+        const borderW = customBubbleStyle.borderWidth || '1px'
+        const borderC = customBubbleStyle.borderColor || primaryColor || '#000000'
+        customBubbleStyle.border = `${borderW} solid ${borderC}`
+
+        if (!customTextStyles.color) {
+          customTextStyles.color = borderC
+        }
+      } else {
+        // filled mode
+        if (useBrandColor && !customTextStyles.color) {
+          customTextStyles.color = '#FFFFFF'
+        }
+        if (customBubbleStyle.borderWidth || customBubbleStyle.borderColor) {
+          customBubbleStyle.borderStyle = customBubbleStyle.borderStyle || 'solid'
+        }
+      }
+    }
+  } else {
+    // Incoming audio message (agent/AI side)
+    if (aiConfig) {
+      customTextStyles = { ...aiConfig.TextStyles }
+      if (hasCardStyles) {
+        isCard = true
+        customBubbleStyle = { ...cardStyles }
+      } else {
+        customBubbleStyle = { backgroundColor: `${primaryColor}12` }
+      }
+    } else {
+      customBubbleStyle = { backgroundColor: `${primaryColor}12` }
+    }
+  }
+
+  if (customTextStyles.color) {
+    timeStyle.color = customTextStyles.color
+    timeStyle.opacity = 0.7
+  }
+
+  let playBtnBg = primaryColor
+  let playIconColor = '#FFFFFF'
+
+  if (isUser) {
+    const bubbleType = customerConfig?.bubbleType ?? 'filled'
+    const useBrandColor = customerConfig?.useBrandColor ?? false
+
+    if (useBrandColor && bubbleType !== 'outline') {
+      playBtnBg = '#FFFFFF'
+      playIconColor = primaryColor
+    }
+  }
 
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
@@ -414,10 +485,10 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
         ref={wrapperRef}
         className={cn('flex w-full min-w-50 flex-col', {
           'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
-          'w-full rounded-2xl px-3 py-2.5': !isUser && !hasCardStyles,
-          'w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm': !isUser && hasCardStyles,
+          'w-full rounded-2xl px-3 py-2.5': !isUser && !isCard,
+          'w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm': !isUser && isCard,
         })}
-        style={customContainerStyle}
+        style={customBubbleStyle}
       >
         {/* Hidden audio element */}
         <audio
@@ -448,18 +519,18 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
             onClick={togglePlay}
             disabled={isLoading}
             className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80',
+              'flex size-9 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80',
               isLoading && 'opacity-60',
             )}
-            style={{ backgroundColor: primaryColor }}
+            style={{ backgroundColor: playBtnBg }}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isLoading ? (
-              <Spinner className="size-4 text-white" />
+              <Spinner className="size-4" style={{ color: playIconColor }} />
             ) : isPlaying ? (
-              <Pause className="size-4" fill="currentColor" />
+              <Pause className="size-4" fill={playIconColor} style={{ color: playIconColor }} />
             ) : (
-              <Play className="ml-0.5 size-4" fill="currentColor" />
+              <Play className="ml-0.5 size-4" fill={playIconColor} style={{ color: playIconColor }} />
             )}
           </button>
 
@@ -472,12 +543,21 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
             loadingStage={loadingStage}
             loadingProgress={loadingProgress}
             onSeek={handleSeek}
+            barColor={
+              customTextStyles.color ||
+              (isUser && customerConfig?.useBrandColor && customerConfig?.bubbleType !== 'outline'
+                ? '#FFFFFF'
+                : primaryColor)
+            }
           />
         </div>
 
         {/* Duration */}
         <div className={cn('mt-0.5 flex items-center', isUser ? 'justify-start' : 'justify-end')}>
-          <span className="text-muted-foreground text-[10px] tabular-nums">
+          <span
+            className="text-muted-foreground text-[10px] tabular-nums"
+            style={{ ...customTextStyles, opacity: 0.7 }}
+          >
             {isPlaying || currentTime > 0 ? formatDuration(currentTime) : formatDuration(duration)}
           </span>
         </div>

@@ -110,8 +110,10 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
   const { widgetConfig } = useWidgetConfigContext()
   const isUser = isUserMessage(message)
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
+  const customerConfig = widgetConfig.messagesConfig?.customerMessages
   const cardStyles = aiConfig?.CardStyles
   const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
+  const customTextStyles = isUser ? customerConfig?.TextStyles : aiConfig?.TextStyles
 
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
@@ -161,7 +163,17 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
           )}
         </div>
 
-        {showContent && <div className="px-1 text-sm leading-relaxed wrap-break-word">{content}</div>}
+        {showContent && (
+          <div
+            className={cn('px-1 text-sm leading-relaxed wrap-break-word', {
+              "font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Primary,#1A1A1A)":
+                isUser,
+            })}
+            style={customTextStyles}
+          >
+            {content}
+          </div>
+        )}
 
         {isOpen &&
           createPortal(
