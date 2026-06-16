@@ -1,5 +1,6 @@
 import { VOICE_MAX_FILE_SIZE } from '@/constants/file-upload'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { CONVERSATION_QUERY_KEYS } from '@/features/conversation/constants/conversation-keys'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
@@ -28,6 +29,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
   const { navigateToConversation } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
   const { mutateAsync: preChatMutation } = usePreChat()
+  const { widgetConfig } = useWidgetConfigContext()
 
   const { mutateAsync: uploadMediaMutation } = useUploadMedia()
   const { mutateAsync: sendMessageMutation } = useSendMessage()
@@ -54,7 +56,10 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
       // Auto-register if not registered yet and pre-chat form is not required
       if (!tokenStorage.get(widgetId)) {
         try {
-          await preChatMutation({ pre_chat_data: {} })
+          await preChatMutation({
+            pre_chat_data: {},
+            ...(widgetConfig.userId ? { user_id: widgetConfig.userId } : {}),
+          })
         } catch (err) {
           logger.debug('useVoiceMessageSender', 'Failed to auto-register user', err)
           toast.error('Failed to start chat. Please try again.', {
@@ -142,6 +147,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
     [
       conversationId,
       preChatMutation,
+      widgetConfig,
       uploadMediaMutation,
       sendMessageMutation,
       navigateToConversation,

@@ -8,6 +8,7 @@ export interface PairAiWidgetSettings {
   sdkMode?: boolean // When true, SDK handles bubble button, widget just shows panel
   beBaseUrl?: string
   openAutomatically?: boolean
+  userId?: string
 }
 
 declare global {
@@ -51,6 +52,7 @@ export interface WidgetConfig {
   showHeader?: boolean
   showFooter?: boolean
   openAutomatically?: boolean
+  userId?: string
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
 }

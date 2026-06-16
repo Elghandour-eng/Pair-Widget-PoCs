@@ -47,7 +47,10 @@ export function useSendChatMessageFlow() {
     // Auto-register if not registered yet and pre-chat form is not required
     if (!tokenStorage.get(widgetId)) {
       try {
-        await preChatMutation({ pre_chat_data: {} })
+        await preChatMutation({
+          pre_chat_data: {},
+          ...(widgetConfig.userId ? { user_id: widgetConfig.userId } : {}),
+        })
       } catch (err) {
         logger.debug('useSendChatMessageFlow', 'Failed to auto-register user', err)
         toast.error('Failed to start chat. Please try again.', {

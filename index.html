@@ -24,6 +24,10 @@
       if (beBaseUrl) {
         window.PairAiWidgetSettings.beBaseUrl = beBaseUrl
       }
+      var userId = urlParams.get('userId')
+      if (userId) {
+        window.PairAiWidgetSettings.userId = userId
+      }
       // Other settings (position, type, launcherTitle) will be set via postMessage in widget-ui-context.tsx
     </script>
     <script type="module" src="/src/main.tsx"></script>

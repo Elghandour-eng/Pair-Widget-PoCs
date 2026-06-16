@@ -4,14 +4,15 @@ import { toast } from 'sonner'
 
 import { WIDGET_ALLOWED_MIME_TYPES, WIDGET_MAX_FILE_SIZE } from '@/constants/file-upload'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { tokenStorage } from '@/core/token-storage'
 import { CONVERSATION_QUERY_KEYS } from '@/features/conversation/constants/conversation-keys'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import { useUploadMedia } from '@/features/conversation/hooks/use-upload-media'
 import { usePreChat } from '@/features/pre-chat-form/hooks/use-pre-chat'
-import { getWidgetId } from '@/utils/widget-id'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { getWidgetId } from '@/utils/widget-id'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
@@ -24,6 +25,7 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
   const { navigateToConversation, currentScreen, conversationId: navConversationId } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
   const { mutateAsync: preChatMutation } = usePreChat()
+  const { widgetConfig } = useWidgetConfigContext()
 
   const { mutateAsync: sendMessageMutation, isPending: isSendMessagePending } = useSendMessage()
 
@@ -66,7 +68,10 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
     // Auto-register if not registered yet and pre-chat form is not required
     if (!tokenStorage.get(widgetId)) {
       try {
-        await preChatMutation({ pre_chat_data: {} })
+        await preChatMutation({
+          pre_chat_data: {},
+          ...(widgetConfig.userId ? { user_id: widgetConfig.userId } : {}),
+        })
       } catch (err) {
         logger.debug('useMediaMessageSender', 'Failed to auto-register user', err)
         toast.error('Failed to start chat. Please try again.', {

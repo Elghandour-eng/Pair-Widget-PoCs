@@ -278,6 +278,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     showHeader: false,
     showFooter: false,
     openAutomatically: windowSettings?.openAutomatically || false,
+    userId: windowSettings?.userId,
     // Deprecated used for Welcome Screen
     welcomeTitle: apiResponse.welcome_title || undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,

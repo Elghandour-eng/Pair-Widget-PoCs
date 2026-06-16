@@ -205,6 +205,7 @@
     if (config.launcherTitle) params.push('launcherTitle=' + encodeURIComponent(config.launcherTitle))
     // Pass beBaseUrl as URL parameter so widget can set it in its window.PairAiWidgetSettings
     if (config.beBaseUrl) params.push('beBaseUrl=' + encodeURIComponent(config.beBaseUrl))
+    if (config.userId) params.push('userId=' + encodeURIComponent(config.userId))
     // Pass sdkMode=true so widget knows it's embedded and doesn't render bubble
     params.push('sdkMode=true')
 
@@ -481,6 +482,7 @@
       launcherTitle: settings.launcherTitle || 'Chat with us!',
       user: options.user,
       openAutomatically: settings.openAutomatically || options.openAutomatically || false,
+      userId: settings.userId || options.userId || null,
     }
 
     console.log('[PairAI SDK] Initializing with config:', config)
