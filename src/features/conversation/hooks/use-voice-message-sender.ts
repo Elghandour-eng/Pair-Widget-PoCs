@@ -4,7 +4,10 @@ import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { CONVERSATION_QUERY_KEYS } from '@/features/conversation/constants/conversation-keys'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import { useUploadMedia } from '@/features/conversation/hooks/use-upload-media'
+import { tokenStorage } from '@/core/token-storage'
+import { usePreChat } from '@/features/pre-chat-form/hooks/use-pre-chat'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { getWidgetId } from '@/utils/widget-id'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -24,6 +27,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
   const queryClient = useQueryClient()
   const { navigateToConversation } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
+  const { mutateAsync: preChatMutation } = usePreChat()
 
   const { mutateAsync: uploadMediaMutation } = useUploadMedia()
   const { mutateAsync: sendMessageMutation } = useSendMessage()
@@ -38,9 +42,30 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
     async (segments: Blob[], totalDurationMs: number): Promise<void> => {
       if (segments.length === 0) return
 
+      const widgetId = getWidgetId()
+      if (!widgetId) {
+        throw new Error('Widget ID is required')
+      }
+
       setIsProcessing(true)
       setProgress({ current: 0, total: segments.length })
       resolvedConversationIdRef.current = conversationId
+
+      // Auto-register if not registered yet and pre-chat form is not required
+      if (!tokenStorage.get(widgetId)) {
+        try {
+          await preChatMutation({ pre_chat_data: {} })
+        } catch (err) {
+          logger.debug('useVoiceMessageSender', 'Failed to auto-register user', err)
+          toast.error('Failed to start chat. Please try again.', {
+            position: 'top-center',
+            richColors: true,
+          })
+          setIsProcessing(false)
+          setProgress({ current: 0, total: 0 })
+          throw err
+        }
+      }
 
       logger.debug('useVoiceMessageSender', 'Starting voice message send', {
         segmentCount: segments.length,
@@ -116,6 +141,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
     },
     [
       conversationId,
+      preChatMutation,
       uploadMediaMutation,
       sendMessageMutation,
       navigateToConversation,
