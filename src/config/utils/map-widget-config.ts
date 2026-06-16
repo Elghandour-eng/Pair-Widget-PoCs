@@ -132,7 +132,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   // chat input
   const rawChatInput = apiResponse.widget_v2_config.chat_input
-  const featureFlags = apiResponse.selected_feature_flags || []
+  // const featureFlags = apiResponse.selected_feature_flags || []
   const rawSendIcon = rawChatInput.sendButtonIcon
   const sendButtonIcon = {
     variant: rawSendIcon?.variant ?? 'send',
@@ -160,10 +160,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
     sendButtonIcon,
     actions: {
-      showEmojiPicker: rawChatInput.inputActions?.stickers || featureFlags.includes('emoji_picker') || false,
-      showFileUpload: rawChatInput.inputActions?.fileUpload || featureFlags.includes('attachments') || false,
+      showEmojiPicker: rawChatInput.inputActions?.stickers || false,
+      showFileUpload: rawChatInput.inputActions?.fileUpload || false,
       showVoiceMessages: rawChatInput.inputActions?.voiceMessages || false,
-      showAttachmentMenu: rawChatInput.inputActions?.attachmentMenu || featureFlags.includes('attachments') || false,
+      showAttachmentMenu: rawChatInput.inputActions?.attachmentMenu || false,
     },
     placeholder: {
       text: rawChatInput.placeholderText?.text ?? 'Ask me Anything...',
