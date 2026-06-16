@@ -1,5 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react'
 
+import { useWidgetConfigContext } from './widget-config-context'
+
 interface WidgetUIContextType {
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
@@ -38,9 +40,10 @@ function sendToParent(type: string, data?: Record<string, unknown>) {
 }
 
 export function WidgetUIProvider({ children }: { children: ReactNode }) {
+  const { widgetConfig } = useWidgetConfigContext()
   // In SDK mode (iframe), widget is always "open" - SDK controls visibility via container
-  // In standalone mode, widget starts closed
-  const [isOpen, setIsOpenState] = useState(isSdkMode())
+  // In standalone mode, widget starts closed, unless openAutomatically is enabled
+  const [isOpen, setIsOpenState] = useState(() => isSdkMode() || !!widgetConfig.openAutomatically)
 
   const setIsOpen = useCallback((newIsOpen: boolean) => {
     setIsOpenState(newIsOpen)

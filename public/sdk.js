@@ -100,6 +100,10 @@
       bubbleHolder.style.left = '20px'
     }
 
+    if (config.openAutomatically) {
+      bubbleHolder.style.display = 'none'
+    }
+
     // Hide initially until CSS loads (prevent unstyled flash)
     bubbleHolder.style.opacity = '0'
     bubbleHolder.style.visibility = 'hidden'
@@ -141,6 +145,10 @@
   // Show bubble after CSS is loaded
   function showBubble() {
     if (!bubbleHolder) return
+    if (config.openAutomatically) {
+      bubbleHolder.style.display = 'none'
+      return
+    }
     bubbleHolder.style.opacity = ''
     bubbleHolder.style.visibility = ''
     bubbleHolder.style.pointerEvents = ''
@@ -170,7 +178,12 @@
     var position = config.position || 'right'
     widgetHolder = document.createElement('div')
     widgetHolder.id = WIDGET_HOLDER_ID
-    widgetHolder.className = 'pair-ai-widget-holder pair-ai-position-' + position + ' pair-ai--hide' // Start hidden
+
+    var holderClass = 'pair-ai-widget-holder pair-ai-position-' + position + ' pair-ai--hide'
+    if (config.openAutomatically) {
+      holderClass += ' pair-ai-widget-holder--auto-open'
+    }
+    widgetHolder.className = holderClass
 
     // Hide immediately with inline styles (before CSS loads) to prevent flash
     widgetHolder.style.opacity = '0'

@@ -394,6 +394,14 @@
     visibility 0s linear 0s;
 }
 
+@media (min-width: 668px) {
+  .pair-ai-widget-holder.pair-ai-widget-holder--auto-open {
+    bottom: 16px;
+    height: calc(100vh - 32px);
+    max-height: none;
+  }
+}
+
 .pair-ai-widget-holder.pair-ai-position-right {
   right: 20px;
 }

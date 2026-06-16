@@ -50,6 +50,7 @@ export interface WidgetConfig {
   hideMessageTime?: boolean
   showHeader?: boolean
   showFooter?: boolean
+  openAutomatically?: boolean
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
 }

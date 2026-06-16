@@ -65,8 +65,12 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
 
   // Position classes for the panel
   const panelPositionClasses = {
-    right: 'min-[668px]:top-auto min-[668px]:left-auto min-[668px]:bottom-[104px] min-[668px]:right-4',
-    left: 'min-[668px]:top-auto min-[668px]:right-auto min-[668px]:bottom-[104px] min-[668px]:left-4',
+    right: widgetConfig.openAutomatically
+      ? 'min-[668px]:top-4 min-[668px]:bottom-4 min-[668px]:right-4 min-[668px]:h-[calc(100vh-32px)] min-[668px]:max-h-none'
+      : 'min-[668px]:top-auto min-[668px]:bottom-[104px] min-[668px]:right-4 min-[668px]:h-[700px] min-[668px]:max-h-[700px]',
+    left: widgetConfig.openAutomatically
+      ? 'min-[668px]:top-4 min-[668px]:bottom-4 min-[668px]:left-4 min-[668px]:h-[calc(100vh-32px)] min-[668px]:max-h-none'
+      : 'min-[668px]:top-auto min-[668px]:bottom-[104px] min-[668px]:left-4 min-[668px]:h-[700px] min-[668px]:max-h-[700px]',
   }
 
   const slideDistance = 50
@@ -78,7 +82,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
         {isOpen && (
           <motion.div
             key="widget-panel"
-            className={`min-[668px]:max-h-175-[668px]:w-full min-min-[668px]:max-w-100 ${panelPositionClasses[position as keyof typeof panelPositionClasses]} fixed inset-0 z-50 min-[668px]:h-full`}
+            className={`min-[668px]:w-100 min-[668px]:max-w-100 ${panelPositionClasses[position as keyof typeof panelPositionClasses]} fixed inset-0 z-50`}
             initial={{
               opacity: 0,
               y: slideDistance,
@@ -115,7 +119,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
       <IncomingMessagePreview />
 
       {/* Chat Bubble Button - only in standalone mode */}
-      <WidgetEye />
+      {!widgetConfig.openAutomatically && <WidgetEye />}
     </div>
   )
 }
