@@ -436,7 +436,8 @@
 
 /* ========== MOBILE STYLES ========== */
 @media (max-width: 667px) {
-  .pair-ai-widget-holder {
+  .pair-ai-widget-holder,
+  .pair-ai-widget-holder.pair-ai-position-left {
     top: 0;
     left: 0;
     right: 0;
