@@ -235,6 +235,11 @@ const HIGH_RES_PEAKS = 512 // stored high-res, downsampled to fit container widt
 
 export function AudioMessage({ message, isUnread, primaryColor, websiteName }: AudioMessageProps) {
   const { widgetConfig } = useWidgetConfigContext()
+  const resolvedPrimaryColor =
+    widgetConfig.chatInput?.sendButtonIcon?.styles?.backgroundColor ||
+    primaryColor ||
+    widgetConfig.primaryColor ||
+    '#3D8EDD'
   const audioRef = useRef<HTMLAudioElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -400,7 +405,14 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
   )
 
   if (!audioUrl) {
-    return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
+    return (
+      <TextMessage
+        message={message}
+        isUnread={isUnread}
+        primaryColor={resolvedPrimaryColor}
+        websiteName={websiteName}
+      />
+    )
   }
 
   const isLoading = loadingStage !== 'ready' && loadingStage !== 'error'
@@ -424,13 +436,13 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
       customTextStyles = { ...customerConfig.TextStyles }
 
       if (useBrandColor) {
-        customBubbleStyle.backgroundColor = primaryColor
+        customBubbleStyle.backgroundColor = resolvedPrimaryColor
       }
 
       if (bubbleType === 'outline') {
         customBubbleStyle.backgroundColor = 'transparent'
         const borderW = customBubbleStyle.borderWidth || '1px'
-        const borderC = customBubbleStyle.borderColor || primaryColor || '#000000'
+        const borderC = customBubbleStyle.borderColor || resolvedPrimaryColor || '#000000'
         customBubbleStyle.border = `${borderW} solid ${borderC}`
 
         if (!customTextStyles.color) {
@@ -454,10 +466,10 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
         isCard = true
         customBubbleStyle = { ...cardStyles }
       } else {
-        customBubbleStyle = { backgroundColor: `${primaryColor}12` }
+        customBubbleStyle = { backgroundColor: `${resolvedPrimaryColor}12` }
       }
     } else {
-      customBubbleStyle = { backgroundColor: `${primaryColor}12` }
+      customBubbleStyle = { backgroundColor: `${resolvedPrimaryColor}12` }
     }
   }
 
@@ -466,7 +478,7 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
     timeStyle.opacity = 0.7
   }
 
-  let playBtnBg = primaryColor
+  let playBtnBg = resolvedPrimaryColor
   let playIconColor = '#FFFFFF'
 
   if (isUser) {
@@ -475,12 +487,12 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
 
     if (useBrandColor && bubbleType !== 'outline') {
       playBtnBg = '#FFFFFF'
-      playIconColor = primaryColor
+      playIconColor = resolvedPrimaryColor
     }
   }
 
   return (
-    <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
+    <MessageLayout message={message} isUnread={isUnread} primaryColor={resolvedPrimaryColor} websiteName={websiteName}>
       <div
         ref={wrapperRef}
         className={cn('flex w-full min-w-50 flex-col', {
@@ -538,16 +550,15 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
           <WaveformBars
             peaks={peaks}
             position={position}
-            primaryColor={primaryColor}
+            primaryColor={resolvedPrimaryColor}
             isLoading={isLoading}
             loadingStage={loadingStage}
             loadingProgress={loadingProgress}
             onSeek={handleSeek}
             barColor={
-              customTextStyles.color ||
-              (isUser && customerConfig?.useBrandColor && customerConfig?.bubbleType !== 'outline'
+              isUser && customerConfig?.useBrandColor && customerConfig?.bubbleType !== 'outline'
                 ? '#FFFFFF'
-                : primaryColor)
+                : resolvedPrimaryColor
             }
           />
         </div>

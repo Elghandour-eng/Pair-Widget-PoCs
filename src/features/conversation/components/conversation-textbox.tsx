@@ -249,7 +249,6 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
     return (
       <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'}>
         <VoiceRecorder
-          primaryColor="#3D8EDD"
           isUploading={isVoiceProcessing}
           uploadProgress={voiceProgress}
           onSend={async (payload) => {

@@ -12,7 +12,6 @@ import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface VoiceRecorderProps {
-  primaryColor?: string
   isUploading?: boolean
   uploadProgress?: { current: number; total: number }
   onSend: (payload: VoiceRecorderPayload) => void
@@ -72,6 +71,8 @@ function WaveformCanvas({ waveformData, primaryColor, isPaused }: WaveformCanvas
 
 export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onCancel }: VoiceRecorderProps) {
   const { widgetConfig } = useWidgetConfigContext()
+  const primaryColor =
+    widgetConfig.chatInput?.sendButtonIcon?.styles?.backgroundColor || widgetConfig.primaryColor || '#3D8EDD'
   const {
     isRecording,
     isPaused,
@@ -216,9 +217,10 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
           type="button"
           onClick={handleCancel}
           className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-full text-[#626A6A] transition-colors',
-            isRecording ? 'bg-[#4D98E2] hover:bg-[#3D8EDD]' : 'bg-[#F2F2F3] hover:bg-[#E4E4E6]',
+            'flex size-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90',
+            isRecording ? '' : 'bg-[#F2F2F3] text-[#626A6A] hover:bg-[#E4E4E6]',
           )}
+          style={isRecording ? { backgroundColor: primaryColor } : undefined}
           aria-label="Cancel recording"
         >
           <X className={cn('size-4', isRecording ? 'text-white' : 'text-[#626A6A]')} />
@@ -236,18 +238,23 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
             {/* Pulsing red dot for active recording */}
             {isRecording && !isPaused && (
               <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4D98E2] opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-[#4D98E2]" />
+                <span
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                  style={{ backgroundColor: primaryColor }}
+                />
+                <span className="relative inline-flex size-2 rounded-full" style={{ backgroundColor: primaryColor }} />
               </span>
             )}
             {/* Static dot for paused state */}
-            {isRecording && isPaused && <span className="size-2 shrink-0 rounded-full bg-[#4D98E2]/50" />}
+            {isRecording && isPaused && (
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: primaryColor, opacity: 0.5 }} />
+            )}
 
             {/* Waveform Canvas (clicks to pause/resume) */}
             <div className={cn('min-w-0 flex-1', !readyPayload && 'cursor-pointer')} onClick={handleWaveformClick}>
               <WaveformCanvas
                 waveformData={readyPayload ? readyPayload.waveform : waveformData}
-                primaryColor={readyPayload ? '#797B86' : '#3D8EDD'}
+                primaryColor={readyPayload ? '#797B86' : primaryColor}
                 isPaused={isPaused}
               />
             </div>
@@ -256,8 +263,9 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
             <span
               className={cn(
                 'min-w-10 px-1 text-center text-[10px] font-medium tabular-nums select-none',
-                readyPayload ? 'text-[#85888E]' : 'text-[#3D8EDD]',
+                readyPayload ? 'text-[#85888E]' : '',
               )}
+              style={readyPayload ? undefined : { color: primaryColor }}
             >
               {readyPayload ? formattedFinalTime : formattedTime}
             </span>
@@ -278,7 +286,10 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
 
       {/* Right button circle */}
       {progressLabel ? (
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white">
+        <div
+          className="flex size-9 shrink-0 items-center justify-center rounded-full text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
           <Spinner className="size-4 text-white" />
         </div>
       ) : readyPayload ? (
@@ -295,7 +306,8 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
         <button
           type="button"
           onClick={resume}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white transition-colors hover:bg-[#2A7BC6]"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: primaryColor }}
           aria-label="Resume recording"
         >
           <Mic className="size-4" />
@@ -304,7 +316,8 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
         <button
           type="button"
           onClick={handleStop}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3D8EDD] text-white transition-colors hover:bg-[#2A7BC6]"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: primaryColor }}
           aria-label="Stop recording"
         >
           <Square className="size-3.5 fill-current" />
