@@ -44,6 +44,7 @@ export interface ApiMessage {
   next_messages?: NextMessageItem[]
   next_msg_type?: string
   next_msg?: NextMessageItem
+  ai_feedback?: 'liked' | 'disliked' | null
 }
 
 /**
@@ -218,6 +219,7 @@ export interface Message {
   next_messages?: NextMessageItem[]
   next_msg_type?: string
   next_msg?: NextMessageItem
+  ai_feedback?: 'liked' | 'disliked' | null
 }
 
 /**

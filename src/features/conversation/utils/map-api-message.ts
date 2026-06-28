@@ -85,6 +85,7 @@ export function mapApiMessageToMessage(apiMessage: ApiMessage): Message {
     next_messages: nextMessages,
     next_msg_type: nextMsgType,
     next_msg: nextMsg,
+    ai_feedback: apiMessage.ai_feedback,
   }
 
   logger.debug('mapApiMessageToMessage', 'Mapped API message to internal format', {

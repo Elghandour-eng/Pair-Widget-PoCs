@@ -1,11 +1,14 @@
 import { ThumbsDownIcon } from '@/components/icons/thumbs-down-icon'
 import { ThumbsUpIcon } from '@/components/icons/thumbs-up-icon'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { useMessageFeedback } from '@/features/conversation/hooks/use-message-feedback'
 
 interface FeedbackSectionProps {
   messageId: string
+  initialFeedback?: 'liked' | 'disliked' | null
 }
 
 const getInactiveColor = (color: string) => {
@@ -15,9 +18,16 @@ const getInactiveColor = (color: string) => {
   return color
 }
 
-export function FeedbackSection({ messageId }: FeedbackSectionProps) {
-  const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null)
+export function FeedbackSection({ messageId, initialFeedback = null }: FeedbackSectionProps) {
+  const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(initialFeedback)
   const { widgetConfig } = useWidgetConfigContext()
+  const { conversationId } = useWidgetNavigation()
+  const { mutateAsync: submitFeedbackMutation } = useMessageFeedback()
+
+  // Keep state in sync with initialFeedback if it changes
+  useEffect(() => {
+    setFeedback(initialFeedback)
+  }, [initialFeedback])
 
   const feedbackConfig = widgetConfig.messagesConfig?.feedback
   const primaryColor = widgetConfig.primaryColor
@@ -39,28 +49,39 @@ export function FeedbackSection({ messageId }: FeedbackSectionProps) {
   const downFill =
     feedback === 'disliked' ? activeColor || undefined : feedback === 'liked' ? undefined : inactiveColor || undefined
 
-  const handleLike = () => {
-    const next = feedback === 'liked' ? null : 'liked'
-    setFeedback(next)
-    if (next === 'liked') {
-      toast.success(toastMessage)
+  const handleFeedback = async (nextFeedback: 'liked' | 'disliked') => {
+    if (!conversationId) {
+      toast.error('Conversation ID is missing')
+      return
     }
-    console.log('Thumbs up clicked for message:', messageId)
-  }
 
-  const handleDislike = () => {
-    const next = feedback === 'disliked' ? null : 'disliked'
+    // Toggle logic: clicking the active feedback clears it (but API feedback must be set)
+    // Here we toggle the UI feedback but send the selected rating to the server.
+    // If the user clicks the same rating, we toggle it off in UI (set to null) or keep it.
+    // Wait, the API doesn't support "deleting" feedback in the spec, but we can send the opposite or the clicked feedback.
+    const next = feedback === nextFeedback ? null : nextFeedback
     setFeedback(next)
-    if (next === 'disliked') {
-      toast.success(toastMessage)
+
+    try {
+      await submitFeedbackMutation({
+        conversationId,
+        messageId,
+        feedback: nextFeedback,
+      })
+      if (next === nextFeedback) {
+        toast.success(toastMessage)
+      }
+    } catch (error) {
+      // Revert UI state on error
+      setFeedback(feedback)
+      toast.error('Failed to submit feedback. Please try again.')
     }
-    console.log('Thumbs down clicked for message:', messageId)
   }
 
   return (
     <div className="mt-1 flex items-center justify-start gap-3 select-none">
       <button
-        onClick={handleLike}
+        onClick={() => handleFeedback('liked')}
         className="cursor-pointer rounded p-1 transition-colors hover:bg-black/5 focus:outline-none"
         aria-label="Thumbs up"
       >
@@ -72,7 +93,7 @@ export function FeedbackSection({ messageId }: FeedbackSectionProps) {
         />
       </button>
       <button
-        onClick={handleDislike}
+        onClick={() => handleFeedback('disliked')}
         className="cursor-pointer rounded p-1 transition-colors hover:bg-black/5 focus:outline-none"
         aria-label="Thumbs down"
       >

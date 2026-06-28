@@ -56,7 +56,7 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
       {productSet && <ProductSection productSet={productSet} />}
 
       {suggestions && isLastMessage && <SuggestionsSection suggestions={suggestions} />}
-      <FeedbackSection messageId={message.ulid} />
+      <FeedbackSection messageId={message.ulid} initialFeedback={message.ai_feedback as 'liked' | 'disliked' | null} />
     </div>
   )
 }
