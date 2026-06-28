@@ -53,9 +53,11 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
       <AiAssistantMessageHeader isPending={false} />
       <AiAssistantMessageBody content={message.content} />
 
-      {productSet && <ProductSection productSet={productSet} />}
+      {productSet && <ProductSection productSet={productSet} sourceMessageUlid={message.ulid} />}
 
-      {suggestions && isLastMessage && <SuggestionsSection suggestions={suggestions} />}
+      {suggestions && isLastMessage && (
+        <SuggestionsSection suggestions={suggestions} sourceMessageUlid={message.ulid} />
+      )}
       <FeedbackSection messageId={message.ulid} initialFeedback={message.ai_feedback as 'liked' | 'disliked' | null} />
     </div>
   )

@@ -163,6 +163,7 @@ export interface SuggestionAction {
   type: 'action'
   label: string
   action_name: string
+  action_ulid: string
   parameters?: Record<string, unknown>
 }
 

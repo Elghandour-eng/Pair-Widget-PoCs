@@ -1,11 +1,15 @@
-import type { ProductCardSet } from '@/features/conversation/types/message'
+import type { ProductCardSet, ProductCardButton } from '@/features/conversation/types/message'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronRight, Heart, ShoppingBag } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Spinner } from '@/components/ui/spinner'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
 
 interface ProductSectionProps {
   productSet: ProductCardSet
+  sourceMessageUlid: string
 }
 
 const getDiscountPercentage = (oldPriceStr?: string, currentPriceStr?: string) => {
@@ -18,11 +22,15 @@ const getDiscountPercentage = (oldPriceStr?: string, currentPriceStr?: string) =
   return null
 }
 
-export function ProductSection({ productSet }: ProductSectionProps) {
+export function ProductSection({ productSet, sourceMessageUlid }: ProductSectionProps) {
   const title = productSet.header?.title || 'Recommended Products'
   const hasViewAll = !!productSet.view_all
   const viewAllText = productSet.header?.action_text || 'View all'
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
+  const [loadingButtonId, setLoadingButtonId] = useState<string | null>(null)
+
+  const { conversationId } = useWidgetNavigation()
+  const { mutateAsync: dispatchActionMutation } = useDispatchAction()
 
   // Initialize Embla Carousel
   const [emblaRef] = useEmblaCarousel({
@@ -30,9 +38,41 @@ export function ProductSection({ productSet }: ProductSectionProps) {
     containScroll: 'trimSnaps',
   })
 
-  const handleAddToCart = (productId: string, quantity: number, productTitle: string) => {
-    console.log('Adding to cart:', { productId, quantity })
-    toast.success(`Added ${productTitle} to cart!`)
+  const handleActionButtonClick = async (button: ProductCardButton, buttonId: string, productTitle: string) => {
+    if (!conversationId) {
+      toast.error('Conversation ID is missing')
+      return
+    }
+
+    if (!button.action_ulid) {
+      // Fallback behavior if action_ulid is missing
+      if (button.action_name === 'add_to_cart') {
+        toast.success(`Added ${productTitle} to cart!`)
+      } else {
+        toast.success(`Executed ${button.label || 'Action'}`)
+      }
+      return
+    }
+
+    setLoadingButtonId(buttonId)
+    try {
+      const res = await dispatchActionMutation({
+        conversationId,
+        actionUlid: button.action_ulid,
+        sourceMessageUlid,
+        parameters: button.parameters,
+      })
+
+      if (res.success) {
+        toast.success(button.label ? `${button.label} successful!` : `Action completed successfully!`)
+      } else {
+        toast.error(res.error_message || 'Action execution failed')
+      }
+    } catch (error) {
+      toast.error('Failed to execute action')
+    } finally {
+      setLoadingButtonId(null)
+    }
   }
 
   const toggleFavorite = (productId: string, productTitle: string) => {
@@ -67,8 +107,10 @@ export function ProductSection({ productSet }: ProductSectionProps) {
           {productSet.cards.map((card, idx) => {
             const mainButton = card.buttons?.[0]
             const productId = (mainButton?.parameters?.product_id as string) || `product-${idx}`
+            const buttonId = `${productId}-${idx}`
             const isFavorite = !!favorites[productId]
             const discountPercent = getDiscountPercentage(card.old_price, card.current_price)
+            const isLoading = loadingButtonId === buttonId
 
             return (
               <div key={idx} className="flex w-36.25 shrink-0 flex-col items-start justify-end gap-3 select-none">
@@ -127,14 +169,17 @@ export function ProductSection({ productSet }: ProductSectionProps) {
                     {mainButton ? (
                       <button
                         type="button"
-                        onClick={() =>
-                          handleAddToCart(productId, (mainButton.parameters?.quantity as number) || 1, card.title)
-                        }
-                        className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#E5E4E1] bg-[#F2F1ED] px-3 transition-colors hover:bg-[#EAE8E3] active:scale-[0.98]"
+                        disabled={isLoading}
+                        onClick={() => handleActionButtonClick(mainButton, buttonId, card.title)}
+                        className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#E5E4E1] bg-[#F2F1ED] px-3 transition-colors hover:bg-[#EAE8E3] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <span className="text-[14px] leading-[130%] font-normal text-[#1A1A1A]">
-                          {mainButton.label || 'Add to Cart'}
-                        </span>
+                        {isLoading ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <span className="text-[14px] leading-[130%] font-normal text-[#1A1A1A]">
+                            {mainButton.label || 'Add to Cart'}
+                          </span>
+                        )}
                       </button>
                     ) : (
                       <div className="h-9 flex-1" />
