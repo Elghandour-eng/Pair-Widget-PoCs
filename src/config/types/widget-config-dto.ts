@@ -77,6 +77,11 @@ export interface WelcomeSubtitle {
   styles: CSSProperties
 }
 
+export interface WidgetBackground {
+  type: 'color' | 'gradient'
+  background: string
+}
+
 export interface ShowIntroScreen {
   value: boolean
   styles?: CSSProperties
@@ -88,6 +93,7 @@ export interface IntroScreen {
   welcomeTitle: WelcomeTitle
   welcomeSubtitle: WelcomeSubtitle
   showIntroScreen: ShowIntroScreen
+  widgetBackground?: WidgetBackground
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,11 +109,12 @@ export interface QuickLinkDisplaySettings {
 
 export interface QuickLinkCard {
   id: string
-  url: string
+  url?: string
   title: string
   active: boolean
   subtitle: string
   media_ulid: string
+  order?: number
 }
 
 export interface QuickLinks {
@@ -116,6 +123,8 @@ export interface QuickLinks {
   quickLinkCards: QuickLinkCard[]
   showQuickLinks: { value: boolean }
   displaySettings: QuickLinkDisplaySettings
+  showTitle?: boolean
+  showSubtitle?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,6 +236,10 @@ export interface Messages {
 
 export interface WidgetV2Config {
   intro_screen: IntroScreen
+  introTitle?: {
+    text: string
+    styles?: CSSProperties
+  }
   quick_links: QuickLinks
   trending_prompts: TrendingPrompts
   chat_input: ChatInput
@@ -251,10 +264,6 @@ export interface WidgetConfigDto {
   welcome_tagline: string
   reply_time: ReplyTime
   avatar_url: string
-  widget_title?: {
-    text: string
-    styles?: CSSProperties
-  }
 
   pre_chat_form_enabled: boolean
   pre_chat_form_options: PreChatFormOptions

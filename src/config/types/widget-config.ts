@@ -64,6 +64,8 @@ export interface QuickLinksConfig {
   cardStyles?: CSSProperties
   textStyle?: CSSProperties
   links: QuickLinkData[]
+  showTitle?: boolean
+  showSubtitle?: boolean
 }
 
 export interface QuickLinkData {
@@ -102,6 +104,11 @@ export interface IntroHeroImage {
   containerStyles?: CSSProperties
 }
 
+export interface WidgetBackgroundConfig {
+  type: 'color' | 'gradient'
+  background: string
+}
+
 export interface IntroScreenConfig {
   show: boolean
   welcomeTitle: string
@@ -109,6 +116,7 @@ export interface IntroScreenConfig {
   welcomeSubtitle: string
   welcomeSubtitleStyles?: CSSProperties
   heroImage?: IntroHeroImage
+  widgetBackground?: WidgetBackgroundConfig
 }
 
 export interface SendButtonIconConfig {

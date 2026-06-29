@@ -60,6 +60,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
                 containerStyles: rawIntro.heroSection.enabled.styles,
               }
             : undefined,
+        widgetBackground: rawIntro.widgetBackground
+          ? {
+              type: rawIntro.widgetBackground.type,
+              background: rawIntro.widgetBackground.background,
+            }
+          : undefined,
       }
     : undefined
 
@@ -69,13 +75,20 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     show: rawQL.showQuickLinks.value,
     position: rawQL.displaySettings?.position ?? 'under_welcome',
     carouselLoop: rawQL.displaySettings?.carouselLoop ?? false,
-    cardStyles: rawQL.cardStyle,
+    cardStyles: rawQL.cardStyle
+      ? {
+          ...rawQL.cardStyle,
+          gap: (rawQL.cardStyle as any).imageTextGap ?? rawQL.cardStyle.gap,
+        }
+      : undefined,
     textStyle: rawQL.textStyle,
+    showTitle: rawQL.showTitle ?? true,
+    showSubtitle: rawQL.showSubtitle ?? true,
     links: (rawQL.quickLinkCards ?? []).map((card, idx) => ({
       id: card.id,
       text: card.title,
       image: card.url,
-      displayOrder: idx + 1,
+      displayOrder: card.order ?? idx + 1,
       active: card.active,
       subtitle: card.subtitle,
       media_ulid: card.media_ulid,
@@ -175,8 +188,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     preChatFormOptions: apiResponse.pre_chat_form_options,
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
-    // TODO: Discuss with the PM if we need to have these styles in the config
-    widgetTitle: apiResponse.widget_title,
+    widgetTitle: apiResponse.widget_v2_config?.introTitle,
     websiteToken: apiResponse.widget_id,
     baseUrl: apiResponse.website_url,
     reply_time: apiResponse.reply_time as 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day',
@@ -189,6 +201,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     // TODO: Discuss with the PM if we need to have these styles in the config
     textboxStyle: undefined,
     widgetBgColor:
+      rawIntro?.widgetBackground?.background ??
       'linear-gradient(180deg, var(--Surface-Base, #FFF) -19.27%, var(--Surface-Tertiary, #EEECE1) 99.71%)',
     hideMessageTime: true,
     showHeader: false,

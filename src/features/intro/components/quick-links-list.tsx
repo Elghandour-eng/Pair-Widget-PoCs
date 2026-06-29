@@ -44,6 +44,8 @@ export function QuickLinksList() {
                   item={item}
                   cardStyles={quickLinksConfig.cardStyles}
                   textStyle={quickLinksConfig.textStyle}
+                  showTitle={quickLinksConfig.showTitle}
+                  showSubtitle={quickLinksConfig.showSubtitle}
                 />
               </div>
             ))}
@@ -57,6 +59,8 @@ export function QuickLinksList() {
               item={item}
               cardStyles={quickLinksConfig.cardStyles}
               textStyle={quickLinksConfig.textStyle}
+              showTitle={quickLinksConfig.showTitle}
+              showSubtitle={quickLinksConfig.showSubtitle}
             />
           ))}
         </div>

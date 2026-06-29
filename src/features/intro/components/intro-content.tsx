@@ -36,14 +36,14 @@ export function IntroContent() {
           {showQuickLinksAbove && <QuickLinksList />}
           <div>
             <h1
-              className="mb-2 max-w-[85%] font-['DM_Sans'] text-[1.5rem] leading-[120%] font-semibold text-[#1A1A1A]"
+              className="mb-2 font-['DM_Sans'] text-[1.5rem] leading-[120%] font-semibold text-[#1A1A1A]"
               style={introConfig?.welcomeTitleStyles}
             >
               {introConfig?.welcomeTitle ?? 'Please add a title'}
             </h1>
 
             <p
-              className="max-w-[85%] font-['DM_Sans'] text-[0.875rem] leading-[130%] font-normal text-[#1A1A1A]"
+              className="font-['DM_Sans'] text-[0.875rem] leading-[130%] font-normal text-[#1A1A1A]"
               style={introConfig?.welcomeSubtitleStyles}
             >
               {introConfig?.welcomeSubtitle ?? 'Please add a subtitle'}
@@ -60,13 +60,13 @@ export function IntroContent() {
             {introConfig?.heroImage?.position === 'top' && heroImage}
             <div className="flex w-full flex-col items-center text-center">
               <h1
-                className="mb-2 max-w-[85%] text-center font-['DM_Sans'] text-[1.5rem] leading-[120%] font-semibold text-[#1A1A1A]"
+                className="mb-2 text-center font-['DM_Sans'] text-[1.5rem] leading-[120%] font-semibold text-[#1A1A1A]"
                 style={introConfig?.welcomeTitleStyles}
               >
                 {introConfig?.welcomeTitle ?? 'Please add a title'}
               </h1>
               <p
-                className="max-w-[85%] text-center font-['DM_Sans'] text-[0.875rem] leading-[130%] font-normal text-[#1A1A1A]"
+                className="text-center font-['DM_Sans'] text-[0.875rem] leading-[130%] font-normal text-[#1A1A1A]"
                 style={introConfig?.welcomeSubtitleStyles}
               >
                 {introConfig?.welcomeSubtitle ?? 'Please add a subtitle'}
