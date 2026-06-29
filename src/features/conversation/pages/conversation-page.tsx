@@ -8,6 +8,7 @@ import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useWidgetUIContext } from '@/contexts/widget-ui-context'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { ConversationHeader } from '../components/conversation-header'
+import { AiAssistantMessageShimmer } from '../components/conversation-message/ai-assistant-message/ai-assistant-message-shimmer'
 import { ConversationMessages } from '../components/conversation-messages'
 import { ConversationTextbox } from '../components/conversation-textbox'
 import { QuestionInput } from '../components/question-input'
@@ -93,12 +94,23 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
           isLoadingMore={false}
         />
       ) : isLoading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Spinner className="size-4" style={{ color: widgetConfig.primaryColor }} />
-            Loading messages...
-          </p>
-        </div>
+        widgetConfig.introScreen?.loadingState?.type === 'shimmer' ? (
+          <div
+            className="flex flex-1 flex-col overflow-y-auto px-4 py-6"
+            style={
+              widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : { backgroundColor: '#FAFAFA' }
+            }
+          >
+            <AiAssistantMessageShimmer cardStyles={widgetConfig.messagesConfig?.aiMessages?.CardStyles} />
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-muted-foreground flex items-center gap-2 text-sm">
+              <Spinner className="size-4" style={{ color: widgetConfig.primaryColor }} />
+              Loading messages...
+            </p>
+          </div>
+        )
       ) : (
         <ConversationMessages
           messages={allMessages}

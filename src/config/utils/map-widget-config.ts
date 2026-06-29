@@ -66,6 +66,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
               background: rawIntro.widgetBackground.background,
             }
           : undefined,
+        loadingState: rawIntro.loadingState
+          ? {
+              type: rawIntro.loadingState.type,
+              styles: rawIntro.loadingState.styles,
+            }
+          : undefined,
       }
     : undefined
 

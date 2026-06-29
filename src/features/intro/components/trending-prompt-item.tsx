@@ -38,7 +38,7 @@ export function TrendingPromptItem({
       disabled={disabled}
     >
       {isLoading ? (
-        <Spinner className="size-6" />
+        <Spinner className="size-4" />
       ) : (
         showIcon &&
         (prompt.iconUrl ? (

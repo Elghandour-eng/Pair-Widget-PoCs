@@ -109,6 +109,13 @@ export interface WidgetBackgroundConfig {
   background: string
 }
 
+export type LoadingStateType = 'shimmer' | 'spinner'
+
+export interface LoadingStateConfig {
+  type: LoadingStateType
+  styles?: CSSProperties
+}
+
 export interface IntroScreenConfig {
   show: boolean
   welcomeTitle: string
@@ -117,6 +124,7 @@ export interface IntroScreenConfig {
   welcomeSubtitleStyles?: CSSProperties
   heroImage?: IntroHeroImage
   widgetBackground?: WidgetBackgroundConfig
+  loadingState?: LoadingStateConfig
 }
 
 export interface SendButtonIconConfig {
