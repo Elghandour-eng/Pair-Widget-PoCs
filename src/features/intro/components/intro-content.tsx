@@ -19,7 +19,7 @@ export function IntroContent() {
       <img
         src={introConfig.heroImage.url}
         alt="Hero image"
-        className={cn('max-h-51.75 w-full rounded object-contain', !hasQuickLinks && 'mx-auto')}
+        className={cn('max-h-31 w-full rounded object-cover', !hasQuickLinks && 'mx-auto')}
         style={introConfig.heroImage.styles}
       />
     </div>

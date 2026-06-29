@@ -48,18 +48,9 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     ? {
         show: rawIntro.showIntroScreen.value,
         welcomeTitle: rawIntro.welcomeTitle?.text ?? apiResponse.welcome_title ?? '',
-        welcomeTitleStyles: {
-          ...(rawIntro.welcomeTitle?.styles ?? {}),
-          // Below is a mock
-          fontFamily: 'Barlow Condensed',
-        },
+        welcomeTitleStyles: rawIntro.welcomeTitle?.styles,
         welcomeSubtitle: rawIntro.welcomeSubtitle?.text ?? apiResponse.welcome_tagline ?? '',
-        welcomeSubtitleStyles: {
-          ...(rawIntro.welcomeSubtitle?.styles ?? {}),
-          // Below is a mock
-          color: '#0D223F8A',
-          fontFamily: 'Barlow Condensed',
-        },
+        welcomeSubtitleStyles: rawIntro.welcomeSubtitle?.styles,
         heroImage:
           rawIntro.heroSection?.enabled?.value && rawIntro.heroSection?.heroImage?.url
             ? {
@@ -79,11 +70,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     position: rawQL.displaySettings?.position ?? 'under_welcome',
     carouselLoop: rawQL.displaySettings?.carouselLoop ?? false,
     cardStyles: rawQL.cardStyle,
-    textStyle: {
-      ...(rawQL.textStyle ?? {}),
-      // Below is a mock
-      fontFamily: 'Barlow Condensed',
-    },
+    textStyle: rawQL.textStyle,
     links: (rawQL.quickLinkCards ?? []).map((card, idx) => ({
       id: card.id,
       text: card.title,
@@ -103,23 +90,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         title: v2Trending.displaySettings?.sectionTitle,
         // TODO: This showTitle property is mocked for now. Sync with BE when they support showTitle in displaySettings.
         showTitle: v2Trending.displaySettings?.showTitle ?? false,
-        titleStyle: {
-          ...(v2Trending.displaySettings?.styles ?? {}),
-          // Below is a mock
-          fontFamily: 'Barlow Condensed',
-        },
+        titleStyle: v2Trending.displaySettings?.styles ?? {},
         showIcon: v2Trending.displaySettings?.showIcons ?? false,
-        chipStyles: {
-          ...(v2Trending.chipStyle ?? {}),
-          // Below is a mock
-          flexDirection: 'column',
-        },
-        textStyle: {
-          ...(v2Trending.textStyle ?? {}),
-          // Below is a mock
-          color: '#0D223F8A',
-          fontFamily: 'Barlow Condensed',
-        },
+        chipStyles: v2Trending.chipStyle ?? {},
+        textStyle: v2Trending.textStyle ?? {},
         // TODO: This carouselLoop property is mocked for now. Sync with BE when they support carouselLoop in displaySettings.
         carouselLoop: v2Trending.displaySettings?.carouselLoop ?? false,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
@@ -136,27 +110,11 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const rawSendIcon = rawChatInput.sendButtonIcon
   const sendButtonIcon = {
     variant: rawSendIcon?.variant ?? 'send',
-    styles: {
-      ...(rawSendIcon?.styles ?? {}),
-      // Below is a mock
-      width: '32px',
-      height: '32px',
-      backgroundColor: '#1A6DE5',
-      borderRadius: '50%',
-    },
+    styles: rawSendIcon?.styles,
   }
 
   const chatInput: ChatInputConfig = {
-    styles: {
-      ...(rawChatInput.styles ?? {}),
-      // Below is a mock
-      fontFamily: 'Barlow Condensed',
-      fontStyle: 'normal',
-      fontWeight: '600',
-      fontSize: '16px',
-      lineHeight: '20px',
-      color: '#0D223F',
-    },
+    styles: rawChatInput.styles ?? {},
     layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
     sendButtonIcon,
     actions: {
@@ -167,16 +125,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     },
     placeholder: {
       text: rawChatInput.placeholderText?.text ?? 'Ask me Anything...',
-      styles: {
-        ...(rawChatInput.placeholderText?.styles ?? {}),
-        // Below is a mock
-        fontFamily: 'Barlow Condensed',
-        fontStyle: 'normal',
-        fontWeight: '600',
-        fontSize: '16px',
-        lineHeight: '20px',
-        color: '#0D223F8A',
-      },
+      styles: rawChatInput.placeholderText?.styles ?? {},
     },
   }
 
@@ -197,44 +146,17 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       ? {
           iconId: rawMessages.aiMessages.iconId ?? '',
           iconUrl: rawMessages.aiMessages.iconUrl,
-          CardStyles: {
-            ...(rawMessages.aiMessages.CardStyles ?? {}),
-            // Below is a mock
-            border: 'none',
-            background: 'transparent',
-            color: '#0D223F',
-            fontFamily: 'Barlow Condensed',
-          },
-          TextStyles: {
-            ...(rawMessages.aiMessages.TextStyles ?? {}),
-            // Below is a mock
-            fontFamily: 'Barlow Condensed',
-            fontStyle: 'normal',
-            fontWeight: '600',
-            fontSize: '16px',
-            lineHeight: '20px',
-            color: '#0D223F',
-          },
+          CardStyles: rawMessages.aiMessages.CardStyles ?? {},
+          TextStyles: rawMessages.aiMessages.TextStyles ?? {},
           showAiIcon: rawMessages.aiMessages.showAiIcon ?? true,
-          messageStyle: 'plain',
+          messageStyle: rawMessages.aiMessages.messageStyle ?? 'plain',
         }
       : undefined,
     customerMessages: rawMessages?.customerMessages
       ? {
-          TextStyles: {
-            ...(rawMessages.customerMessages.TextStyles ?? {}),
-            // Below is a mock
-            color: '#0D223F',
-            fontFamily: 'Barlow Condensed',
-          },
+          TextStyles: rawMessages.customerMessages.TextStyles ?? {},
           bubbleType: rawMessages.customerMessages.bubbleType ?? 'filled',
-          bubbleStyle: {
-            ...(rawMessages.customerMessages.bubbleStyle ?? {}),
-            // Below is a mock
-            border: '0.5px solid var(--Blue-100, #D9DFE9)',
-            fontFamily: 'Barlow Condensed',
-            background: '#FFFFFF',
-          },
+          bubbleStyle: rawMessages.customerMessages.bubbleStyle ?? {},
           useBrandColor: rawMessages.customerMessages.useBrandColor ?? false,
         }
       : undefined,
@@ -254,14 +176,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
     // TODO: Discuss with the PM if we need to have these styles in the config
-    widgetTitle: {
-      text: 'ASK HIRO',
-      styles: {
-        ...(apiResponse.widget_title?.styles ?? {}),
-        // Below is a mock
-        fontFamily: 'Barlow Condensed',
-      },
-    },
+    widgetTitle: apiResponse.widget_title,
     websiteToken: apiResponse.widget_id,
     baseUrl: apiResponse.website_url,
     reply_time: apiResponse.reply_time as 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day',
@@ -273,7 +188,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     messagesConfig,
     // TODO: Discuss with the PM if we need to have these styles in the config
     textboxStyle: undefined,
-    widgetBgColor: 'linear-gradient(180deg, #F7F7F7 0%, #E6EAF4 100%)',
+    widgetBgColor:
+      'linear-gradient(180deg, var(--Surface-Base, #FFF) -19.27%, var(--Surface-Tertiary, #EEECE1) 99.71%)',
     hideMessageTime: true,
     showHeader: false,
     showFooter: false,
