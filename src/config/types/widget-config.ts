@@ -55,6 +55,7 @@ export interface WidgetConfig {
   userId?: string
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
+  launcherStyles?: CSSProperties
 }
 
 export interface QuickLinksConfig {

@@ -4,6 +4,8 @@ import { WidgetFooter } from '@/components/widget-footer'
 import { WelcomeContent } from '@/features/welcome/components/welcome-content'
 import { WelcomeHeader } from '@/features/welcome/components/welcome-header'
 
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 /**
@@ -12,12 +14,13 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
  */
 export function WelcomePage() {
   logger.debug('WelcomePage', 'Component rendered')
+  const { widgetConfig } = useWidgetConfigContext()
 
   return (
     <>
       <WelcomeHeader />
       <WelcomeContent />
-      <WidgetFooter />
+      {widgetConfig.showFooter && <WidgetFooter />}
     </>
   )
 }

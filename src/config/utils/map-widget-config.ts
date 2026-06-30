@@ -184,9 +184,13 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   return {
     name: apiResponse.name,
     enabled: true, // Widget is enabled if config is returned
-    position: windowSettings?.openAutomatically ? 'right' : windowSettings?.position || 'right',
-    type: windowSettings?.type,
-    launcherTitle: windowSettings?.launcherTitle,
+    position: apiResponse.launcher_position || windowSettings?.position || 'right',
+    type: apiResponse.launcher_style
+      ? apiResponse.launcher_style === 'expanded_bubble'
+        ? 'expanded_bubble'
+        : 'standard'
+      : windowSettings?.type,
+    launcherTitle: apiResponse.launcher_title || windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
     requiresPreChat: apiResponse.pre_chat_form_enabled,
     greetingEnabled: apiResponse.enable_greeting,
@@ -210,12 +214,14 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       rawIntro?.widgetBackground?.background ??
       'linear-gradient(180deg, var(--Surface-Base, #FFF) -19.27%, var(--Surface-Tertiary, #EEECE1) 99.71%)',
     hideMessageTime: true,
-    showHeader: false,
-    showFooter: false,
-    openAutomatically: windowSettings?.openAutomatically || false,
+    showHeader: apiResponse.widget_header ?? true,
+    showFooter: apiResponse.powered_by_pair_ai ?? true,
+    openAutomatically:
+      apiResponse.opening_method === 'automatically_open' || windowSettings?.openAutomatically || false,
     userId: windowSettings?.userId,
     // Deprecated used for Welcome Screen
     welcomeTitle: apiResponse.welcome_title || undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,
+    launcherStyles: apiResponse.launcher_styles || apiResponse.styles,
   }
 }

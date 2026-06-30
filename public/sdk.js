@@ -403,6 +403,11 @@
           // Send config to widget
           sendMessageToWidget('sdk:config', config)
           break
+        case 'widget:configUpdated':
+          if (event.data.config) {
+            updateSdkConfig(event.data.config)
+          }
+          break
         case 'widget:close':
           // Widget requested to close
           toggleWidget(false)
@@ -449,6 +454,133 @@
     var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
     if (bubble) {
       bubble.style.background = color
+    }
+  }
+
+  // Inject font from Google Fonts dynamically if requested
+  function injectGoogleFont(fontFamily) {
+    if (!fontFamily) return
+    var rawFamily = fontFamily.split(',')[0].replace(/['"]/g, '').trim()
+    var fontId = 'google-font-sdk-' + rawFamily.toLowerCase().replace(/\s+/g, '-')
+    if (document.getElementById(fontId)) return
+
+    var link = document.createElement('link')
+    link.id = fontId
+    link.rel = 'stylesheet'
+    link.href =
+      'https://fonts.googleapis.com/css2?family=' +
+      encodeURIComponent(rawFamily) +
+      ':wght@300;400;500;600;700&display=swap'
+    document.head.appendChild(link)
+  }
+
+  // Update SDK config dynamically based on widget backend settings
+  function updateSdkConfig(newConfig) {
+    if (!newConfig) return
+
+    console.log('[PairAI SDK] Updating config dynamically:', newConfig)
+
+    // Preserve existing settings if new ones are not provided
+    var oldPosition = config.position
+    var oldType = config.type
+    var oldOpenAutomatically = config.openAutomatically
+
+    if (newConfig.position) config.position = newConfig.position
+    if (newConfig.type) config.type = newConfig.type
+    if (newConfig.launcherTitle) config.launcherTitle = newConfig.launcherTitle
+    if (newConfig.openAutomatically !== undefined) config.openAutomatically = newConfig.openAutomatically
+    if (newConfig.primaryColor) config.primaryColor = newConfig.primaryColor
+    if (newConfig.launcherStyles) config.launcherStyles = newConfig.launcherStyles
+    if (newConfig.showFooter !== undefined) config.showFooter = newConfig.showFooter
+
+    // 1. Update position classes on holders
+    if (config.position !== oldPosition) {
+      if (bubbleHolder) {
+        bubbleHolder.style.left = config.position === 'left' ? '20px' : ''
+        bubbleHolder.style.right = config.position === 'right' ? '20px' : ''
+      }
+      if (widgetHolder) {
+        widgetHolder.className = widgetHolder.className
+          .replace('pair-ai-position-left', '')
+          .replace('pair-ai-position-right', '')
+        widgetHolder.classList.add('pair-ai-position-' + config.position)
+      }
+    }
+
+    // 2. Update automatic open behavior
+    if (config.openAutomatically !== oldOpenAutomatically) {
+      if (config.openAutomatically) {
+        if (bubbleHolder) bubbleHolder.style.display = 'none'
+        if (widgetHolder) {
+          if (!widgetHolder.classList.contains('pair-ai-widget-holder--auto-open')) {
+            widgetHolder.classList.add('pair-ai-widget-holder--auto-open')
+          }
+        }
+        toggleWidget(true)
+      } else {
+        if (bubbleHolder) bubbleHolder.style.display = ''
+        if (widgetHolder) {
+          widgetHolder.classList.remove('pair-ai-widget-holder--auto-open')
+        }
+      }
+    }
+
+    // 3. Update bubble elements and classes
+    var bubble = bubbleHolder ? bubbleHolder.querySelector('.pair-ai-bubble') : null
+    if (bubble) {
+      // Apply style variant
+      if (config.type === 'expanded_bubble') {
+        if (!bubble.classList.contains('pair-ai-bubble--expanded')) {
+          bubble.classList.add('pair-ai-bubble--expanded')
+        }
+      } else {
+        bubble.classList.remove('pair-ai-bubble--expanded')
+      }
+
+      // Update bubble content (preserve badge, handle expanded text)
+      var existingBadge = bubble.querySelector('.pair-ai-bubble-badge')
+      var badgeHTML = existingBadge ? existingBadge.outerHTML : ''
+      if (isOpen) {
+        bubble.innerHTML = closeIcon + badgeHTML
+      } else {
+        if (config.type === 'expanded_bubble') {
+          bubble.innerHTML = chatIcon + '<span>' + (config.launcherTitle || 'Chat with us!') + '</span>' + badgeHTML
+        } else {
+          bubble.innerHTML = chatIcon + badgeHTML
+        }
+      }
+      badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
+
+      // Apply launcher styles (color, backgroundColor, fontSize, fontFamily, fontWeight)
+      var lStyles = config.launcherStyles || {}
+      var bubbleBg = lStyles.backgroundColor || config.primaryColor
+      if (bubbleBg) {
+        bubble.style.background = bubbleBg
+      }
+
+      var bubbleColor = lStyles.color || 'white'
+      if (bubbleColor) {
+        bubble.style.color = bubbleColor
+        var svgPath = bubble.querySelector('svg path')
+        if (svgPath) {
+          svgPath.setAttribute('fill', bubbleColor)
+        }
+        var span = bubble.querySelector('span')
+        if (span) {
+          span.style.color = bubbleColor
+        }
+      }
+
+      if (lStyles.fontSize) {
+        bubble.style.fontSize = lStyles.fontSize
+      }
+      if (lStyles.fontFamily) {
+        bubble.style.fontFamily = lStyles.fontFamily
+        injectGoogleFont(lStyles.fontFamily)
+      }
+      if (lStyles.fontWeight) {
+        bubble.style.fontWeight = lStyles.fontWeight
+      }
     }
   }
 

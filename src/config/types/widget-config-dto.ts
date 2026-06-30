@@ -291,4 +291,12 @@ export interface WidgetConfigDto {
   widget_v2_config: WidgetV2Config
 
   visitor_credentials: unknown[]
+  widget_header?: boolean
+  opening_method?: 'automatically_open' | 'chat_icon'
+  launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard'
+  launcher_position?: 'left' | 'right'
+  styles?: CSSProperties
+  launcher_styles?: CSSProperties
+  powered_by_pair_ai?: boolean
+  launcher_title?: string
 }

@@ -70,7 +70,10 @@ export function WidgetEye() {
           className={`fixed ${WIDGET_EYE_POSITION_CLASSES[position]} z-50 flex cursor-pointer touch-none items-center gap-2 overflow-hidden rounded-full px-4 shadow-lg hover:shadow-xl ${
             isOpen ? 'size-16' : 'h-12 max-w-75 min-w-50'
           }`}
-          style={{ backgroundColor: widgetConfig.primaryColor }}
+          style={{
+            backgroundColor: widgetConfig.primaryColor,
+            ...widgetConfig.launcherStyles,
+          }}
           initial={{
             scale: 0,
             opacity: 0,
@@ -92,7 +95,9 @@ export function WidgetEye() {
           }}
         >
           <div className="pointer-events-none flex shrink-0 items-center justify-center">
-            {!isOpen && <BubbleChatIcon className="pointer-events-none size-5 text-white" />}
+            {!isOpen && (
+              <BubbleChatIcon className="pointer-events-none size-5" style={{ ...widgetConfig.launcherStyles }} />
+            )}
             <AnimatePresence initial={false}>
               {isOpen && (
                 <motion.div
@@ -103,7 +108,10 @@ export function WidgetEye() {
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 >
-                  <X className="pointer-events-none size-6 text-white" />
+                  <X
+                    className="pointer-events-none size-6"
+                    style={{ color: widgetConfig.launcherStyles?.color || 'white' }}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -116,7 +124,12 @@ export function WidgetEye() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="pointer-events-none truncate text-sm font-medium whitespace-nowrap text-white"
+                className="pointer-events-none truncate text-sm font-medium whitespace-nowrap"
+                style={{
+                  color: widgetConfig.launcherStyles?.color || 'white',
+                  fontFamily: widgetConfig.launcherStyles?.fontFamily,
+                  fontWeight: widgetConfig.launcherStyles?.fontWeight,
+                }}
               >
                 {launcherTitle}
               </motion.span>
@@ -151,7 +164,13 @@ export function WidgetEye() {
         aria-label={launcherTitle}
         title={launcherTitle}
         className={`fixed ${WIDGET_EYE_POSITION_CLASSES[position]} z-40 flex size-16 cursor-pointer touch-none items-center justify-center rounded-full shadow-lg hover:shadow-xl`}
-        style={{ backgroundColor: widgetConfig.primaryColor }}
+        style={{
+          backgroundColor: widgetConfig.launcherStyles?.backgroundColor || widgetConfig.primaryColor,
+          color: widgetConfig.launcherStyles?.color || 'white',
+          fontSize: widgetConfig.launcherStyles?.fontSize,
+          fontWeight: widgetConfig.launcherStyles?.fontWeight,
+          fontFamily: widgetConfig.launcherStyles?.fontFamily,
+        }}
         initial={{
           scale: 0,
           opacity: 0,
@@ -179,7 +198,10 @@ export function WidgetEye() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="pointer-events-none absolute inset-0 flex items-center justify-center"
               >
-                <X className="pointer-events-none size-6 text-white" />
+                <X
+                  className="pointer-events-none size-6"
+                  style={{ color: widgetConfig.launcherStyles?.color || 'white' }}
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -190,7 +212,10 @@ export function WidgetEye() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="pointer-events-none absolute inset-0 flex items-center justify-center"
               >
-                <BubbleChatIcon className="pointer-events-none size-6 text-white" />
+                <BubbleChatIcon
+                  className="pointer-events-none size-6"
+                  style={{ color: widgetConfig.launcherStyles?.color || 'white' }}
+                />
               </motion.div>
             )}
           </AnimatePresence>

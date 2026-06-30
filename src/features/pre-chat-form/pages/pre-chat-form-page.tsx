@@ -9,7 +9,6 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 export function PreChatFormPage() {
   const { widgetConfig } = useWidgetConfigContext()
-  const showFooter = widgetConfig?.showFooter
 
   logger.debug('PreChatFormPage', 'Component rendered')
 
@@ -17,7 +16,7 @@ export function PreChatFormPage() {
     <>
       <PreChatHeader />
       <PreChatForm />
-      {showFooter && <WidgetFooter />}
+      {widgetConfig.showFooter && <WidgetFooter />}
     </>
   )
 }
