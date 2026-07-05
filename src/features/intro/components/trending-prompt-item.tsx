@@ -14,6 +14,7 @@ interface TrendingPromptItemProps {
   onClick?: () => void
   disabled?: boolean
   isLoading?: boolean
+  isCardLayout?: boolean
 }
 
 export function TrendingPromptItem({
@@ -24,8 +25,9 @@ export function TrendingPromptItem({
   onClick,
   disabled,
   isLoading,
+  isCardLayout,
 }: TrendingPromptItemProps) {
-  const isColumn = chipStyles?.flexDirection === 'column'
+  const isColumn = isCardLayout ?? chipStyles?.flexDirection === 'column'
 
   return (
     <button

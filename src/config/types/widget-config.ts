@@ -87,6 +87,7 @@ export interface TrendingPromptsConfig {
   chipStyles: CSSProperties
   textStyle: CSSProperties
   prompts: TrendingPromptData[]
+  layout?: 'card' | 'chip'
   // TODO: update this when BE supports it
   showTitle?: boolean
   carouselLoop?: boolean

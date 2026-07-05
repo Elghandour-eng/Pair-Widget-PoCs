@@ -141,6 +141,7 @@ export interface TrendingPromptDisplaySettings {
   styles?: CSSProperties
   showIcons: boolean
   sectionTitle: string
+  layout?: 'card' | 'chip'
   // TODO: update this when BE supports it
   showTitle?: boolean
   carouselLoop?: boolean

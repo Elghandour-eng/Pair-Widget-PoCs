@@ -113,6 +113,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         showIcon: v2Trending.displaySettings?.showIcons ?? false,
         chipStyles: v2Trending.chipStyle ?? {},
         textStyle: v2Trending.textStyle ?? {},
+        layout: v2Trending.displaySettings?.layout ?? 'chip',
         // TODO: This carouselLoop property is mocked for now. Sync with BE when they support carouselLoop in displaySettings.
         carouselLoop: v2Trending.displaySettings?.carouselLoop ?? false,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({

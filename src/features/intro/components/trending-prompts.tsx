@@ -38,11 +38,11 @@ export function TrendingPrompts() {
   }
 
   const showTitle = config.showTitle ?? true
-  const isColumn = chipStyles?.flexDirection === 'column'
+  const isCardLayout = config.layout === 'card' || chipStyles?.flexDirection === 'column'
 
   const { containerRef, emblaRef, basisPercentage } = useCarousel({
     itemCount: prompts.length,
-    active: isColumn,
+    active: isCardLayout,
     loop: config.carouselLoop,
     autoplay: config.carouselLoop,
   })
@@ -59,7 +59,7 @@ export function TrendingPrompts() {
         </h2>
       )}
       <div ref={containerRef} className="w-full">
-        {isColumn ? (
+        {isCardLayout ? (
           <div className="w-full cursor-grab overflow-hidden active:cursor-grabbing" ref={emblaRef}>
             <div className="-ms-2 flex">
               {prompts.map((prompt) => (
@@ -76,6 +76,7 @@ export function TrendingPrompts() {
                     onClick={() => handlePromptClick(prompt.id, prompt.text)}
                     disabled={isPending && loadingPromptId === prompt.id}
                     isLoading={loadingPromptId === prompt.id}
+                    isCardLayout={isCardLayout}
                   />
                 </div>
               ))}
@@ -93,6 +94,7 @@ export function TrendingPrompts() {
                   onClick={() => handlePromptClick(prompt.id, prompt.text)}
                   disabled={isPending && loadingPromptId === prompt.id}
                   isLoading={loadingPromptId === prompt.id}
+                  isCardLayout={isCardLayout}
                 />
               </li>
             ))}
