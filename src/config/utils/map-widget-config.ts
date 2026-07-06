@@ -199,7 +199,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     preChatFormOptions: apiResponse.pre_chat_form_options,
     businessName: apiResponse.business_name || undefined,
     avatarUrl: apiResponse.avatar_url || undefined,
-    widgetTitle: apiResponse.widget_v2_config?.introTitle,
+    widgetTitle: apiResponse.widget_v2_config?.intro_screen?.introTitle || apiResponse.widget_v2_config?.introTitle,
     websiteToken: apiResponse.widget_id,
     baseUrl: apiResponse.website_url,
     reply_time: apiResponse.reply_time as 'in_a_few_hours' | 'in_a_few_minutes' | 'in_a_day',

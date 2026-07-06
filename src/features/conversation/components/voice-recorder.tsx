@@ -71,6 +71,7 @@ function WaveformCanvas({ waveformData, primaryColor, isPaused }: WaveformCanvas
 
 export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onCancel }: VoiceRecorderProps) {
   const { widgetConfig } = useWidgetConfigContext()
+  const { iconColor, ...sendButtonStyles } = widgetConfig.chatInput.sendButtonIcon.styles || {}
   const primaryColor =
     widgetConfig.chatInput?.sendButtonIcon?.styles?.backgroundColor || widgetConfig.primaryColor || '#3D8EDD'
   const {
@@ -297,10 +298,14 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
           type="button"
           onClick={handleSend}
           className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]"
-          style={widgetConfig.chatInput.sendButtonIcon.styles}
+          style={sendButtonStyles}
           aria-label="Send voice message"
         >
-          <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
+          <SendIcon
+            className={cn('size-3', !iconColor && 'text-white')}
+            style={iconColor ? { color: iconColor } : undefined}
+            variant={widgetConfig.chatInput.sendButtonIcon.variant}
+          />
         </button>
       ) : isPaused ? (
         <button

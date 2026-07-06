@@ -30,6 +30,11 @@ export function IntroContent() {
 
   return (
     <WidgetContent className="flex h-full flex-col gap-6 overflow-auto">
+      {widgetConfig.widgetTitle?.text && (
+        <div className="text-start text-[1.25rem] font-bold text-[#1E1E1E]" style={widgetConfig.widgetTitle.styles}>
+          {widgetConfig.widgetTitle.text}
+        </div>
+      )}
       {hasQuickLinks ? (
         <>
           {introConfig?.heroImage?.position === 'top' && heroImage}

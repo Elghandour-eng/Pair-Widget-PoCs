@@ -94,6 +94,10 @@ export interface IntroScreen {
   welcomeSubtitle: WelcomeSubtitle
   showIntroScreen: ShowIntroScreen
   widgetBackground?: WidgetBackground
+  introTitle?: {
+    text: string
+    styles?: CSSProperties
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -175,7 +179,9 @@ export interface PlaceholderText {
 
 export interface SendButtonIconDto {
   variant: 'arrow-up' | 'send'
-  styles?: CSSProperties
+  styles?: CSSProperties & {
+    iconColor?: string
+  }
 }
 
 export interface ChatInput {

@@ -4,6 +4,7 @@ import { tokenStorage } from '@/core/token-storage'
 import { ConversationTextbox } from '@/features/conversation/components/conversation-textbox'
 import { useConversations } from '@/features/conversation/queries/use-conversations-queries'
 import { IntroContent } from '@/features/intro/components/intro-content'
+import { IntroHeader } from '@/features/intro/components/intro-header'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 
@@ -25,6 +26,7 @@ export function IntroPage() {
         background: widgetConfig.widgetBgColor,
       }}
     >
+      {widgetConfig.showHeader && <IntroHeader />}
       <IntroContent />
 
       <ConversationTextbox conversationId={conversationId} />

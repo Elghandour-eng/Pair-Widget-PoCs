@@ -51,6 +51,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { widgetConfig } = useWidgetConfigContext()
+  const { iconColor, ...sendButtonStyles } = widgetConfig.chatInput.sendButtonIcon.styles || {}
   const { navigateToPreChat, setInitialMessage } = useWidgetNavigation()
   const { sendMessageFlow, isPending: isSendMessagePending, isSuccess: isSendMessageSuccess } = useSendChatMessageFlow()
   const { validateAndGetFile, sendMediaMessage, isProcessing } = useMediaMessageSender({ conversationId })
@@ -403,7 +404,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
                 (!canSend || isSendMessagePending || isProcessing) &&
                 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
             )}
-            style={widgetConfig.chatInput.sendButtonIcon.styles}
+            style={sendButtonStyles}
             aria-label={isGenerating ? 'Stop generating' : 'Send message'}
           >
             {isGenerating ? (
@@ -411,7 +412,11 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             ) : isSendMessagePending || isProcessing ? (
               <Spinner className="size-4 text-white" />
             ) : (
-              <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
+              <SendIcon
+                className={cn('size-3', !iconColor && 'text-white')}
+                style={iconColor ? { color: iconColor } : undefined}
+                variant={widgetConfig.chatInput.sendButtonIcon.variant}
+              />
             )}
           </button>
         </div>

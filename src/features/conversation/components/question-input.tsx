@@ -18,6 +18,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
   const { activeQuestionGroup, answers, toggleAnswer, dismissQuestionGroup, setQuestionIndex } = useQuestionContext()
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { widgetConfig } = useWidgetConfigContext()
+  const { iconColor, ...buttonStyles } = widgetConfig.chatInput.sendButtonIcon.styles || {}
   const [isSending, setIsSending] = useState(false)
 
   if (!activeQuestionGroup) return null
@@ -216,14 +217,18 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
               'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]',
               (isButtonDisabled || isSending) && 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
             )}
-            style={isLastQuestion ? widgetConfig.chatInput.sendButtonIcon.styles : undefined}
+            style={isLastQuestion ? buttonStyles : undefined}
             aria-label={isLastQuestion ? 'Send message' : 'Next question'}
           >
             {isLastQuestion ? (
               isSending ? (
                 <Spinner className="size-4 text-white" />
               ) : (
-                <SendIcon className="size-3 text-white" variant={widgetConfig.chatInput.sendButtonIcon.variant} />
+                <SendIcon
+                  className={cn('size-3', !iconColor && 'text-white')}
+                  style={iconColor ? { color: iconColor } : undefined}
+                  variant={widgetConfig.chatInput.sendButtonIcon.variant}
+                />
               )
             ) : (
               <ChevronRight className="size-4 text-white" />

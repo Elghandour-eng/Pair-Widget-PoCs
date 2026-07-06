@@ -46,14 +46,6 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
           className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0"
           style={widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : undefined}
         >
-          {widgetConfig.widgetTitle?.text && (
-            <div
-              className="px-4 pt-6 text-start text-2xl font-bold text-[#0D223F]"
-              style={widgetConfig.widgetTitle.styles}
-            >
-              {widgetConfig.widgetTitle.text}
-            </div>
-          )}
           {children}
         </Card>
       </motion.div>
@@ -101,14 +93,6 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
               className="flex h-full w-full flex-col gap-0 overflow-y-auto rounded-none border-0 p-0 shadow-[0_5px_40px_rgba(0,0,0,.16)] min-[668px]:rounded-xl"
               style={widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : undefined}
             >
-              {widgetConfig.widgetTitle?.text && (
-                <div
-                  className="px-5 pt-5 text-start text-[1.25rem] font-bold text-[#1E1E1E]"
-                  style={widgetConfig.widgetTitle.styles}
-                >
-                  {widgetConfig.widgetTitle.text}
-                </div>
-              )}
               {children}
             </Card>
           </motion.div>

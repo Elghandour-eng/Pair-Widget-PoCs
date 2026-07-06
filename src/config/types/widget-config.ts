@@ -131,7 +131,9 @@ export interface IntroScreenConfig {
 
 export interface SendButtonIconConfig {
   variant: 'arrow-up' | 'send'
-  styles?: CSSProperties
+  styles?: CSSProperties & {
+    iconColor?: string
+  }
 }
 
 export interface ChatInputConfig {
