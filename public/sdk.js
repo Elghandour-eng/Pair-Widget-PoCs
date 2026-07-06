@@ -352,6 +352,10 @@
         badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
         // Hide bubble on mobile
         bubble.classList.add('pair-ai--hide-mobile')
+        // If openAutomatically is true, also hide the bubble on desktop
+        if (config.openAutomatically && bubbleHolder) {
+          bubbleHolder.style.display = 'none'
+        }
         // Notify widget
         sendMessageToWidget('sdk:opened', {})
         console.log('[PairAI SDK] Widget opened')
@@ -371,10 +375,17 @@
         badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
         // Show bubble on mobile
         bubble.classList.remove('pair-ai--hide-mobile')
+        // Make sure bubble is visible when closed
+        if (bubbleHolder) {
+          bubbleHolder.style.display = ''
+        }
         // Notify widget
         sendMessageToWidget('sdk:closed', {})
         console.log('[PairAI SDK] Widget closed')
       }
+
+      // Re-apply styles after changing innerHTML
+      applyBubbleStyles()
 
       // Remove animation class after icon change
       setTimeout(function () {
@@ -551,36 +562,8 @@
       }
       badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
 
-      // Apply launcher styles (color, backgroundColor, fontSize, fontFamily, fontWeight)
-      var lStyles = config.launcherStyles || {}
-      var bubbleBg = lStyles.backgroundColor || config.primaryColor
-      if (bubbleBg) {
-        bubble.style.background = bubbleBg
-      }
-
-      var bubbleColor = lStyles.color || 'white'
-      if (bubbleColor) {
-        bubble.style.color = bubbleColor
-        var svgPath = bubble.querySelector('svg path')
-        if (svgPath) {
-          svgPath.setAttribute('fill', bubbleColor)
-        }
-        var span = bubble.querySelector('span')
-        if (span) {
-          span.style.color = bubbleColor
-        }
-      }
-
-      if (lStyles.fontSize) {
-        bubble.style.fontSize = lStyles.fontSize
-      }
-      if (lStyles.fontFamily) {
-        bubble.style.fontFamily = lStyles.fontFamily
-        injectGoogleFont(lStyles.fontFamily)
-      }
-      if (lStyles.fontWeight) {
-        bubble.style.fontWeight = lStyles.fontWeight
-      }
+      // Apply styles
+      applyBubbleStyles()
     }
   }
 
