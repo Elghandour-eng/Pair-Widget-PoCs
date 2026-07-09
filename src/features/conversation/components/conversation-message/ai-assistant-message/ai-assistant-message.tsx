@@ -6,6 +6,7 @@ import { AiAssistantMessageShimmer } from './ai-assistant-message-shimmer'
 import { FeedbackSection } from './feedback-section'
 import { ProductSection } from './product-section'
 import { SuggestionsSection } from './suggestions-section'
+import { TemplateRenderer } from './widget-template/template-renderer'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 interface AiAssistantMessageProps {
@@ -52,6 +53,10 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
     <div className="flex w-full flex-col items-start gap-6 bg-transparent px-4 py-2">
       <AiAssistantMessageHeader isPending={false} />
       <AiAssistantMessageBody content={message.content} />
+
+      {message.widget_template && (
+        <TemplateRenderer widgetTemplate={message.widget_template} sourceMessageUlid={message.ulid} />
+      )}
 
       {productSet && <ProductSection productSet={productSet} sourceMessageUlid={message.ulid} />}
 

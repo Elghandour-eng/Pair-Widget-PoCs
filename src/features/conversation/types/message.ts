@@ -221,7 +221,291 @@ export interface Message {
   next_msg_type?: string
   next_msg?: NextMessageItem
   ai_feedback?: 'liked' | 'disliked' | null
+  widget_template?: WidgetTemplate
 }
+
+export interface ProductComparisonTemplate {
+  type: 'product_comparison'
+  content: {
+    intro_text?: string
+    title: string
+    icon?: { url: string }
+    products: Array<{
+      id: string
+      name: string
+      image?: { url: string }
+      subtitle?: string
+      prompt?: string
+    }>
+    rows: Array<{
+      key: string
+      label: string
+      value_type?: 'text' | 'price' | 'number' | 'percentage' | 'boolean' | 'rating' | 'availability' | 'badge' | 'list'
+      values: Record<string, unknown>
+    }>
+    usage_guidance?: {
+      title: string
+      items: Array<{ title: string; usage: string }>
+    }
+    recommendation?: {
+      icon?: string
+      title?: string
+      text: string
+      recommended_product_id?: string
+    }
+    actions?: Array<{
+      type: 'add_product'
+      label?: string
+      payload?: Record<string, unknown>
+    }>
+  }
+  config: {
+    comparison?: {
+      max_visible_rows?: number
+      enable_expand_collapse?: boolean
+      see_more_label?: string
+      see_less_label?: string
+      missing_value_fallback?: string
+    }
+    actions?: { enabled?: boolean; allowed_actions?: string[] }
+  }
+}
+
+export interface ProductCollectionSuggestionsTemplate {
+  type: 'product_collection_suggestions'
+  content: {
+    collection: {
+      id?: string
+      title: string
+      icon?: string
+      subtitle?: string
+      items_count?: number
+      description?: string
+      savings_banner?: {
+        show?: boolean
+        icon?: string
+        title: string
+        description?: string
+        coupon_code?: string
+      }
+      products: Array<{
+        id: string
+        image: { url: string }
+        name: string
+        price: { value?: number; currency?: string; formatted?: string }
+        brand?: string
+        specs?: string
+        note?: string
+        availability?: string
+        quantity?: number
+        old_price?: { value?: number; currency?: string; formatted?: string }
+        price_display?: { type?: string; label?: string; old_label?: string }
+      }>
+      summary_rows?: Array<{
+        id?: string
+        label: string
+        value: { formatted: string; value?: number; currency?: string }
+        type?: string
+      }>
+      collection_total?: {
+        label?: string
+        value: number
+        currency?: string
+        formatted?: string
+      }
+      actions?: Array<{
+        type: 'add_collection_to_cart'
+        label?: string
+        icon?: string
+        payload?: {
+          products?: Array<{ product_id: string; quantity?: number }>
+          source_template_type?: string
+        }
+      }>
+    }
+  }
+  config: {
+    layout?: { variant?: 'default' | 'order_summary'; card_layout?: string }
+    savings_banner?: Record<string, unknown>
+    summary_rows?: Record<string, unknown>
+    item_actions?: { enabled?: boolean; allowed_actions?: string[] }
+    [key: string]: unknown
+  }
+}
+
+export interface ErrorCardTemplate {
+  type: 'error_card'
+  content: {
+    title: string
+    message: string
+    icon?: { url: string }
+    missing?: Array<{ ref: string; reason?: string }>
+    actions?: Array<{
+      type: string
+      label?: string
+      payload?: Record<string, unknown>
+    }>
+  }
+  config: {
+    copy?: { default_title?: string; default_message?: string }
+    style?: { icon?: string; variant?: 'error' | 'warning' }
+    actions?: { enabled?: boolean; allowed_actions?: string[] }
+  }
+}
+
+export interface InformativeTemplateData {
+  type: 'informative'
+  content: {
+    intro_text?: string
+    header: {
+      id?: string
+      title: string
+      action?: { type: string; label?: string; payload?: Record<string, unknown> }
+      items: Array<{
+        id?: string
+        icon?: string | null
+        title: string
+        description?: string
+        description_type?: 'list'
+        description_items?: string[]
+      }>
+    }
+    closing_text?: string
+  }
+  config: {
+    intro?: Record<string, unknown>
+    informative_card?: Record<string, unknown>
+    informative_header?: Record<string, unknown>
+    informative_items?: Record<string, unknown>
+    closing_text?: Record<string, unknown>
+    actions?: Record<string, unknown>
+    fallbacks?: Record<string, unknown>
+  }
+}
+
+export interface OrderStatusTemplate {
+  type: 'order_status'
+  content: {
+    intro_text?: string
+    closing_text?: string
+    order: {
+      id?: string
+      order_number?: string
+      status: { label: string; value?: string }
+      refund_status?: { label: string; value?: string }
+      summary?: {
+        placed_on?: string
+        items_count?: number
+        total_amount?: { value?: number; currency?: string; formatted?: string }
+      }
+      timeline?: {
+        current_step_id?: string
+        items: Array<{
+          id: string
+          label: string
+          status: 'completed' | 'active' | 'pending'
+          date?: string | null
+          description?: string
+        }>
+      }
+      items?: {
+        visible_count?: number
+        total_count?: number
+        products: Array<{
+          id: string
+          name: string
+          image?: string
+          brand?: string
+          price?: { value?: number; currency?: string; formatted?: string }
+          attributes?: Array<{ label: string; value: string }>
+        }>
+      }
+      actions?: Array<{
+        type: string
+        label?: string
+        payload?: Record<string, unknown>
+      }>
+    }
+  }
+  config: {
+    visibility?: Record<string, boolean>
+    layout?: Record<string, unknown>
+    labels?: Record<string, string>
+    style?: Record<string, unknown>
+    behavior?: Record<string, unknown>
+    states?: Record<string, unknown>
+  }
+}
+
+export interface WishlistProductsTemplate {
+  type: 'wishlist_products'
+  content: {
+    intro_text?: string
+    closing_text?: string
+    wishlist: {
+      id?: string
+      title?: string
+      items_count?: number
+      visible_count?: number
+      products: Array<{
+        id: string
+        name: string
+        image?: string
+        brand?: string
+        subtitle?: string
+        price?: { value?: number; currency?: string; formatted?: string }
+        status_badge?: { label: string; value: string } | null
+        availability?: string
+        payload?: Record<string, unknown>
+      }>
+      actions?: Array<{
+        type: 'view_all_wishlist'
+        label?: string
+        payload?: Record<string, unknown>
+      }>
+    }
+  }
+  config: {
+    layout?: Record<string, unknown>
+    labels?: Record<string, string>
+    style?: Record<string, unknown>
+    behavior?: Record<string, unknown>
+    states?: Record<string, unknown>
+  }
+}
+
+export interface CarouselTemplate {
+  type: 'carousel'
+  carousel_type: 'offers'
+  content: {
+    title?: string
+    items: Array<{
+      id?: string
+      code: string
+      title: string
+      description?: string
+      actions?: Array<{
+        type: 'copy_code' | 'view_details' | 'view_eligible_products'
+        label?: string
+        payload?: Record<string, unknown>
+      }>
+    }>
+  }
+  config: {
+    layout?: { visible_items?: number; scroll_type?: string; show_pagination_dots?: boolean }
+    visibility?: Record<string, boolean>
+    style?: Record<string, unknown>
+  }
+}
+
+export type WidgetTemplate =
+  | ProductComparisonTemplate
+  | ProductCollectionSuggestionsTemplate
+  | ErrorCardTemplate
+  | InformativeTemplateData
+  | OrderStatusTemplate
+  | WishlistProductsTemplate
+  | CarouselTemplate
 
 /**
  * Messages list response (matches actual API response)
