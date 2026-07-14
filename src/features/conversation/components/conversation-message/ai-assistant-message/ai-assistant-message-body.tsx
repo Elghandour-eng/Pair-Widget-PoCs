@@ -7,6 +7,8 @@ interface AiAssistantMessageBodyProps {
 }
 
 export function AiAssistantMessageBody({ content }: AiAssistantMessageBodyProps) {
+  if (!content || !content.trim()) return null
+
   const { widgetConfig } = useWidgetConfigContext()
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const cardStyles = aiConfig?.CardStyles

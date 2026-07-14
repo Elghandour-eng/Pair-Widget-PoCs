@@ -94,11 +94,11 @@ export function ProductComparison({ template, sourceMessageUlid }: ProductCompar
               className={`flex flex-col items-center gap-2 border-b border-[#E5E4E1] bg-[#EEECE159] px-2 py-4 text-center ${isLastCol ? '' : 'border-r border-[#E5E4E1]'}`}
             >
               {product.image?.url ? (
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-[0.5px] border-[#E5E4E1] bg-[#FFF]">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border-[0.5px] border-solid border-(--Strokes-Primary,#E5E4E1) bg-[#FFF]">
                   <img src={product.image.url} alt={product.name} className="h-full w-full object-cover" />
                 </div>
               ) : (
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-[#E5E4E1] bg-[#FFF] text-[10px] text-gray-400">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border-[0.5px] border-solid border-(--Strokes-Primary,#E5E4E1) bg-[#FFF] text-[10px] text-gray-400">
                   N/A
                 </div>
               )}

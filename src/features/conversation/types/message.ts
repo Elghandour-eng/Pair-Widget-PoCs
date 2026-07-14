@@ -328,7 +328,7 @@ export interface ProductCollectionSuggestionsTemplate {
     layout?: { variant?: 'default' | 'order_summary'; card_layout?: string }
     savings_banner?: Record<string, unknown>
     summary_rows?: Record<string, unknown>
-    item_actions?: { enabled?: boolean; allowed_actions?: string[] }
+    item_actions?: { enabled?: boolean; allowed_actions?: string[]; display?: string }
     [key: string]: unknown
   }
 }
@@ -479,6 +479,8 @@ export interface CarouselTemplate {
   carousel_type: 'offers'
   content: {
     title?: string
+    intro_text?: string
+    closing_text?: string
     items: Array<{
       id?: string
       code: string
