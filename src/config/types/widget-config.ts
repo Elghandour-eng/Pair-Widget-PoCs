@@ -1,5 +1,20 @@
 import type { CSSProperties } from 'react'
 
+export interface HeaderConfig {
+  enabled: boolean
+  backgroundEnabled: boolean
+  backgroundColor: string
+  title: string
+  subtitle: string
+  titleStyle: CSSProperties
+  subtitleStyle: CSSProperties
+  iconUrl?: string | null
+  actions: {
+    cart: boolean
+    favorites: boolean
+  }
+}
+
 export interface PairAiWidgetSettings {
   position: 'left' | 'right'
   type: 'expanded_bubble' | 'standard'
@@ -21,7 +36,7 @@ export interface WidgetConfig {
   name: string
   enabled: boolean
   position: 'left' | 'right'
-  type?: string
+  type?: 'expanded_bubble' | 'standard' | 'icon_only'
   launcherTitle?: string
   primaryColor: string
   requiresPreChat: boolean
@@ -56,6 +71,7 @@ export interface WidgetConfig {
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
   launcherStyles?: CSSProperties
+  headerConfig?: HeaderConfig
 }
 
 export interface QuickLinksConfig {

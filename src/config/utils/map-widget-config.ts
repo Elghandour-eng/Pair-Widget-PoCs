@@ -1,5 +1,6 @@
 import type {
   ChatInputConfig,
+  HeaderConfig,
   IntroScreenConfig,
   MessagesConfig,
   PairAiWidgetSettings,
@@ -42,6 +43,25 @@ function isSdkMode(): boolean {
  * Maps API response and window settings to WidgetConfig
  */
 export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?: PairAiWidgetSettings): WidgetConfig {
+  // header
+  const rawHeader = apiResponse.widget_v2_config?.header
+  const headerConfig: HeaderConfig | undefined = rawHeader
+    ? {
+        enabled: rawHeader.enabled,
+        backgroundEnabled: rawHeader.background?.enabled ?? false,
+        backgroundColor: rawHeader.background?.color ?? '',
+        title: rawHeader.content?.title ?? '',
+        subtitle: rawHeader.content?.subtitle ?? '',
+        titleStyle: rawHeader.titleStyle ?? {},
+        subtitleStyle: rawHeader.subtitleStyle ?? {},
+        iconUrl: rawHeader.icon ?? undefined,
+        actions: {
+          cart: rawHeader.actions?.cart ?? false,
+          favorites: rawHeader.actions?.favorites ?? false,
+        },
+      }
+    : undefined
+
   // intro screen
   const rawIntro = apiResponse.widget_v2_config?.intro_screen
   const introScreen: IntroScreenConfig | undefined = rawIntro
@@ -189,7 +209,9 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     type: apiResponse.launcher_style
       ? apiResponse.launcher_style === 'expanded_bubble'
         ? 'expanded_bubble'
-        : 'standard'
+        : apiResponse.launcher_style === 'icon_only'
+          ? 'icon_only'
+          : 'standard'
       : windowSettings?.type,
     launcherTitle: apiResponse.launcher_title || windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
@@ -224,5 +246,6 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     welcomeTitle: apiResponse.welcome_title || undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,
     launcherStyles: apiResponse.launcher_styles || apiResponse.styles,
+    headerConfig,
   }
 }

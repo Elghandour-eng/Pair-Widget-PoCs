@@ -41,6 +41,36 @@ export interface WorkingHours {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// widget_v2_config — header
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HeaderBackground {
+  enabled: boolean
+  color: string
+}
+
+export interface HeaderContent {
+  title: string
+  subtitle: string
+}
+
+export interface HeaderActions {
+  cart: boolean
+  favorites: boolean
+}
+
+export interface HeaderDto {
+  enabled: boolean
+  iconId?: string
+  icon?: string | null
+  background: HeaderBackground
+  content: HeaderContent
+  titleStyle: CSSProperties
+  subtitleStyle: CSSProperties
+  actions: HeaderActions
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // widget_v2_config — intro_screen
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -242,6 +272,7 @@ export interface Messages {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface WidgetV2Config {
+  header?: HeaderDto
   intro_screen: IntroScreen
   introTitle?: {
     text: string
@@ -300,7 +331,7 @@ export interface WidgetConfigDto {
   visitor_credentials: unknown[]
   widget_header?: boolean
   opening_method?: 'automatically_open' | 'chat_icon'
-  launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard'
+  launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard' | 'icon_only'
   launcher_position?: 'left' | 'right'
   styles?: CSSProperties
   launcher_styles?: CSSProperties
