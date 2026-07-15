@@ -95,7 +95,8 @@ export interface ProductCardButton {
   type: 'button' | string
   label: string
   action_name: 'add_to_cart' | string
-  action_ulid: string
+  id?: string
+  action_ulid?: string
   parameters: {
     product_id: string
     quantity: number
@@ -163,7 +164,8 @@ export interface SuggestionAction {
   type: 'action'
   label: string
   action_name: string
-  action_ulid: string
+  id?: string
+  action_ulid?: string
   parameters?: Record<string, unknown>
 }
 
@@ -254,7 +256,9 @@ export interface ProductComparisonTemplate {
       recommended_product_id?: string
     }
     actions?: Array<{
-      type: 'add_product'
+      id?: string
+      action_ulid?: string
+      type: 'add_product' | string
       label?: string
       payload?: Record<string, unknown>
     }>
@@ -314,7 +318,9 @@ export interface ProductCollectionSuggestionsTemplate {
         formatted?: string
       }
       actions?: Array<{
-        type: 'add_collection_to_cart'
+        id?: string
+        action_ulid?: string
+        type: 'add_collection_to_cart' | string
         label?: string
         icon?: string
         payload?: {
@@ -341,6 +347,8 @@ export interface ErrorCardTemplate {
     icon?: { url: string }
     missing?: Array<{ ref: string; reason?: string }>
     actions?: Array<{
+      id?: string
+      action_ulid?: string
       type: string
       label?: string
       payload?: Record<string, unknown>
@@ -360,7 +368,7 @@ export interface InformativeTemplateData {
     header: {
       id?: string
       title: string
-      action?: { type: string; label?: string; payload?: Record<string, unknown> }
+      action?: { id?: string; action_ulid?: string; type: string; label?: string; payload?: Record<string, unknown> }
       items: Array<{
         id?: string
         icon?: string | null
@@ -421,6 +429,8 @@ export interface OrderStatusTemplate {
         }>
       }
       actions?: Array<{
+        id?: string
+        action_ulid?: string
         type: string
         label?: string
         payload?: Record<string, unknown>
@@ -459,7 +469,9 @@ export interface WishlistProductsTemplate {
         payload?: Record<string, unknown>
       }>
       actions?: Array<{
-        type: 'view_all_wishlist'
+        id?: string
+        action_ulid?: string
+        type: 'view_all_wishlist' | string
         label?: string
         payload?: Record<string, unknown>
       }>
@@ -487,7 +499,9 @@ export interface CarouselTemplate {
       title: string
       description?: string
       actions?: Array<{
-        type: 'copy_code' | 'view_details' | 'view_eligible_products'
+        id?: string
+        action_ulid?: string
+        type: 'copy_code' | 'view_details' | 'view_eligible_products' | string
         label?: string
         payload?: Record<string, unknown>
       }>

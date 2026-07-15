@@ -101,10 +101,6 @@ export function WishlistProducts({ template, sourceMessageUlid }: WishlistProduc
   const totalCount = items_count ?? products.length
 
   const handleAction = async (act: any) => {
-    if (act.type === 'view_all_wishlist') {
-      setDrawerOpen(true)
-      return
-    }
     if (!conversationId) {
       toast.error('Conversation ID is missing')
       return
@@ -113,7 +109,7 @@ export function WishlistProducts({ template, sourceMessageUlid }: WishlistProduc
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: act.action_ulid || '',
+        actionUlid: act.id || act.action_ulid || '',
         sourceMessageUlid,
         parameters: act.payload || {},
       })

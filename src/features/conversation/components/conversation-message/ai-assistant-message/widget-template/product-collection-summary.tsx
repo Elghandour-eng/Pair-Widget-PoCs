@@ -30,7 +30,7 @@ export function ProductCollectionSummary({ template, sourceMessageUlid }: Produc
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: action.action_ulid || '',
+        actionUlid: action.id || action.action_ulid || '',
         sourceMessageUlid,
         parameters: action.payload || {},
       })

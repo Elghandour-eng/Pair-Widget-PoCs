@@ -35,7 +35,7 @@ export function ErrorCard({ template, sourceMessageUlid }: ErrorCardProps) {
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: act.action_ulid || '',
+        actionUlid: act.id || act.action_ulid || '',
         sourceMessageUlid,
         parameters: act.payload || {},
       })
@@ -53,7 +53,10 @@ export function ErrorCard({ template, sourceMessageUlid }: ErrorCardProps) {
 
   const allowedActions = config?.actions?.allowed_actions ?? []
   const visibleActions = config?.actions?.enabled
-    ? (actions ?? []).filter((a) => allowedActions.length === 0 || allowedActions.includes(a.type))
+    ? (actions ?? []).filter((a) => {
+        const actionType = a.id || a.type
+        return allowedActions.length === 0 || allowedActions.includes(actionType)
+      })
     : []
 
   return (

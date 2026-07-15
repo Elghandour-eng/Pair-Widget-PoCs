@@ -44,7 +44,9 @@ export function ProductSection({ productSet, sourceMessageUlid }: ProductSection
       return
     }
 
-    if (!button.action_ulid) {
+    const actionUlid = button.id || button.action_ulid
+
+    if (!actionUlid) {
       // Fallback behavior if action_ulid is missing
       if (button.action_name === 'add_to_cart') {
         toast.success(`Added ${productTitle} to cart!`)
@@ -58,7 +60,7 @@ export function ProductSection({ productSet, sourceMessageUlid }: ProductSection
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: button.action_ulid,
+        actionUlid: actionUlid,
         sourceMessageUlid,
         parameters: button.parameters,
       })

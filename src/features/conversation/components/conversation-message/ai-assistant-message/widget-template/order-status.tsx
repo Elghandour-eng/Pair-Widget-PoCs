@@ -125,11 +125,12 @@ export function OrderStatus({ template, sourceMessageUlid }: OrderStatusProps) {
       toast.error('Conversation ID is missing')
       return
     }
-    setLoadingAction(act.type)
+    const actionId = act.id || act.type || ''
+    setLoadingAction(actionId)
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: act.action_ulid || '',
+        actionUlid: act.id || act.action_ulid || '',
         sourceMessageUlid,
         parameters: act.payload || {},
       })
@@ -301,7 +302,7 @@ export function OrderStatus({ template, sourceMessageUlid }: OrderStatusProps) {
                   onClick={() => handleAction(act)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#1F1F1F] bg-white px-4 py-2.25 text-[14px] leading-4.5 font-medium text-[#1F1F1F] transition-colors hover:bg-[#F5F5F5] disabled:opacity-50"
                 >
-                  {loadingAction === act.type ? (
+                  {loadingAction === (act.id || act.type) ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1F1F1F] border-t-transparent" />
                   ) : (
                     <ArrowUpRight className="h-4 w-4" />

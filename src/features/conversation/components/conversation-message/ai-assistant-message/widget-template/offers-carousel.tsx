@@ -83,11 +83,11 @@ export function OffersCarousel({ template, sourceMessageUlid }: OffersCarouselPr
       toast.error('Conversation ID is missing')
       return
     }
-    setLoadingAction(act.type)
+    setLoadingAction(act.id || act.type || '')
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: '',
+        actionUlid: act.id || act.action_ulid || '',
         sourceMessageUlid,
         parameters: act.payload || {},
       })

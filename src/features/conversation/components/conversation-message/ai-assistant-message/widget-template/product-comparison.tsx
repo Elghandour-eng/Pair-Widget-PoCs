@@ -35,7 +35,7 @@ export function ProductComparison({ template, sourceMessageUlid }: ProductCompar
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: action.action_ulid || '',
+        actionUlid: action.id || action.action_ulid || '',
         sourceMessageUlid,
         parameters: action.payload || {},
       })

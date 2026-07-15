@@ -20,7 +20,7 @@ export function InformativeTemplate({ template, sourceMessageUlid }: Informative
   const [loadingAction, setLoadingAction] = useState(false)
   const [actionSuccess, setActionSuccess] = useState(false)
 
-  const isCopyCode = action?.type === 'copy_code'
+  const isCopyCode = (action?.id || action?.type) === 'copy_code'
   const showAction = config?.informative_header?.show_action !== false
 
   const handleAction = async (act: any) => {
@@ -29,8 +29,10 @@ export function InformativeTemplate({ template, sourceMessageUlid }: Informative
       return
     }
 
+    const actionType = act.id || act.type
+
     // For copy_code, handle client-side clipboard copy
-    if (act.type === 'copy_code' && act.payload?.code) {
+    if (actionType === 'copy_code' && act.payload?.code) {
       try {
         await navigator.clipboard.writeText(act.payload.code)
         setActionSuccess(true)
@@ -46,7 +48,7 @@ export function InformativeTemplate({ template, sourceMessageUlid }: Informative
     try {
       const res = await dispatchActionMutation({
         conversationId,
-        actionUlid: act.action_ulid || '',
+        actionUlid: act.id || act.action_ulid || '',
         sourceMessageUlid,
         parameters: act.payload || {},
       })

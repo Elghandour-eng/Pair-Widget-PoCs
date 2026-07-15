@@ -31,7 +31,8 @@ export function SuggestionsSection({ suggestions, sourceMessageUlid }: Suggestio
         return
       }
 
-      if (!option.action_ulid) {
+      const actionUlid = option.id || option.action_ulid
+      if (!actionUlid) {
         toast.success(`Executed ${option.label || 'Action'}`)
         return
       }
@@ -39,7 +40,7 @@ export function SuggestionsSection({ suggestions, sourceMessageUlid }: Suggestio
       try {
         const res = await dispatchActionMutation({
           conversationId,
-          actionUlid: option.action_ulid,
+          actionUlid,
           sourceMessageUlid,
           parameters: option.parameters,
         })
