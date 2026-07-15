@@ -420,7 +420,7 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const customerConfig = widgetConfig.messagesConfig?.customerMessages
   const cardStyles = aiConfig?.CardStyles
-  const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
+  const hasCardStyles = aiConfig?.messageStyle === 'card' && cardStyles && Object.keys(cardStyles).length > 0
 
   let customBubbleStyle: React.CSSProperties = {}
   let customTextStyles: React.CSSProperties = {}
@@ -439,7 +439,7 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
         customBubbleStyle.backgroundColor = resolvedPrimaryColor
       }
 
-      if (bubbleType === 'outline') {
+      if (bubbleType === 'outline' || bubbleType === 'outlined') {
         customBubbleStyle.backgroundColor = 'transparent'
         const borderW = customBubbleStyle.borderWidth || '1px'
         const borderC = customBubbleStyle.borderColor || resolvedPrimaryColor || '#000000'
@@ -453,9 +453,11 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
         if (useBrandColor && !customTextStyles.color) {
           customTextStyles.color = '#FFFFFF'
         }
-        if (customBubbleStyle.borderWidth || customBubbleStyle.borderColor) {
-          customBubbleStyle.borderStyle = customBubbleStyle.borderStyle || 'solid'
-        }
+        // In filled mode, there should be no border
+        delete customBubbleStyle.border
+        delete customBubbleStyle.borderWidth
+        delete customBubbleStyle.borderColor
+        delete customBubbleStyle.borderStyle
       }
     }
   } else {
@@ -465,6 +467,8 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
       if (hasCardStyles) {
         isCard = true
         customBubbleStyle = { ...cardStyles }
+      } else if (aiConfig.messageStyle === 'plain') {
+        customBubbleStyle = { backgroundColor: 'transparent', border: 'none' }
       } else {
         customBubbleStyle = { backgroundColor: `${resolvedPrimaryColor}12` }
       }
@@ -485,7 +489,7 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
     const bubbleType = customerConfig?.bubbleType ?? 'filled'
     const useBrandColor = customerConfig?.useBrandColor ?? false
 
-    if (useBrandColor && bubbleType !== 'outline') {
+    if (useBrandColor && bubbleType !== 'outline' && bubbleType !== 'outlined') {
       playBtnBg = '#FFFFFF'
       playIconColor = resolvedPrimaryColor
     }
@@ -497,7 +501,8 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
         ref={wrapperRef}
         className={cn('flex w-full min-w-50 flex-col', {
           'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
-          'w-full rounded-2xl px-3 py-2.5': !isUser && !isCard,
+          'w-full rounded-2xl px-3 py-2.5': !isUser && !isCard && aiConfig?.messageStyle !== 'plain',
+          'w-full p-0': !isUser && !isCard && aiConfig?.messageStyle === 'plain',
           'w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm': !isUser && isCard,
         })}
         style={customBubbleStyle}

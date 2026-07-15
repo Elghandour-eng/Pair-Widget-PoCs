@@ -20,7 +20,8 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
 
   const { widgetConfig } = useWidgetConfigContext()
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
-  const cardStyles = aiConfig?.CardStyles
+  const isCard = aiConfig?.messageStyle === 'card'
+  const cardStyles = isCard ? aiConfig?.CardStyles : undefined
 
   // Find suggestions option in next_messages / next_msg
   const suggestionsItem = message.next_messages?.find((item) => item.type === 'suggestions') as

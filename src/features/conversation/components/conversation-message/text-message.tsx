@@ -44,7 +44,7 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
         customBubbleStyle.backgroundColor = primaryColor
       }
 
-      if (bubbleType === 'outline') {
+      if (bubbleType === 'outline' || bubbleType === 'outlined') {
         customBubbleStyle.backgroundColor = 'transparent'
         const borderW = customBubbleStyle.borderWidth || '1px'
         const borderC = customBubbleStyle.borderColor || primaryColor || '#000000'
@@ -58,16 +58,19 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
         if (useBrandColor && !customTextStyles.color) {
           customTextStyles.color = '#FFFFFF'
         }
-        if (customBubbleStyle.borderWidth || customBubbleStyle.borderColor) {
-          customBubbleStyle.borderStyle = customBubbleStyle.borderStyle || 'solid'
-        }
+        // In filled mode, there should be no border
+        delete customBubbleStyle.border
+        delete customBubbleStyle.borderWidth
+        delete customBubbleStyle.borderColor
+        delete customBubbleStyle.borderStyle
       }
     }
   } else {
     // Incoming message
     if (aiConfig) {
       customTextStyles = { ...aiConfig.TextStyles }
-      const hasCardStyles = aiConfig.CardStyles && Object.keys(aiConfig.CardStyles).length > 0
+      const hasCardStyles =
+        aiConfig.messageStyle === 'card' && aiConfig.CardStyles && Object.keys(aiConfig.CardStyles).length > 0
       if (hasCardStyles) {
         isCard = true
         customBubbleStyle = { ...aiConfig.CardStyles }
@@ -91,10 +94,15 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
       <div
         className={cn('relative flex min-w-25 flex-col wrap-break-word text-ellipsis', {
           'max-w-73 rounded-2xl bg-[#EEECE1] p-3 text-[#1A1A1A]': isUser,
-          'w-full rounded-2xl rounded-bl-none pt-3 pr-4 pb-3 pl-4': !isUser && !isCard,
-          'text-foreground bg-[#F0F1F1]': !isUser && !isCard && !isPending && !isFailed,
-          'text-foreground/90 bg-[#F0F1F1]/90': !isUser && !isCard && isPending,
-          'text-foreground/70 bg-[#F0F1F1]/70': !isUser && !isCard && isFailed,
+          'w-full rounded-2xl rounded-bl-none pt-3 pr-4 pb-3 pl-4':
+            !isUser && !isCard && aiConfig?.messageStyle !== 'plain',
+          'text-foreground bg-[#F0F1F1]':
+            !isUser && !isCard && !isPending && !isFailed && aiConfig?.messageStyle !== 'plain',
+          'text-foreground/90 bg-[#F0F1F1]/90': !isUser && !isCard && isPending && aiConfig?.messageStyle !== 'plain',
+          'text-foreground/70 bg-[#F0F1F1]/70': !isUser && !isCard && isFailed && aiConfig?.messageStyle !== 'plain',
+
+          // Plain style classes for incoming messages (no background, no border)
+          'w-full bg-transparent p-0': !isUser && !isCard && aiConfig?.messageStyle === 'plain',
 
           // Card style classes for incoming messages
           'w-full rounded-lg border border-gray-200 bg-white p-4 text-[#1A1A1A] shadow-sm': !isUser && isCard,

@@ -13,7 +13,7 @@ export function AiAssistantMessageBody({ content }: AiAssistantMessageBodyProps)
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const cardStyles = aiConfig?.CardStyles
   const textStyles = aiConfig?.TextStyles
-  const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
+  const hasCardStyles = aiConfig?.messageStyle === 'card' && cardStyles && Object.keys(cardStyles).length > 0
 
   return (
     <div
