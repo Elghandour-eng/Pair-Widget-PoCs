@@ -48,10 +48,29 @@ export function ProductCollectionSummary({ template, sourceMessageUlid }: Produc
 
   const productCount = products.length
 
+  const renderIcon = () => {
+    if (!icon) return null
+    if (typeof icon === 'string') {
+      if (
+        icon.startsWith('http://') ||
+        icon.startsWith('https://') ||
+        icon.startsWith('/') ||
+        icon.startsWith('data:')
+      ) {
+        return <img src={icon} alt="" className="h-6 w-6 shrink-0 object-contain" />
+      }
+      return <span className="shrink-0 text-lg leading-none">{icon}</span>
+    }
+    if (typeof icon === 'object' && 'url' in icon && typeof icon.url === 'string') {
+      return <img src={icon.url} alt="" className="h-6 w-6 shrink-0 object-contain" />
+    }
+    return null
+  }
+
   return (
     <div className="w-full min-w-0 overflow-hidden">
       <h2 className="mb-5 flex items-center gap-2 text-[18px] leading-6.75 font-semibold text-[#1A1A1A]">
-        {icon && <span className="text-lg leading-none">{icon}</span>}
+        {renderIcon()}
         {title}
       </h2>
       <section className="flex w-full min-w-0 flex-col gap-4 overflow-hidden rounded-xl border-[1.5px] border-[#E5E4E1] bg-[#F9F8F4] p-[20px_16px] font-sans transition-all duration-300">

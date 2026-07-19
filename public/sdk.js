@@ -468,6 +468,43 @@
     }
   }
 
+  // Apply launcher styles to the bubble (color, backgroundColor, fontSize, fontFamily, fontWeight)
+  function applyBubbleStyles() {
+    if (!bubbleHolder) return
+    var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
+    if (!bubble) return
+
+    var lStyles = config.launcherStyles || {}
+    var bubbleBg = lStyles.backgroundColor || config.primaryColor
+    if (bubbleBg) {
+      bubble.style.background = bubbleBg
+    }
+
+    var bubbleColor = lStyles.color || 'white'
+    if (bubbleColor) {
+      bubble.style.color = bubbleColor
+      var svgPath = bubble.querySelector('svg path')
+      if (svgPath) {
+        svgPath.setAttribute('fill', bubbleColor)
+      }
+      var span = bubble.querySelector('span')
+      if (span) {
+        span.style.color = bubbleColor
+      }
+    }
+
+    if (lStyles.fontSize) {
+      bubble.style.fontSize = lStyles.fontSize
+    }
+    if (lStyles.fontFamily) {
+      bubble.style.fontFamily = lStyles.fontFamily
+      injectGoogleFont(lStyles.fontFamily)
+    }
+    if (lStyles.fontWeight) {
+      bubble.style.fontWeight = lStyles.fontWeight
+    }
+  }
+
   // Inject font from Google Fonts dynamically if requested
   function injectGoogleFont(fontFamily) {
     if (!fontFamily) return

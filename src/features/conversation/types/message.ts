@@ -238,6 +238,7 @@ export interface ProductComparisonTemplate {
       image?: { url: string }
       subtitle?: string
       prompt?: string
+      note?: string
     }>
     rows: Array<{
       key: string
@@ -281,7 +282,7 @@ export interface ProductCollectionSuggestionsTemplate {
     collection: {
       id?: string
       title: string
-      icon?: string
+      icon?: string | { url: string }
       subtitle?: string
       items_count?: number
       description?: string
