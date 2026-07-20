@@ -157,84 +157,99 @@ export function ProductCollectionSummary({ template, sourceMessageUlid }: Produc
               product.availability?.toLowerCase() === 'out_of_stock' ||
               product.availability?.toLowerCase() === 'out of stock'
 
+            const noteText =
+              product.note || (product as any).hero_text || (product as any).highlight || (product as any).card_note
+
             return (
               <div
                 key={product.id}
-                className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E4E1] bg-[#FFF] px-2 py-3 transition-colors hover:bg-slate-50/50"
+                className="flex flex-col overflow-hidden rounded-xl border border-[#E5E4E1] bg-[#FFF] transition-all hover:bg-slate-50/50"
               >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {product.image?.url ? (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border-[0.5px] border-solid border-(--Strokes-Primary,#E5E4E1) bg-[#FCEFE8]">
-                      <img src={product.image.url} alt={product.name} className="h-full w-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border-[0.5px] border-solid border-(--Strokes-Primary,#E5E4E1) bg-[#FCEFE8] text-xs text-gray-400">
-                      N/A
-                    </div>
-                  )}
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    {product.brand && (
-                      <span className="truncate font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
-                        {product.brand}
-                      </span>
+                <div className="flex items-start justify-between gap-3 p-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                    {product.image?.url ? (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border-[0.5px] border-solid border-[#E5E4E1] bg-[#FCEFE8]">
+                        <img src={product.image.url} alt={product.name} className="h-full w-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border-[0.5px] border-solid border-[#E5E4E1] bg-[#FCEFE8] text-xs text-gray-400">
+                        N/A
+                      </div>
                     )}
-                    <p
-                      className="truncate font-sans text-[12px] leading-4.5 font-normal text-[#616161]"
-                      title={product.name}
-                    >
-                      {product.name}
-                    </p>
-                    {product.specs && (
-                      <span className="mt-0.5 truncate text-[11px] text-[#999999]">{product.specs}</span>
-                    )}
-                    {product.quantity && product.quantity > 1 && (
-                      <span className="text-[11px] text-[#999999]">Qty: {product.quantity}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1 pl-2">
-                  {isFree ? (
-                    <span className="font-sans text-[12px] leading-4.5 font-bold tracking-[0.24px] text-[#197F4C] uppercase">
-                      FREE
-                    </span>
-                  ) : priceCurrency ? (
-                    <span className="flex items-baseline gap-1">
-                      <span className="font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
-                        {priceValue}
-                      </span>
-                      <span className="font-sans text-[12px] leading-4.5 font-normal text-[#757575]">
-                        {priceCurrency}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
-                      {formattedPrice}
-                    </span>
-                  )}
-
-                  {hasOldPrice &&
-                    (oldPriceCurrency ? (
-                      <span className="flex items-baseline gap-0.5">
-                        <span className="font-sans text-[14px] leading-[18.2px] font-normal text-[#757575] line-through">
-                          {oldPriceValue}
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      {product.brand && (
+                        <span className="truncate font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
+                          {product.brand}
                         </span>
-                        <span className="font-sans text-[12px] leading-4.5 font-normal text-[#757575] line-through">
-                          {oldPriceCurrency}
+                      )}
+                      <p
+                        className="truncate font-sans text-[12px] leading-4.5 font-normal text-[#616161]"
+                        title={product.name}
+                      >
+                        {product.name}
+                      </p>
+                      {product.specs && (
+                        <span className="truncate font-sans text-[12px] leading-4.5 font-normal text-[#616161]">
+                          {product.specs}
+                        </span>
+                      )}
+                      {product.quantity && product.quantity > 1 && (
+                        <span className="text-[11px] text-[#999999]">Qty: {product.quantity}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1 pl-2">
+                    {isFree ? (
+                      <span className="font-sans text-[12px] leading-4.5 font-bold tracking-[0.24px] text-[#197F4C] uppercase">
+                        FREE
+                      </span>
+                    ) : priceCurrency ? (
+                      <span className="flex items-baseline gap-1">
+                        <span className="font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
+                          {priceValue}
+                        </span>
+                        <span className="font-sans text-[12px] leading-4.5 font-normal text-[#757575]">
+                          {priceCurrency}
                         </span>
                       </span>
                     ) : (
-                      <span className="font-sans text-[14px] leading-[18.2px] font-normal text-[#757575] line-through">
-                        {formattedOldPrice}
+                      <span className="font-sans text-[14px] leading-5.25 font-semibold text-[#1A1A1A]">
+                        {formattedPrice}
                       </span>
-                    ))}
-                  {isOutOfStock ? (
-                    <span className="mt-0.5 rounded-full bg-[#F2EEE6] px-2 py-0.5 text-[10px] font-bold tracking-wider text-[#474747] uppercase">
-                      out of stock
-                    </span>
-                  ) : product.availability ? (
-                    <span className="text-[11px] font-medium text-emerald-600">{product.availability}</span>
-                  ) : null}
+                    )}
+
+                    {hasOldPrice &&
+                      (oldPriceCurrency ? (
+                        <span className="flex items-baseline gap-0.5">
+                          <span className="font-sans text-[14px] leading-[18.2px] font-normal text-[#757575] line-through">
+                            {oldPriceValue}
+                          </span>
+                          <span className="font-sans text-[12px] leading-4.5 font-normal text-[#757575] line-through">
+                            {oldPriceCurrency}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="font-sans text-[14px] leading-[18.2px] font-normal text-[#757575] line-through">
+                          {formattedOldPrice}
+                        </span>
+                      ))}
+                    {isOutOfStock ? (
+                      <span className="mt-0.5 rounded-full bg-[#F2EEE6] px-2 py-0.5 text-[10px] font-bold tracking-wider text-[#474747] uppercase">
+                        out of stock
+                      </span>
+                    ) : product.availability ? (
+                      <span className="text-[11px] font-medium text-emerald-600">{product.availability}</span>
+                    ) : null}
+                  </div>
                 </div>
+
+                {noteText && (
+                  <div className="flex min-h-8.5 w-full items-center border-t border-[#E5E4E1]/60 bg-(--Tags-Light-Aqua,#E6EEF2) px-3 py-2">
+                    <p className="font-sans text-[12px] leading-4.5 font-normal text-(--Tags-Aqua,#0D2F40)">
+                      {noteText}
+                    </p>
+                  </div>
+                )}
               </div>
             )
           })}
