@@ -68,11 +68,18 @@ export interface CSATSurveyData {
   is_ai_generated: boolean
 }
 
+export interface CsatOption {
+  text: string
+  weight: number
+}
+
 export interface CsatConfig {
   message: string
   button_text: string
-  display_type: 'emoji' | 'star'
+  display_type: 'emoji' | 'star' | 'text_options' | string
   closing_message: string
+  options?: CsatOption[]
+  multi_select?: boolean
 }
 
 export interface ListSectionRow {
