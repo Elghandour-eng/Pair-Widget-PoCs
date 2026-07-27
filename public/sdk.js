@@ -145,13 +145,12 @@
   // Show bubble after CSS is loaded
   function showBubble() {
     if (!bubbleHolder) return
-    if (config.openAutomatically) {
-      bubbleHolder.style.display = 'none'
-      return
-    }
     bubbleHolder.style.opacity = ''
     bubbleHolder.style.visibility = ''
     bubbleHolder.style.pointerEvents = ''
+    if (config.openAutomatically && isOpen) {
+      bubbleHolder.style.display = 'none'
+    }
   }
 
   // Update unread badge
@@ -378,6 +377,9 @@
         // Make sure bubble is visible when closed
         if (bubbleHolder) {
           bubbleHolder.style.display = ''
+          bubbleHolder.style.opacity = ''
+          bubbleHolder.style.visibility = ''
+          bubbleHolder.style.pointerEvents = ''
         }
         // Notify widget
         sendMessageToWidget('sdk:closed', {})

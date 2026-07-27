@@ -103,7 +103,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
       <IncomingMessagePreview />
 
       {/* Chat Bubble Button - only in standalone mode */}
-      {!widgetConfig.openAutomatically && <WidgetEye />}
+      {(!isOpen || !widgetConfig.openAutomatically) && <WidgetEye />}
     </div>
   )
 }
