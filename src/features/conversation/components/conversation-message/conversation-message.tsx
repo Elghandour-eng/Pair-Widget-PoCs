@@ -1,6 +1,7 @@
 import { AiAssistantMessage } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message'
 import { TextMessage } from '@/features/conversation/components/conversation-message/text-message'
 import type { Message } from '@/features/conversation/types/message'
+import { isAiMessage } from '@/features/conversation/utils/message-utils'
 
 interface ConversationMessageProps {
   message: Message
@@ -62,13 +63,16 @@ function ConversationMessage({
     return <AudioMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
   }
 
+  if (message.is_csat_survey) {
+    return <CsatMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
+  }
+
+  if (isAiMessage(message)) {
+    return <AiAssistantMessage message={message} isLastMessage={isLastMessage} />
+  }
+
   switch (message.message_type) {
     case 'text':
-      if (message.is_csat_survey) {
-        return (
-          <CsatMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
-        )
-      }
       return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
     case 'image':
       return (
@@ -81,11 +85,6 @@ function ConversationMessage({
         <VideoMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
       )
     case 'interactive':
-      if (message.is_csat_survey) {
-        return (
-          <CsatMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
-        )
-      }
       // Fallback for other interactive types or unknown
       return <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
     case 'widget_message':

@@ -44,19 +44,21 @@ export function mapApiMessageToMessage(apiMessage: ApiMessage): Message {
 
   // Map content_type to message_type
   const messageType =
-    apiMessage.content_type === 'text'
-      ? 'text'
-      : apiMessage.content_type === 'image'
-        ? 'image'
-        : apiMessage.content_type === 'file'
-          ? 'file'
-          : apiMessage.content_type === 'audio'
-            ? 'audio'
-            : apiMessage.content_type === 'video'
-              ? 'video'
-              : apiMessage.content_type === 'input_csat'
-                ? 'interactive'
-                : 'text'
+    apiMessage.content_type === 'widget_message'
+      ? 'widget_message'
+      : apiMessage.content_type === 'text'
+        ? 'text'
+        : apiMessage.content_type === 'image'
+          ? 'image'
+          : apiMessage.content_type === 'file'
+            ? 'file'
+            : apiMessage.content_type === 'audio'
+              ? 'audio'
+              : apiMessage.content_type === 'video'
+                ? 'video'
+                : apiMessage.content_type === 'input_csat'
+                  ? 'interactive'
+                  : 'text'
 
   const interactiveMetadata = apiMessage.content_attributes?.interactive_metadata as InteractiveMetadata | undefined
 

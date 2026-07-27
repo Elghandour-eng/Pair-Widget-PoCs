@@ -15,6 +15,19 @@ export function isOutgoingMessage(message: Message): boolean {
 }
 
 /**
+ * Check if message is from an AI Assistant
+ */
+export function isAiMessage(message: Message): boolean {
+  if (message.message_type === 'widget_message') return true
+  if (message.sender_type === 'bot' || message.sender_type === 'ai_agent' || message.sender_type === 'agent') {
+    if (message.message_type === 'text' && !message.is_csat_survey) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Check if message is pending (optimistic message)
  */
 export function isPendingMessage(message: Message): boolean {
