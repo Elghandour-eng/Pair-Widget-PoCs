@@ -63,6 +63,10 @@ export interface HeaderDto {
   enabled: boolean
   iconId?: string
   icon?: string | null
+  iconStyle?: CSSProperties & {
+    borderRadius?: string
+    backgroundColor?: string
+  }
   background: HeaderBackground
   content: HeaderContent
   titleStyle: CSSProperties

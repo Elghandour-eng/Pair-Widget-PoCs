@@ -9,6 +9,10 @@ export interface HeaderConfig {
   titleStyle: CSSProperties
   subtitleStyle: CSSProperties
   iconUrl?: string | null
+  iconStyle?: CSSProperties & {
+    borderRadius?: string
+    backgroundColor?: string
+  }
   actions: {
     cart: boolean
     favorites: boolean

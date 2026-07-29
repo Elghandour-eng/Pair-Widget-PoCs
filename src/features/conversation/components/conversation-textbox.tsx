@@ -361,7 +361,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
         </div>
 
         {/* Right actions (Emoji picker, mic, send) */}
-        <div className="mr-px flex shrink-0 items-center gap-2">
+        <div className="mr-px flex shrink-0 items-center gap-0.5">
           {isEmojiPickerEnabled && (
             <div className="relative flex items-center">
               <button

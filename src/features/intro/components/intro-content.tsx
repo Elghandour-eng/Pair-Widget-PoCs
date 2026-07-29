@@ -11,6 +11,9 @@ export function IntroContent() {
 
   const hasQuickLinks = !!quickLinksConfig?.show && (quickLinksConfig.links || []).length > 0
 
+  const heroImageStyles = introConfig?.heroImage?.styles as Record<string, unknown> | undefined
+  const hasExplicitHeight = !!(heroImageStyles?.height || heroImageStyles?.maxHeight || heroImageStyles?.['max-height'])
+
   const heroImage = introConfig?.heroImage && (
     <div
       className={cn('w-full', !hasQuickLinks && 'flex justify-center')}
@@ -19,7 +22,7 @@ export function IntroContent() {
       <img
         src={introConfig.heroImage.url}
         alt="Hero image"
-        className={cn('max-h-31 w-full rounded object-cover', !hasQuickLinks && 'mx-auto')}
+        className={cn(!hasExplicitHeight && 'max-h-31', 'w-full rounded object-cover', !hasQuickLinks && 'mx-auto')}
         style={introConfig.heroImage.styles}
       />
     </div>

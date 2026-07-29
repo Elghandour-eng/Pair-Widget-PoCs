@@ -35,9 +35,14 @@ function IntroHeader({ isHostOnline = true }: IntroHeaderProps) {
     <WidgetHeader className="flex-row items-center gap-2 pt-5 pb-5 shadow-xs" style={headerStyle}>
       <div className="flex items-center gap-2">
         {useHeaderIcon ? (
-          <img src={h!.iconUrl!} alt="Widget avatar" className="h-12.5 w-12.5 rounded-2xl object-cover" />
+          <img
+            src={h!.iconUrl!}
+            alt="Widget avatar"
+            className="h-12.5 w-12.5 rounded-2xl object-cover"
+            style={h?.iconStyle}
+          />
         ) : (
-          <WidgetAvatar showIconFallback={true} />
+          <WidgetAvatar showIconFallback={true} style={h?.iconStyle} />
         )}
 
         <div>

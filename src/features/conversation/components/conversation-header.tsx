@@ -45,9 +45,14 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
       </Button>
       <div className="flex items-center gap-2">
         {useHeaderIcon ? (
-          <img src={h!.iconUrl!} alt="Widget avatar" className="h-12.5 w-12.5 rounded-2xl object-cover" />
+          <img
+            src={h!.iconUrl!}
+            alt="Widget avatar"
+            className="h-12.5 w-12.5 rounded-2xl object-cover"
+            style={h?.iconStyle}
+          />
         ) : (
-          <WidgetAvatar showIconFallback={true} />
+          <WidgetAvatar showIconFallback={true} style={h?.iconStyle} />
         )}
 
         <div>

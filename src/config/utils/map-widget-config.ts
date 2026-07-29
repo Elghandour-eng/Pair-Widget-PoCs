@@ -55,6 +55,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         titleStyle: rawHeader.titleStyle ?? {},
         subtitleStyle: rawHeader.subtitleStyle ?? {},
         iconUrl: rawHeader.icon ?? undefined,
+        iconStyle: (rawHeader as any).iconStyle ?? {
+          borderRadius: (rawHeader as any).iconBorderRadius,
+          backgroundColor: (rawHeader as any).iconBackgroundColor,
+        },
         actions: {
           cart: rawHeader.actions?.cart ?? false,
           favorites: rawHeader.actions?.favorites ?? false,
