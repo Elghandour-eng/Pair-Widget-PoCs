@@ -19,7 +19,7 @@ function WidgetAvatar({
     <Avatar className="h-12.5 w-12.5 rounded-2xl" style={style}>
       <AvatarImage src={useURL ? widgetConfig.avatarUrl : undefined} alt="website avatar" />
       <AvatarFallback
-        className="flex size-full items-center justify-center rounded-2xl bg-[#4D98E2] text-sm font-medium text-white"
+        className="flex size-full items-center justify-center rounded-[inherit] bg-[#4D98E2] text-sm font-medium text-white"
         style={bgStyle}
       >
         <BubbleChatIcon className="text-white" />

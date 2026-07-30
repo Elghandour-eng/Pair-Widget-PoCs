@@ -10,6 +10,7 @@ export interface HeaderConfig {
   subtitleStyle: CSSProperties
   iconUrl?: string | null
   iconStyle?: CSSProperties & {
+    shape?: 'circle' | 'square' | string
     borderRadius?: string
     backgroundColor?: string
   }

@@ -64,6 +64,7 @@ export interface HeaderDto {
   iconId?: string
   icon?: string | null
   iconStyle?: CSSProperties & {
+    shape?: 'circle' | 'square' | string
     borderRadius?: string
     backgroundColor?: string
   }

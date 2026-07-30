@@ -45,6 +45,30 @@ function isSdkMode(): boolean {
 export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?: PairAiWidgetSettings): WidgetConfig {
   // header
   const rawHeader = apiResponse.widget_v2_config?.header
+  const rawIconStyle = (rawHeader as any)?.iconStyle
+  const shape = rawIconStyle?.shape?.toString().toLowerCase()
+
+  let resolvedBorderRadius: string | undefined = undefined
+  if (shape === 'circle') {
+    resolvedBorderRadius = '50%'
+  } else if (shape === 'square') {
+    resolvedBorderRadius = '8px'
+  } else {
+    resolvedBorderRadius = rawIconStyle?.borderRadius ?? (rawHeader as any)?.iconBorderRadius
+  }
+
+  const iconStyle = rawIconStyle
+    ? {
+        ...rawIconStyle,
+        ...(resolvedBorderRadius ? { borderRadius: resolvedBorderRadius } : {}),
+      }
+    : (rawHeader as any)?.iconBorderRadius || (rawHeader as any)?.iconBackgroundColor || resolvedBorderRadius
+      ? {
+          borderRadius: resolvedBorderRadius,
+          backgroundColor: (rawHeader as any)?.iconBackgroundColor,
+        }
+      : undefined
+
   const headerConfig: HeaderConfig | undefined = rawHeader
     ? {
         enabled: rawHeader.enabled,
@@ -55,10 +79,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         titleStyle: rawHeader.titleStyle ?? {},
         subtitleStyle: rawHeader.subtitleStyle ?? {},
         iconUrl: rawHeader.icon ?? undefined,
-        iconStyle: (rawHeader as any).iconStyle ?? {
-          borderRadius: (rawHeader as any).iconBorderRadius,
-          backgroundColor: (rawHeader as any).iconBackgroundColor,
-        },
+        iconStyle,
         actions: {
           cart: rawHeader.actions?.cart ?? false,
           favorites: rawHeader.actions?.favorites ?? false,

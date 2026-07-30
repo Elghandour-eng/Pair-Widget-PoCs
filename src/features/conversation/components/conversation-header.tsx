@@ -56,22 +56,22 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
         )}
 
         <div>
-          <div className="flex items-center gap-1">
-            <h1
-              className="align-middle text-[20px] leading-[130%] font-medium tracking-[0%] text-[#1E1E1E]"
-              style={h?.titleStyle}
-            >
-              {titleText}
-            </h1>
-            {/* Green online dot */}
-            {isHostOnline && <div className="size-1.5 rounded-full bg-[#3AA36B]" />}
-          </div>
-          <span
-            className="text-[16px] leading-[150%] font-normal tracking-[0%] text-[#85888E]"
-            style={h?.subtitleStyle}
+          <h1
+            className="align-middle text-[20px] leading-[130%] font-medium tracking-[0%] text-[#1E1E1E]"
+            style={h?.titleStyle}
           >
-            {subtitleText}
-          </span>
+            {titleText}
+          </h1>
+          <div className="flex gap-1.5">
+            {/* Green online dot */}
+            {isHostOnline && <div className="size-1.5 shrink-0 rounded-full bg-[#3AA36B]" />}
+            <span
+              className="text-[16px] leading-[150%] font-normal tracking-[0%] text-[#85888E]"
+              style={h?.subtitleStyle}
+            >
+              {subtitleText}
+            </span>
+          </div>
         </div>
       </div>
 
