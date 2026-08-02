@@ -82,6 +82,10 @@ export function getPusherClient(): Pusher {
 
   pusherInstance.connection.bind('state_change', (states: { previous: string; current: string }) => {
     logger.debug('pusherClient', 'Pusher connection state changed', states)
+    // Dispatch reconnect event so the app can hydrate messages and clear stale streams
+    if (states.current === 'connected' && states.previous !== 'initialized') {
+      window.dispatchEvent(new CustomEvent('pusher:reconnected'))
+    }
   })
 
   // Handle subscription errors

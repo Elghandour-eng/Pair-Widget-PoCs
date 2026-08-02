@@ -55,7 +55,7 @@ export interface PusherNewMessageEventData {
       type: string
       content: string
       message_type: Message['message_type']
-      sender_type: 'contact' | 'agent' | 'human_agent' | string
+      sender_type: 'contact' | 'agent' | 'human_agent' | 'ai_agent' | string
       sent_at: string
       status: 'sent' | 'pending' | 'failed' | string
       sender_name?: string
@@ -91,4 +91,69 @@ export interface PusherEvent<T = unknown> {
   event: string
   data: T
   channel?: Conversation['ulid']
+}
+
+// ---------------------------------------------------------------------------
+// AI Streaming Event Types
+// ---------------------------------------------------------------------------
+
+/**
+ * Generic envelope wrapper for all Pusher events sent through the
+ * notification driver. Event-specific payload lives under `data`.
+ *
+ * IMPORTANT: Do not read `stream_id`, `delta`, or `status` from the top level.
+ */
+export interface PusherEnvelope<T> {
+  title: string
+  body: string
+  data: T
+  priority?: string
+  eventName: string
+}
+
+/**
+ * Payload for `widget.thinking` events.
+ * Emitted from a non-empty Dify `agent_thought`. Render as transient status
+ * text, not as part of the answer. Treat as untrusted plain text.
+ */
+export interface WidgetThinkingData {
+  conversation_id: string
+  stream_id: string
+  text: string
+}
+
+/**
+ * Payload for `widget.message.delta` events.
+ * Contains one answer fragment. `seq` is the ordering / dedup key within a
+ * stream. Do NOT assume callback arrival order equals `seq` order.
+ */
+export interface WidgetDeltaData {
+  conversation_id: string
+  stream_id: string
+  delta: string
+  seq: number
+}
+
+/**
+ * Payload for `widget.message.complete` events.
+ * Means the processor observed Dify's end-of-message SSE event. Does NOT mean
+ * the reply has been persisted. Keep the provisional bubble until `new-message`.
+ */
+export interface WidgetCompleteData {
+  conversation_id: string
+  stream_id: string
+}
+
+/**
+ * Payload for `widget.typing` events.
+ * Coarse fallback and lifecycle hint. `stop` is advisory and must not discard
+ * an active streamed bubble.
+ */
+export interface WidgetTypingData {
+  sender_type: 'ai' | 'agent' | 'system'
+  sender_id: string | null
+  sender_name: string | null
+  status: 'start' | 'stop'
+  conversation_id: string
+  timestamp: string
 }

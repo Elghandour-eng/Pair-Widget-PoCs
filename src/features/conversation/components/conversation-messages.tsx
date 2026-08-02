@@ -6,10 +6,12 @@ import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { ConversationMessage } from '@/features/conversation/components/conversation-message/conversation-message'
 import { EmptyMessage } from '@/features/conversation/components/empty-message'
 import { LoadMore } from '@/features/conversation/components/load-more'
+import { StreamingMessage } from '@/features/conversation/components/streaming-message'
 import { TypingIndicator } from '@/features/conversation/components/typing-indicator'
 import { UnreadIndicator } from '@/features/conversation/components/unread-indicator'
 import { useQuestionContext } from '@/features/conversation/contexts/question-context'
 import { useConversationScroll } from '@/features/conversation/hooks/use-conversation-scroll'
+import { useStreaming } from '@/features/conversation/hooks/use-streaming'
 import type { Message, QuestionMessage } from '@/features/conversation/types/message'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { scrollToBottom } from '../utils/scroll-utils'
@@ -39,6 +41,7 @@ function ConversationMessages({
   const typingState = conversationId ? typingStates.get(conversationId) : undefined
   const isTyping = typingState?.isTyping ?? false
   const { activeQuestionGroup, setActiveQuestionGroup, dismissedQuestions } = useQuestionContext()
+  const { activeStream, hasActiveStream } = useStreaming(conversationId)
 
   const lastMessage = messages[messages.length - 1]
 
@@ -196,12 +199,40 @@ function ConversationMessages({
     }
   }, [conversationId, conversationUnreadMessages, markAsRead, scrollContainerRef])
 
-  // Scroll to bottom when typing starts
+  // Scroll to bottom when typing starts (smooth, one-off)
   useEffect(() => {
-    if (isTyping) {
+    if (isTyping && !hasActiveStream) {
       scrollToBottom(scrollContainerRef.current, 'smooth')
     }
-  }, [isTyping, scrollContainerRef])
+  }, [isTyping, hasActiveStream, scrollContainerRef])
+
+  // During streaming: only scroll if user is already near the bottom,
+  // use instant scroll to avoid animation fighting, and coalesce rapid
+  // delta updates into a single scroll per animation frame.
+  const streamingRafRef = useRef<number | null>(null)
+  const streamTextLength = activeStream?.text.length ?? 0
+
+  useEffect(() => {
+    if (!hasActiveStream) return
+
+    // If user has scrolled up, don't force them back down
+    if (!isAtBottom) return
+
+    // Coalesce into one scroll per frame
+    if (streamingRafRef.current !== null) return
+
+    streamingRafRef.current = requestAnimationFrame(() => {
+      scrollToBottom(scrollContainerRef.current, 'instant')
+      streamingRafRef.current = null
+    })
+
+    return () => {
+      if (streamingRafRef.current !== null) {
+        cancelAnimationFrame(streamingRafRef.current)
+        streamingRafRef.current = null
+      }
+    }
+  }, [hasActiveStream, streamTextLength, isAtBottom, scrollContainerRef])
 
   // Callback to register message elements
   const registerMessageRef = useCallback((messageId: string, element: HTMLDivElement | null) => {
@@ -285,7 +316,8 @@ function ConversationMessages({
                   </div>
                 )
               })}
-              {isTyping && (
+              {activeStream && <StreamingMessage stream={activeStream} />}
+              {isTyping && !hasActiveStream && (
                 <TypingIndicator senderName={typingState?.senderName} senderType={typingState?.senderType} />
               )}
             </div>

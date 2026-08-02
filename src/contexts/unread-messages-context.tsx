@@ -4,10 +4,17 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { TOKEN_CHANGED_EVENT, tokenStorage } from '@/core/token-storage'
 import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
+import { streamingStore } from '@/features/conversation/stores/streaming-store'
 import { handleIncomingPusherMessage } from '@/features/conversation/utils/handle-pusher-message'
-import type { PusherNewMessageEventData } from '@/pusher/types/pusher-events'
+import type {
+  PusherNewMessageEventData,
+  WidgetThinkingData,
+  WidgetDeltaData,
+  WidgetCompleteData,
+} from '@/pusher/types/pusher-events'
 import { getPrivateConversationChannelName } from '@/pusher/utils/channel-names'
 import { getPusherClient } from '@/pusher/utils/pusher-client'
+import { unwrapEnvelope } from '@/pusher/utils/unwrap-envelope'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
@@ -294,12 +301,13 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
             // Parse data if it's a string
             const parsedData: PusherNewMessageEventData = typeof data === 'string' ? JSON.parse(data) : data
 
-            // Clear typing state when message is received
+            // Clear typing state and active streams when persisted message arrives
             setTypingStates((prev) => {
               const newMap = new Map(prev)
               newMap.delete(conversationId)
               return newMap
             })
+            streamingStore.removeStreamsForConversation(conversationId)
 
             logger.debug('🔵 MESSAGE:RENDER', 'Parsed Pusher data', {
               conversationId,
@@ -381,6 +389,22 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
               const isTyping = typingData.status === 'start'
               const senderName = typingData.sender_name
               const senderType = typingData.sender_type
+
+              const isAiTyping = !senderType || senderType === 'ai' || senderType === 'ai_agent' || senderType === 'bot'
+
+              // Guard: for AI typing, ignore 'stop' — stop is advisory and can be emitted before the first delta.
+              // Typing indicator will be hidden when new-message arrives, activeStream takes over, or 15s timeout.
+              if (!isTyping && isAiTyping) {
+                logger.debug(
+                  '🔵 TYPING:EVENT',
+                  'Ignoring typing stop for AI agent — waiting for deltas or new-message',
+                  {
+                    conversationId: typingData.conversation_id,
+                  },
+                )
+                return
+              }
+
               setTypingStates((prev) => {
                 const newMap = new Map(prev)
                 newMap.set(typingData.conversation_id, { isTyping, senderName, senderType })
@@ -408,6 +432,41 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
         channel.bind('widget.typing', handleTyping)
         channel.bind('widget_typing', handleTyping)
+
+        // --- AI Streaming events ---
+        channel.bind('widget.thinking', (data: unknown) => {
+          const envelope = unwrapEnvelope<WidgetThinkingData>(data)
+          if (envelope) {
+            logger.debug('🔵 STREAM:EVENT', 'widget.thinking received', {
+              conversationId,
+              streamId: envelope.stream_id,
+            })
+            streamingStore.handleThinking(envelope.conversation_id, envelope.stream_id, envelope.text)
+          }
+        })
+
+        channel.bind('widget.message.delta', (data: unknown) => {
+          const envelope = unwrapEnvelope<WidgetDeltaData>(data)
+          if (envelope) {
+            logger.debug('🔵 STREAM:EVENT', 'widget.message.delta received', {
+              conversationId,
+              streamId: envelope.stream_id,
+              seq: envelope.seq,
+            })
+            streamingStore.handleDelta(envelope.conversation_id, envelope.stream_id, envelope.delta, envelope.seq)
+          }
+        })
+
+        channel.bind('widget.message.complete', (data: unknown) => {
+          const envelope = unwrapEnvelope<WidgetCompleteData>(data)
+          if (envelope) {
+            logger.debug('🔵 STREAM:EVENT', 'widget.message.complete received', {
+              conversationId,
+              streamId: envelope.stream_id,
+            })
+            streamingStore.handleComplete(envelope.conversation_id, envelope.stream_id)
+          }
+        })
 
         // Update channels map
         setChannels((prev) => {
@@ -544,12 +603,13 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
                 // Parse data if it's a string
                 const parsedData: PusherNewMessageEventData = typeof data === 'string' ? JSON.parse(data) : data
 
-                // Clear typing state when message is received
+                // Clear typing state and active streams when persisted message arrives
                 setTypingStates((prev) => {
                   const newMap = new Map(prev)
                   newMap.delete(conversation.ulid)
                   return newMap
                 })
+                streamingStore.removeStreamsForConversation(conversation.ulid)
 
                 logger.debug('🔵 MESSAGE:RENDER', 'Calling handleIncomingPusherMessage from provider', {
                   conversationId: conversation.ulid,
@@ -610,6 +670,23 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
                   const isTyping = typingData.status === 'start'
                   const senderName = typingData.sender_name
                   const senderType = typingData.sender_type
+
+                  const isAiTyping =
+                    !senderType || senderType === 'ai' || senderType === 'ai_agent' || senderType === 'bot'
+
+                  // Guard: for AI typing, ignore 'stop' — stop is advisory and can be emitted before the first delta.
+                  // Typing indicator will be hidden when new-message arrives, activeStream takes over, or 15s timeout.
+                  if (!isTyping && isAiTyping) {
+                    logger.debug(
+                      '🔵 TYPING:EVENT',
+                      'Ignoring typing stop for AI agent — waiting for deltas or new-message',
+                      {
+                        conversationId: typingData.conversation_id,
+                      },
+                    )
+                    return
+                  }
+
                   setTypingStates((prev) => {
                     const newMap = new Map(prev)
                     newMap.set(typingData.conversation_id, { isTyping, senderName, senderType })
@@ -637,6 +714,41 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
             channel.bind('widget.typing', handleTyping)
             channel.bind('widget_typing', handleTyping)
+
+            // --- AI Streaming events ---
+            channel.bind('widget.thinking', (data: unknown) => {
+              const envelope = unwrapEnvelope<WidgetThinkingData>(data)
+              if (envelope) {
+                logger.debug('🔵 STREAM:EVENT', 'widget.thinking received (init)', {
+                  conversationId: conversation.ulid,
+                  streamId: envelope.stream_id,
+                })
+                streamingStore.handleThinking(envelope.conversation_id, envelope.stream_id, envelope.text)
+              }
+            })
+
+            channel.bind('widget.message.delta', (data: unknown) => {
+              const envelope = unwrapEnvelope<WidgetDeltaData>(data)
+              if (envelope) {
+                logger.debug('🔵 STREAM:EVENT', 'widget.message.delta received (init)', {
+                  conversationId: conversation.ulid,
+                  streamId: envelope.stream_id,
+                  seq: envelope.seq,
+                })
+                streamingStore.handleDelta(envelope.conversation_id, envelope.stream_id, envelope.delta, envelope.seq)
+              }
+            })
+
+            channel.bind('widget.message.complete', (data: unknown) => {
+              const envelope = unwrapEnvelope<WidgetCompleteData>(data)
+              if (envelope) {
+                logger.debug('🔵 STREAM:EVENT', 'widget.message.complete received (init)', {
+                  conversationId: conversation.ulid,
+                  streamId: envelope.stream_id,
+                })
+                streamingStore.handleComplete(envelope.conversation_id, envelope.stream_id)
+              }
+            })
 
             newChannels.set(conversation.ulid, channel)
           } catch (error) {
@@ -688,6 +800,30 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       setChannels(new Map())
     }
   }, [hasToken]) // Re-run when token state changes
+
+  // Reconnect hydration: re-fetch messages and clear stale streams on reconnect
+  useEffect(() => {
+    const widgetId = getWidgetId()
+
+    const handleReconnect = () => {
+      logger.debug('UnreadMessagesProvider', 'Pusher reconnected — hydrating messages', {
+        channelCount: channels.size,
+      })
+
+      channels.forEach((_, conversationId) => {
+        // Re-fetch messages from REST API
+        queryClient.invalidateQueries({
+          queryKey: ['conversations', widgetId, conversationId, 'messages'],
+          exact: false,
+        })
+        // Clear any stale provisional streams
+        streamingStore.removeStreamsForConversation(conversationId)
+      })
+    }
+
+    window.addEventListener('pusher:reconnected', handleReconnect)
+    return () => window.removeEventListener('pusher:reconnected', handleReconnect)
+  }, [channels])
 
   return (
     <UnreadMessagesContext.Provider
