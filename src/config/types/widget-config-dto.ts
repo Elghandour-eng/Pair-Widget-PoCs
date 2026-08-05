@@ -318,6 +318,8 @@ export interface WidgetConfigDto {
   greeting_message_ar: string | null
 
   locale: string
+  headers?: Record<string, string>
+  params?: Record<string, string>
   website_url: string
   business_name: string | null
   sender_name_type: SenderNameType

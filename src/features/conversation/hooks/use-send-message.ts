@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { sendMessage } from '@/features/conversation/apis/send-message'
 import type { SendMessageRequest } from '@/features/conversation/types/send-message-request'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
@@ -8,6 +9,7 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 export function useSendMessage() {
   logger.debug('useSendMessage', 'Initializing send message mutation hook')
+  const { widgetConfig } = useWidgetConfigContext()
 
   return useMutation({
     mutationFn: (variables: SendMessageRequest) => {
@@ -16,7 +18,7 @@ export function useSendMessage() {
         contentLength: variables.content.length,
         messageType: variables.message_type,
       })
-      return sendMessage(variables)
+      return sendMessage(variables, widgetConfig)
     },
     onSuccess: (data) => {
       logger.debug('✅ MESSAGE:RENDER', 'Message sent successfully via XHR', {

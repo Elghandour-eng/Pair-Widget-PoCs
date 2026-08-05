@@ -267,6 +267,17 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     openAutomatically:
       apiResponse.opening_method === 'automatically_open' || windowSettings?.openAutomatically || false,
     userId: windowSettings?.userId,
+    visitorCredential:
+      windowSettings?.accessToken || windowSettings?.accessTokenExpiresAt || windowSettings?.refreshFn
+        ? {
+            accessToken: windowSettings.accessToken,
+            accessTokenExpiresAt: windowSettings.accessTokenExpiresAt,
+            refreshFn: windowSettings.refreshFn,
+          }
+        : undefined,
+    metadata: windowSettings?.metadata,
+    hostHeaderMappings: apiResponse.headers,
+    hostParamMappings: apiResponse.params,
     // Deprecated used for Welcome Screen
     welcomeTitle: apiResponse.welcome_title || undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,

@@ -20,6 +20,12 @@ export interface HeaderConfig {
   }
 }
 
+export interface VisitorCredential {
+  accessToken?: string
+  accessTokenExpiresAt?: number
+  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresAt?: number }>
+}
+
 export interface PairAiWidgetSettings {
   position: 'left' | 'right'
   type: 'expanded_bubble' | 'standard'
@@ -29,6 +35,10 @@ export interface PairAiWidgetSettings {
   beBaseUrl?: string
   openAutomatically?: boolean
   userId?: string
+  accessToken?: string
+  accessTokenExpiresAt?: number
+  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresAt?: number }>
+  metadata?: Record<string, unknown>
 }
 
 declare global {
@@ -73,6 +83,12 @@ export interface WidgetConfig {
   showFooter?: boolean
   openAutomatically?: boolean
   userId?: string
+  visitorCredential?: VisitorCredential
+  metadata?: Record<string, unknown>
+  /** Host integration header mappings: maps outgoing header names to keys in metadata */
+  hostHeaderMappings?: Record<string, string>
+  /** Host integration query parameter mappings: maps outgoing query parameter names to keys in metadata */
+  hostParamMappings?: Record<string, string>
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
   launcherStyles?: CSSProperties

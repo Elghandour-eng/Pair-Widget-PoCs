@@ -14,6 +14,45 @@
         launcherTitle: 'Chat with us!',
         openAutomatically: true,
         userId: '01HF7YAT00KEVN5G8KVF7WQ96G',
+        accessToken: 'ACCESS_TOKEN',
+        accessTokenExpiresAt: 32,
+        refreshFn: async () => {
+          // Retrieve the current token from your application
+          const token = 'PASS_TOKEN_HERE'
+
+          const response = await fetch('API_URL', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (!response.ok) {
+            throw new Error('Failed to refresh token')
+          }
+
+          const { token: accessToken } = await response.json()
+
+          return { accessToken, accessTokenExpiresAt: 84600 }
+        },
+        metadata: {
+          param: {
+            gender: '2741',
+            app_version: '8.0.0',
+            platform: 'web',
+            deviceId: '1784117644116-60353',
+            exp_list: {
+              'exp-57226': 'New',
+              'exp-55139': 'default',
+              'exp-96160': 'default',
+              'exp-36818': 'disabled',
+              'exp-46098': 'A',
+              'exp-18701': 'disabled',
+              'exp-25877': 'Exp A',
+            },
+          },
+          locale: 'en-kw',
+        },
       }
       ;(function (d, t) {
         var BASE_URL = 'http://localhost:3000'
@@ -26,7 +65,7 @@
           window.PairAiWidgetSDK.run({
             // Boutiqaat Widget ID: '01KT8X452RMYR45GEWCCED5DAV',
             // Hiro Widget ID: '01KV5D4WSMW463XF1HQMV9GMM7',
-            widgetId: '01KT8X452RMYR45GEWCCED5DAV',
+            widgetId: '01KZ0RE6RABAXZJR9CA9G1SDDN',
             baseUrl: BASE_URL,
           })
         }

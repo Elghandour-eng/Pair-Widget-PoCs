@@ -1,7 +1,7 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
-import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
-import type { SuggestionsMessage, SuggestionOption } from '@/features/conversation/types/message'
+import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
+import type { SuggestionOption, SuggestionsMessage } from '@/features/conversation/types/message'
 import { toast } from 'sonner'
 
 interface SuggestionsSectionProps {
@@ -62,7 +62,7 @@ export function SuggestionsSection({ suggestions, sourceMessageUlid }: Suggestio
         <p className="text-left text-[14px] leading-[130%] font-normal text-[#1A1A1A]">{suggestions.text}</p>
       )}
       <div className="flex w-full flex-wrap justify-start gap-2">
-        {suggestions.options.map((option, idx) => {
+        {suggestions.options?.map((option, idx) => {
           const isStringOption = typeof option === 'string'
           const label = isStringOption ? option : option?.label || ''
 

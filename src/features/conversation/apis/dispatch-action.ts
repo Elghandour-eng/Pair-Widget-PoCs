@@ -1,4 +1,6 @@
 import { apiClient } from '@/core/http'
+import type { WidgetConfig } from '@/config/types/widget-config'
+import { getPayloadEnrichments } from '@/utils/payload-enricher'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
 
@@ -9,6 +11,7 @@ export interface DispatchActionRequest {
   actionUlid: string
   sourceMessageUlid: string
   parameters?: Record<string, unknown>
+  widgetConfig: WidgetConfig
 }
 
 export interface DispatchActionResponse {
@@ -28,12 +31,19 @@ export async function dispatchAction({
   actionUlid,
   sourceMessageUlid,
   parameters,
+  widgetConfig,
 }: DispatchActionRequest): Promise<DispatchActionResponse> {
-  logger.debug('dispatchAction', 'Dispatching action', {
+  const enrichments = getPayloadEnrichments(widgetConfig)
+  const payload = {
+    source_message_ulid: sourceMessageUlid,
+    parameters: parameters || {},
+    ...enrichments,
+  }
+
+  logger.debug('dispatchAction', 'Dispatching action with payload', {
     conversationId,
     actionUlid,
-    sourceMessageUlid,
-    parameters,
+    payload,
   })
 
   const widgetId = getWidgetId()
@@ -43,10 +53,7 @@ export async function dispatchAction({
 
   const response = await apiClient.post<DispatchActionResponse>(
     `/v1/widget/${widgetId}/conversations/${conversationId}/actions/${actionUlid}/dispatch`,
-    {
-      source_message_ulid: sourceMessageUlid,
-      parameters: parameters || {},
-    },
+    payload,
   )
 
   logger.debug('dispatchAction', 'Action dispatched successfully', response.data)

@@ -4,4 +4,7 @@ export interface SendMessageRequest {
   message_type: 'text' | 'image' | 'file' | 'audio' | 'video'
   media_url?: string
   metadata?: Record<string, unknown>
+  visitor_credential?: string
+  headers?: Record<string, unknown>
+  query_params?: Record<string, unknown>
 }

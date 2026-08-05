@@ -449,6 +449,34 @@
         case 'widget:dismissPreview':
           hidePreview()
           break
+        case 'widget:requestTokenRefresh':
+          var hostSettings = window.PairAiWidgetSettings || {}
+          if (typeof hostSettings.refreshFn === 'function') {
+            console.log('[PairAI SDK] Executing refreshFn on host page...')
+            try {
+              Promise.resolve(hostSettings.refreshFn())
+                .then(function (result) {
+                  if (result && result.accessToken) {
+                    config.accessToken = result.accessToken
+                    if (result.accessTokenExpiresAt !== undefined) {
+                      config.accessTokenExpiresAt = result.accessTokenExpiresAt
+                    }
+                    console.log('[PairAI SDK] Token refreshed successfully, sending updated config to widget:', config)
+                    sendMessageToWidget('sdk:config', config)
+                  }
+                })
+                .catch(function (err) {
+                  console.error('[PairAI SDK] Error executing refreshFn on host page:', err)
+                })
+            } catch (err) {
+              console.error('[PairAI SDK] Exception executing refreshFn on host page:', err)
+            }
+          } else {
+            console.warn(
+              '[PairAI SDK] widget:requestTokenRefresh received but hostSettings.refreshFn is not a function',
+            )
+          }
+          break
         default:
           break
       }
@@ -637,6 +665,9 @@
       user: options.user,
       openAutomatically: settings.openAutomatically || options.openAutomatically || false,
       userId: settings.userId || options.userId || null,
+      accessToken: settings.accessToken,
+      accessTokenExpiresAt: settings.accessTokenExpiresAt,
+      metadata: settings.metadata,
     }
 
     console.log('[PairAI SDK] Initializing with config:', config)

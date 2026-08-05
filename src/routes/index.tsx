@@ -5,11 +5,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { WidgetColorSync } from '@/components/widget-color-sync'
 import { WidgetLayout } from '@/components/widget-layout'
 import { WidgetUnreadSync } from '@/components/widget-unread-sync'
+import { WidgetVisitorTokenRefreshSync } from '@/components/widget-visitor-token-refresh-sync'
 import { DEV_WINDOW_SETTINGS } from '@/config/constants/dev-window-settings'
 import { WidgetConfigQueryOptions } from '@/config/queries/use-widget-config-queries'
+import { mapToWidgetConfig } from '@/config/utils/map-widget-config'
 import { UnreadMessagesProvider } from '@/contexts/unread-messages-context'
 import { WidgetConfigProvider } from '@/contexts/widget-config-context'
-import { mapToWidgetConfig } from '@/config/utils/map-widget-config'
 import { WidgetNavigationProvider, useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { WidgetUIProvider } from '@/contexts/widget-ui-context'
 import { tokenStorage } from '@/core/token-storage'
@@ -136,6 +137,7 @@ export const Route = createFileRoute('/')({
   component: () => {
     return (
       <WidgetConfigProvider>
+        <WidgetVisitorTokenRefreshSync />
         <WidgetUIProvider>
           <WidgetColorSync />
           <WidgetNavigationProvider>
