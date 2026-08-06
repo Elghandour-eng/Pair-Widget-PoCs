@@ -268,11 +268,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       apiResponse.opening_method === 'automatically_open' || windowSettings?.openAutomatically || false,
     userId: windowSettings?.userId,
     visitorCredential:
-      windowSettings?.accessToken || windowSettings?.accessTokenExpiresAt || windowSettings?.refreshFn
+      windowSettings?.accessToken || windowSettings?.accessTokenExpiresIn || windowSettings?.refreshFn
         ? {
             accessToken: windowSettings.accessToken,
-            accessTokenExpiresAt: windowSettings.accessTokenExpiresAt,
+            accessTokenExpiresIn: windowSettings.accessTokenExpiresIn,
             refreshFn: windowSettings.refreshFn,
+            _updatedAt: windowSettings._updatedAt,
           }
         : undefined,
     metadata: windowSettings?.metadata,

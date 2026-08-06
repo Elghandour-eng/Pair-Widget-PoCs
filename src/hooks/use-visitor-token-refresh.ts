@@ -14,12 +14,10 @@ const REFRESH_WARNING_BUFFER_MS = 30_000
  * 2. Absolute Unix timestamp in s (> 1_000_000_000)
  * 3. Relative duration in seconds (<= 1_000_000_000, e.g. 84600)
  */
-function getExpirationTimestampMs(expiresAt: number | undefined): number | null {
+function getExpirationTimestampMs(expiresAt: number | undefined, baseTimeMs: number): number | null {
   if (expiresAt === undefined || expiresAt === null || isNaN(expiresAt)) {
     return null
   }
-
-  const nowMs = Date.now()
 
   if (expiresAt > 1_000_000_000_000) {
     // Already milliseconds timestamp
@@ -32,7 +30,7 @@ function getExpirationTimestampMs(expiresAt: number | undefined): number | null 
   }
 
   // Relative duration in seconds
-  return nowMs + expiresAt * 1000
+  return baseTimeMs + expiresAt * 1000
 }
 
 interface UseVisitorTokenRefreshOptions {
@@ -41,10 +39,10 @@ interface UseVisitorTokenRefreshOptions {
 
 export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshOptions) {
   const visitorCredential = widgetConfig.visitorCredential
+  const initialExpires = visitorCredential?.accessTokenExpiresIn
   const [accessToken, setAccessToken] = useState<string | undefined>(visitorCredential?.accessToken)
-  const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | undefined>(
-    visitorCredential?.accessTokenExpiresAt,
-  )
+  const [accessTokenExpiresIn, setAccessTokenExpiresIn] = useState<number | undefined>(initialExpires)
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number>(Date.now())
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -55,15 +53,29 @@ export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshO
     refreshFnRef.current = widgetConfig.visitorCredential?.refreshFn
   }, [widgetConfig.visitorCredential?.refreshFn])
 
-  // Update state if initial config props change
+  // Update state whenever widgetConfig.visitorCredential updates
   useEffect(() => {
-    if (widgetConfig.visitorCredential?.accessToken !== undefined) {
-      setAccessToken(widgetConfig.visitorCredential.accessToken)
+    const vc = widgetConfig.visitorCredential
+    if (!vc) return
+
+    if (vc.accessToken !== undefined) {
+      setAccessToken(vc.accessToken)
     }
-    if (widgetConfig.visitorCredential?.accessTokenExpiresAt !== undefined) {
-      setAccessTokenExpiresAt(widgetConfig.visitorCredential.accessTokenExpiresAt)
+    const currentExpires = vc.accessTokenExpiresIn
+    if (currentExpires !== undefined) {
+      setAccessTokenExpiresIn(currentExpires)
     }
-  }, [widgetConfig.visitorCredential?.accessToken, widgetConfig.visitorCredential?.accessTokenExpiresAt])
+    logger.debug('useVisitorTokenRefresh', 'Updated credentials from widgetConfig', {
+      accessToken: vc.accessToken,
+      accessTokenExpiresIn: currentExpires,
+      _updatedAt: vc._updatedAt,
+    })
+    setLastRefreshedAt(Date.now())
+  }, [
+    widgetConfig.visitorCredential?.accessToken,
+    widgetConfig.visitorCredential?.accessTokenExpiresIn,
+    widgetConfig.visitorCredential?._updatedAt,
+  ])
 
   const executeRefresh = useCallback(async () => {
     const fn = refreshFnRef.current
@@ -71,7 +83,7 @@ export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshO
       if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
         logger.debug(
           'useVisitorTokenRefresh',
-          'No local refreshFn, sending widget:requestTokenRefresh postMessage to host SDK',
+          'No local refreshFn in iframe, sending widget:requestTokenRefresh postMessage to host SDK',
         )
         window.parent.postMessage({ type: 'widget:requestTokenRefresh' }, '*')
       } else {
@@ -94,12 +106,14 @@ export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshO
             window.PairAiWidgetSettings.accessToken = res.accessToken
           }
         }
-        if (res.accessTokenExpiresAt !== undefined) {
-          setAccessTokenExpiresAt(res.accessTokenExpiresAt)
+        const newExpires = res.accessTokenExpiresIn
+        if (newExpires !== undefined) {
+          setAccessTokenExpiresIn(newExpires)
           if (window.PairAiWidgetSettings) {
-            window.PairAiWidgetSettings.accessTokenExpiresAt = res.accessTokenExpiresAt
+            window.PairAiWidgetSettings.accessTokenExpiresIn = newExpires
           }
         }
+        setLastRefreshedAt(Date.now())
       }
     } catch (error) {
       logger.debug('useVisitorTokenRefresh', 'Error during visitor token refresh execution', error)
@@ -121,41 +135,46 @@ export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshO
     }
 
     const inIframe = typeof window !== 'undefined' && window.parent && window.parent !== window
-    if ((!refreshFnRef.current && !inIframe) || accessTokenExpiresAt === undefined) {
+    if ((!refreshFnRef.current && !inIframe) || accessTokenExpiresIn === undefined) {
       logger.debug(
         'useVisitorTokenRefresh',
-        'Missing refreshFn/iframe context or accessTokenExpiresAt, no timer scheduled',
+        'Missing refreshFn/iframe context or accessTokenExpiresIn, no timer scheduled',
+        { hasRefreshFn: !!refreshFnRef.current, inIframe, accessTokenExpiresIn },
       )
       return
     }
 
-    const expMs = getExpirationTimestampMs(accessTokenExpiresAt)
+    const expMs = getExpirationTimestampMs(accessTokenExpiresIn, lastRefreshedAt)
     if (!expMs) return
 
     const nowMs = Date.now()
     const targetRefreshTimeMs = expMs - REFRESH_WARNING_BUFFER_MS
     const delayMs = targetRefreshTimeMs - nowMs
 
-    logger.debug('useVisitorTokenRefresh', 'Visitor token expiration timer setup', {
-      nowMs: new Date(nowMs).toISOString(),
-      expMs: new Date(expMs).toISOString(),
-      targetRefreshTimeMs: new Date(targetRefreshTimeMs).toISOString(),
+    const logDetails = {
+      accessTokenExpiresIn,
+      now: new Date(nowMs).toLocaleTimeString(),
+      expiresAt: new Date(expMs).toLocaleTimeString(),
+      targetRefreshTime: new Date(targetRefreshTimeMs).toLocaleTimeString(),
       delayMs,
-      delaySeconds: Math.round(delayMs / 1000),
-    })
+      delaySeconds: (delayMs / 1000).toFixed(1),
+    }
+
+    logger.debug('useVisitorTokenRefresh', 'Visitor token expiration timer setup', logDetails)
 
     if (delayMs <= 0) {
       logger.debug(
         'useVisitorTokenRefresh',
-        'Token is expiring in less than 30s or already expired. Triggering immediately.',
+        'Token is expiring in less than 30s or already expired. Triggering refresh immediately.',
       )
       executeRefresh()
     } else {
       logger.debug(
         'useVisitorTokenRefresh',
-        `Scheduling visitor token refresh in ${Math.round(delayMs / 1000)} seconds`,
+        `Scheduling visitor token refresh in ${(delayMs / 1000).toFixed(1)} seconds`,
       )
       timerRef.current = setTimeout(() => {
+        logger.debug('useVisitorTokenRefresh', 'Timer fired! Executing token refresh...')
         executeRefresh()
       }, delayMs)
     }
@@ -166,11 +185,11 @@ export function useVisitorTokenRefresh({ widgetConfig }: UseVisitorTokenRefreshO
         timerRef.current = null
       }
     }
-  }, [accessTokenExpiresAt, executeRefresh])
+  }, [accessTokenExpiresIn, lastRefreshedAt, executeRefresh])
 
   return {
     accessToken,
-    accessTokenExpiresAt,
+    accessTokenExpiresIn,
     isRefreshing,
     refreshTokenNow: executeRefresh,
   }

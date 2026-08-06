@@ -22,8 +22,9 @@ export interface HeaderConfig {
 
 export interface VisitorCredential {
   accessToken?: string
-  accessTokenExpiresAt?: number
-  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresAt?: number }>
+  accessTokenExpiresIn?: number
+  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresIn?: number }>
+  _updatedAt?: number
 }
 
 export interface PairAiWidgetSettings {
@@ -36,9 +37,10 @@ export interface PairAiWidgetSettings {
   openAutomatically?: boolean
   userId?: string
   accessToken?: string
-  accessTokenExpiresAt?: number
-  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresAt?: number }>
+  accessTokenExpiresIn?: number
+  refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresIn?: number }>
   metadata?: Record<string, unknown>
+  _updatedAt?: number
 }
 
 declare global {

@@ -33,7 +33,10 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
         const receivedConfig = event.data.data
         if (receivedConfig) {
           logger.debug('WidgetConfigProvider', 'Received sdk:config via postMessage', receivedConfig)
-          setSdkConfig(receivedConfig)
+          setSdkConfig({
+            ...receivedConfig,
+            _updatedAt: Date.now(),
+          })
         }
       } else if (event.data?.type === 'metadata:update') {
         const receivedMetadata = event.data.data || event.data.metadata

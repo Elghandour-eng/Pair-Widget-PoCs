@@ -450,19 +450,23 @@
           hidePreview()
           break
         case 'widget:requestTokenRefresh':
+          console.log('[PairAI SDK] Received widget:requestTokenRefresh from widget iframe')
           var hostSettings = window.PairAiWidgetSettings || {}
           if (typeof hostSettings.refreshFn === 'function') {
             console.log('[PairAI SDK] Executing refreshFn on host page...')
             try {
               Promise.resolve(hostSettings.refreshFn())
                 .then(function (result) {
+                  console.log('[PairAI SDK] hostSettings.refreshFn() resolved with:', result)
                   if (result && result.accessToken) {
                     config.accessToken = result.accessToken
-                    if (result.accessTokenExpiresAt !== undefined) {
-                      config.accessTokenExpiresAt = result.accessTokenExpiresAt
+                    if (result.accessTokenExpiresIn !== undefined) {
+                      config.accessTokenExpiresIn = result.accessTokenExpiresIn
                     }
                     console.log('[PairAI SDK] Token refreshed successfully, sending updated config to widget:', config)
                     sendMessageToWidget('sdk:config', config)
+                  } else {
+                    console.warn('[PairAI SDK] refreshFn returned result without accessToken:', result)
                   }
                 })
                 .catch(function (err) {
@@ -666,7 +670,7 @@
       openAutomatically: settings.openAutomatically || options.openAutomatically || false,
       userId: settings.userId || options.userId || null,
       accessToken: settings.accessToken,
-      accessTokenExpiresAt: settings.accessTokenExpiresAt,
+      accessTokenExpiresIn: settings.accessTokenExpiresIn,
       metadata: settings.metadata,
     }
 
