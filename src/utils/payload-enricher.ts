@@ -5,7 +5,7 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 export interface PayloadEnrichments {
   visitor_credential?: string
-  headers?: Record<string, unknown>
+  headers?: Record<string, string>
   query_params?: Record<string, unknown>
 }
 
@@ -28,10 +28,11 @@ export function getPayloadEnrichments(widgetConfig: WidgetConfig): PayloadEnrich
   // 2. headers: lookup mapped hostHeaderMappings inside metadata
   const headerMappings = widgetConfig.hostHeaderMappings
   if (headerMappings && typeof headerMappings === 'object') {
-    const resolvedHeaders: Record<string, unknown> = {}
+    const resolvedHeaders: Record<string, string> = {}
     for (const [headerName, metadataKey] of Object.entries(headerMappings)) {
-      if (metadataKey && metadata[metadataKey] !== undefined) {
-        resolvedHeaders[headerName] = metadata[metadataKey]
+      if (metadataKey && metadata[metadataKey] !== undefined && metadata[metadataKey] !== null) {
+        const rawValue = metadata[metadataKey]
+        resolvedHeaders[headerName] = typeof rawValue === 'object' ? JSON.stringify(rawValue) : String(rawValue)
       } else {
         logger.debug(
           'getPayloadEnrichments',

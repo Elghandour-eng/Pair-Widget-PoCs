@@ -5,6 +5,6 @@ export interface SendMessageRequest {
   media_url?: string
   metadata?: Record<string, unknown>
   visitor_credential?: string
-  headers?: Record<string, unknown>
+  headers?: Record<string, string>
   query_params?: Record<string, unknown>
 }
