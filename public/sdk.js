@@ -831,10 +831,32 @@
     return iframe
   }
 
+  // Update metadata dynamically
+  function updateMetadata(newMetadata) {
+    if (!newMetadata || typeof newMetadata !== 'object') {
+      console.warn('[PairAI SDK] updateMetadata requires an object parameter')
+      return
+    }
+
+    console.log('[PairAI SDK] Updating metadata:', newMetadata)
+
+    // Update internal config metadata
+    config.metadata = Object.assign({}, config.metadata || {}, newMetadata)
+
+    // Update global settings metadata if present on host page
+    if (window.PairAiWidgetSettings) {
+      window.PairAiWidgetSettings.metadata = Object.assign({}, window.PairAiWidgetSettings.metadata || {}, newMetadata)
+    }
+
+    // Send metadata:update postMessage to widget iframe
+    sendMessageToWidget('metadata:update', newMetadata)
+  }
+
   // Public API
   window.PairAiWidgetSDK = {
     run: init,
     renderForm: renderForm,
+    updateMetadata: updateMetadata,
     toggle: function (show) {
       toggleWidget(show)
     },

@@ -23,6 +23,9 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
   // State to store postMessage settings from host SDK
   const [sdkConfig, setSdkConfig] = useState<Partial<PairAiWidgetSettings> | undefined>(undefined)
 
+  // State to store dynamic metadata updates from postMessage
+  const [dynamicMetadata, setDynamicMetadata] = useState<Record<string, unknown>>({})
+
   // Listen for postMessage from SDK
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -31,6 +34,15 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
         if (receivedConfig) {
           logger.debug('WidgetConfigProvider', 'Received sdk:config via postMessage', receivedConfig)
           setSdkConfig(receivedConfig)
+        }
+      } else if (event.data?.type === 'metadata:update') {
+        const receivedMetadata = event.data.data || event.data.metadata
+        if (receivedMetadata && typeof receivedMetadata === 'object') {
+          logger.debug('WidgetConfigProvider', 'Received metadata:update via postMessage', receivedMetadata)
+          setDynamicMetadata((prev) => ({
+            ...prev,
+            ...receivedMetadata,
+          }))
         }
       }
     }
@@ -65,6 +77,13 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
       ...(sdkConfig || {}),
     } as PairAiWidgetSettings
 
+    if (Object.keys(dynamicMetadata).length > 0) {
+      combined.metadata = {
+        ...(combined.metadata || {}),
+        ...dynamicMetadata,
+      }
+    }
+
     // Preserve refreshFn function from parentSettings or local window if sdkConfig stripped it
     const refreshFn = parentSettings?.refreshFn || window.PairAiWidgetSettings?.refreshFn
     if (refreshFn) {
@@ -72,7 +91,7 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
     }
 
     return combined
-  }, [sdkConfig])
+  }, [sdkConfig, dynamicMetadata])
 
   // Map to WidgetConfig
   const widgetConfig = useMemo(() => {
