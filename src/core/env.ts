@@ -37,10 +37,12 @@ export const env = {
   baseURL: getBaseURL(),
   pusherAppKey: getEnvVariable('VITE_PUSHER_APP_KEY'),
   pusherCluster: getEnvVariable('VITE_PUSHER_CLUSTER'),
+  hiroWidgetId: getEnvVariable('VITE_HIRO_WIDGET_ID'),
 }
 
 logger.debug('env', 'Environment configuration initialized', {
   baseURL: env.baseURL,
   pusherAppKey: env.pusherAppKey,
   pusherCluster: env.pusherCluster,
+  hiroWidgetId: env.hiroWidgetId,
 })
