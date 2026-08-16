@@ -169,11 +169,19 @@ export interface QuestionMessage {
 
 export interface SuggestionAction {
   type: 'action'
-  label: string
-  action_name: string
+  label?: string
+  text?: string
+  title?: string
+  action_title?: string
+  action_name?: string
   id?: string
   action_ulid?: string
+  imageUrl?: string
+  image_url?: string
+  iconUrl?: string
+  icon_url?: string
   parameters?: Record<string, unknown>
+  payload?: Record<string, unknown>
 }
 
 export type SuggestionOption = string | SuggestionAction
@@ -184,7 +192,12 @@ export interface SuggestionsMessage {
   options: SuggestionOption[]
 }
 
-export type NextMessageItem = ProductCardSet | QuestionMessage | SuggestionsMessage | Record<string, unknown>
+export type NextMessageItem =
+  | ProductCardSet
+  | QuestionMessage
+  | SuggestionsMessage
+  | SuggestionAction
+  | Record<string, unknown>
 
 export interface InteractiveMetadata {
   body_text?: string

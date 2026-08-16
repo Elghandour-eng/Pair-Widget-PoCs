@@ -133,6 +133,11 @@ export function parseStreamingMessage(stream: StreamState): Message {
     // Extract next_messages / next_msg
     if (Array.isArray(parsedJson.next_messages)) {
       nextMessages = parsedJson.next_messages
+    } else if (
+      parsedJson.interactive_metadata?.next_messages &&
+      Array.isArray(parsedJson.interactive_metadata.next_messages)
+    ) {
+      nextMessages = parsedJson.interactive_metadata.next_messages
     }
     if (parsedJson.next_msg && typeof parsedJson.next_msg === 'object') {
       nextMsg = parsedJson.next_msg

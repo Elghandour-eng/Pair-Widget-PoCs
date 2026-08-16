@@ -60,10 +60,13 @@ export function mapApiMessageToMessage(apiMessage: ApiMessage): Message {
                   ? 'interactive'
                   : 'text'
 
-  const interactiveMetadata = apiMessage.content_attributes?.interactive_metadata as InteractiveMetadata | undefined
+  const interactiveMetadata =
+    (apiMessage.content_attributes?.interactive_metadata as InteractiveMetadata | undefined) ||
+    ((apiMessage as unknown as Record<string, unknown>).interactive_metadata as InteractiveMetadata | undefined)
 
   const nextMessages =
     apiMessage.next_messages ||
+    ((apiMessage as unknown as Record<string, unknown>).next_messages as NextMessageItem[] | undefined) ||
     (apiMessage.content_attributes?.next_messages as NextMessageItem[] | undefined) ||
     interactiveMetadata?.next_messages
 

@@ -1,11 +1,11 @@
-import type { Message, ProductCardSet, SuggestionsMessage } from '@/features/conversation/types/message'
+import type { Message, ProductCardSet, NextMessageItem } from '@/features/conversation/types/message'
 import { isPendingMessage } from '@/features/conversation/utils/message-utils'
 import { AiAssistantMessageBody } from './ai-assistant-message-body'
 import { AiAssistantMessageHeader } from './ai-assistant-message-header'
 import { AiAssistantMessageShimmer } from './ai-assistant-message-shimmer'
 import { FeedbackSection } from './feedback-section'
 import { ProductSection } from './product-section'
-import { SuggestionsSection } from './suggestions-section'
+import { NextMessagesSection } from './next-messages-section'
 import { TemplateRenderer } from './widget-template/template-renderer'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
@@ -16,30 +16,26 @@ interface AiAssistantMessageProps {
 
 export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessageProps) {
   const isPending = isPendingMessage(message)
-  console.log('isPending:', isPending)
 
   const { widgetConfig } = useWidgetConfigContext()
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const isCard = aiConfig?.messageStyle === 'card'
   const cardStyles = isCard ? aiConfig?.CardStyles : undefined
 
-  // Find suggestions option in next_messages / next_msg
-  const suggestionsItem = message.next_messages?.find((item) => item.type === 'suggestions') as
-    | SuggestionsMessage
-    | undefined
-  const suggestionsMsg = (message.next_msg?.type === 'suggestions' ? message.next_msg : undefined) as
-    | SuggestionsMessage
-    | undefined
-  const suggestions = suggestionsItem || suggestionsMsg
+  // Extract next_messages list from all possible sources while preserving order
+  const nextMessagesList: NextMessageItem[] =
+    message.next_messages && message.next_messages.length > 0
+      ? message.next_messages
+      : message.interactive_metadata?.next_messages && message.interactive_metadata.next_messages.length > 0
+        ? message.interactive_metadata.next_messages
+        : message.next_msg
+          ? [message.next_msg]
+          : []
 
-  // Find product_card_set option in next_messages / next_msg
-  const productSetItem = message.next_messages?.find((item) => item.type === 'product_card_set') as
-    | ProductCardSet
-    | undefined
-  const productSetMsg = (message.next_msg?.type === 'product_card_set' ? message.next_msg : undefined) as
-    | ProductCardSet
-    | undefined
-  const productSet = productSetItem || productSetMsg
+  // Check if product_card_set exists outside of lastMessage constraint (for historical card display)
+  const productSetOutside = !isLastMessage
+    ? (nextMessagesList.find((item) => item?.type === 'product_card_set') as ProductCardSet | undefined)
+    : undefined
 
   if (isPending) {
     return (
@@ -59,11 +55,16 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
         <TemplateRenderer widgetTemplate={message.widget_template} sourceMessageUlid={message.ulid} />
       )}
 
-      {productSet && <ProductSection productSet={productSet} sourceMessageUlid={message.ulid} />}
+      {productSetOutside && <ProductSection productSet={productSetOutside} sourceMessageUlid={message.ulid} />}
 
-      {suggestions && isLastMessage && (
-        <SuggestionsSection suggestions={suggestions} sourceMessageUlid={message.ulid} />
+      {isLastMessage && (
+        <NextMessagesSection
+          nextMessages={nextMessagesList}
+          sourceMessageUlid={message.ulid}
+          messageContent={message.content}
+        />
       )}
+
       <FeedbackSection messageId={message.ulid} initialFeedback={message.ai_feedback as 'liked' | 'disliked' | null} />
     </div>
   )
