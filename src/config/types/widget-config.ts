@@ -40,6 +40,7 @@ export interface PairAiWidgetSettings {
   accessTokenExpiresIn?: number
   refreshFn?: () => Promise<{ accessToken?: string; accessTokenExpiresIn?: number }>
   metadata?: Record<string, unknown>
+  welcome_title_var?: string
   _updatedAt?: number
 }
 

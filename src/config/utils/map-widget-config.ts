@@ -9,6 +9,7 @@ import type {
   WidgetConfig,
 } from '@/config/types/widget-config'
 import type { WidgetConfigDto } from '../types/widget-config-dto'
+import { formatWelcomeTitle } from './format-welcome-title'
 
 /**
  * Check if widget is running in SDK mode (embedded via SDK)
@@ -43,6 +44,10 @@ function isSdkMode(): boolean {
  * Maps API response and window settings to WidgetConfig
  */
 export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?: PairAiWidgetSettings): WidgetConfig {
+  const urlWelcomeTitleVar =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('welcome_title_var') : null
+
+  const welcomeTitleVar = windowSettings?.welcome_title_var ?? urlWelcomeTitleVar ?? undefined
   // header
   const rawHeader = apiResponse.widget_v2_config?.header
   const rawIconStyle = (rawHeader as any)?.iconStyle
@@ -92,7 +97,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const introScreen: IntroScreenConfig | undefined = rawIntro
     ? {
         show: rawIntro.showIntroScreen.value,
-        welcomeTitle: rawIntro.welcomeTitle?.text ?? apiResponse.welcome_title ?? '',
+        welcomeTitle: formatWelcomeTitle(
+          rawIntro.welcomeTitle?.text ?? apiResponse.welcome_title ?? '',
+          welcomeTitleVar,
+        ),
         welcomeTitleStyles: rawIntro.welcomeTitle?.styles,
         welcomeSubtitle: rawIntro.welcomeSubtitle?.text ?? apiResponse.welcome_tagline ?? '',
         welcomeSubtitleStyles: rawIntro.welcomeSubtitle?.styles,
@@ -280,7 +288,9 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     hostHeaderMappings: apiResponse.headers,
     hostParamMappings: apiResponse.params,
     // Deprecated used for Welcome Screen
-    welcomeTitle: apiResponse.welcome_title || undefined,
+    welcomeTitle: apiResponse.welcome_title
+      ? formatWelcomeTitle(apiResponse.welcome_title, welcomeTitleVar)
+      : undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,
     launcherStyles: apiResponse.launcher_styles || apiResponse.styles,
     headerConfig,

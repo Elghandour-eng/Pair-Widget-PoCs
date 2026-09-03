@@ -205,6 +205,7 @@
     // Pass beBaseUrl as URL parameter so widget can set it in its window.PairAiWidgetSettings
     if (config.beBaseUrl) params.push('beBaseUrl=' + encodeURIComponent(config.beBaseUrl))
     if (config.userId) params.push('userId=' + encodeURIComponent(config.userId))
+    if (config.welcome_title_var) params.push('welcome_title_var=' + encodeURIComponent(config.welcome_title_var))
     // Pass sdkMode=true so widget knows it's embedded and doesn't render bubble
     params.push('sdkMode=true')
 
@@ -574,6 +575,7 @@
     if (newConfig.primaryColor) config.primaryColor = newConfig.primaryColor
     if (newConfig.launcherStyles) config.launcherStyles = newConfig.launcherStyles
     if (newConfig.showFooter !== undefined) config.showFooter = newConfig.showFooter
+    if (newConfig.welcome_title_var !== undefined) config.welcome_title_var = newConfig.welcome_title_var
 
     // 1. Update position classes on holders
     if (config.position !== oldPosition) {
@@ -672,6 +674,7 @@
       accessToken: settings.accessToken,
       accessTokenExpiresIn: settings.accessTokenExpiresIn,
       metadata: settings.metadata,
+      welcome_title_var: settings.welcome_title_var || options.welcome_title_var,
     }
 
     console.log('[PairAI SDK] Initializing with config:', config)
