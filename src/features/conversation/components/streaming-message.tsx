@@ -124,13 +124,14 @@ export function parseStreamingMessage(stream: StreamState): Message {
         'order_status',
         'wishlist_products',
         'carousel',
+        'product_slots',
       ]
       if (knownTemplateTypes.includes(parsedJson.type)) {
         widgetTemplate = parsedJson as WidgetTemplate
       }
     }
 
-    // Extract next_messages / next_msg
+    // Extract next_messages / next_msg / suggestions
     if (Array.isArray(parsedJson.next_messages)) {
       nextMessages = parsedJson.next_messages
     } else if (
@@ -138,7 +139,14 @@ export function parseStreamingMessage(stream: StreamState): Message {
       Array.isArray(parsedJson.interactive_metadata.next_messages)
     ) {
       nextMessages = parsedJson.interactive_metadata.next_messages
+    } else if (parsedJson.suggestions) {
+      if (Array.isArray(parsedJson.suggestions)) {
+        nextMessages = [{ type: 'suggestions', options: parsedJson.suggestions }]
+      } else if (typeof parsedJson.suggestions === 'object') {
+        nextMessages = [parsedJson.suggestions]
+      }
     }
+
     if (parsedJson.next_msg && typeof parsedJson.next_msg === 'object') {
       nextMsg = parsedJson.next_msg
     }

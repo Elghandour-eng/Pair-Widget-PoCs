@@ -1,4 +1,4 @@
-import type { WidgetTemplate } from '@/features/conversation/types/message'
+import type { OffersCarouselTemplate, WidgetTemplate } from '@/features/conversation/types/message'
 import { ProductComparison } from './product-comparison'
 import { ProductCollectionSummary } from './product-collection-summary'
 import { InformativeTemplate } from './informative-template'
@@ -6,6 +6,8 @@ import { OrderStatus } from './order-status'
 import { ErrorCard } from './error-card'
 import { WishlistProducts } from './wishlist-products'
 import { OffersCarousel } from './offers-carousel'
+import { ProductsCarousel } from './products-carousel'
+import { ProductSlots } from './product-slots'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -27,7 +29,14 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
     case 'wishlist_products':
       return <WishlistProducts template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'carousel':
-      return <OffersCarousel template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+      if (widgetTemplate.carousel_type === 'products') {
+        return <ProductsCarousel template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+      }
+      return (
+        <OffersCarousel template={widgetTemplate as OffersCarouselTemplate} sourceMessageUlid={sourceMessageUlid} />
+      )
+    case 'product_slots':
+      return <ProductSlots template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }

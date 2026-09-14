@@ -28,9 +28,15 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
       ? message.next_messages
       : message.interactive_metadata?.next_messages && message.interactive_metadata.next_messages.length > 0
         ? message.interactive_metadata.next_messages
-        : message.next_msg
-          ? [message.next_msg]
-          : []
+        : message.suggestions
+          ? [
+              Array.isArray(message.suggestions)
+                ? { type: 'suggestions', options: message.suggestions }
+                : message.suggestions,
+            ]
+          : message.next_msg
+            ? [message.next_msg]
+            : []
 
   // Check if product_card_set exists outside of lastMessage constraint (for historical card display)
   const productSetOutside = !isLastMessage

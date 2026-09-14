@@ -281,7 +281,7 @@ function ConversationMessages({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex h-full w-full flex-col overflow-y-auto px-4 py-6"
+        className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-4 py-6"
       >
         <div className="flex flex-col gap-3 py-4">
           {messages.length === 0 && !isTyping ? (

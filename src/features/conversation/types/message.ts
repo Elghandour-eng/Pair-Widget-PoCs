@@ -240,6 +240,7 @@ export interface Message {
   interactive_metadata?: InteractiveMetadata
   is_csat_survey: boolean
   next_messages?: NextMessageItem[]
+  suggestions?: SuggestionOption[] | SuggestionsMessage
   next_msg_type?: string
   next_msg?: NextMessageItem
   ai_feedback?: 'liked' | 'disliked' | null
@@ -507,7 +508,7 @@ export interface WishlistProductsTemplate {
   }
 }
 
-export interface CarouselTemplate {
+export interface OffersCarouselTemplate {
   type: 'carousel'
   carousel_type: 'offers'
   content: {
@@ -535,6 +536,173 @@ export interface CarouselTemplate {
   }
 }
 
+export interface ProductCarouselItemAction {
+  id?: string
+  action_ulid?: string
+  type: 'add_to_cart' | string
+  label?: string
+  payload?: {
+    product_id?: string
+    [key: string]: unknown
+  }
+}
+
+export interface ProductCarouselItem {
+  id: string
+  name: string
+  brand?: string
+  image?: string
+  price: {
+    old?: number
+    current: number
+    currency: string
+  }
+  actions?: ProductCarouselItemAction[]
+  discount?: {
+    label: string
+    percentage: number
+  }
+  availability?: 'in_stock' | 'out_of_stock' | string
+}
+
+export interface ProductsCarouselTemplate {
+  type: 'carousel'
+  carousel_type: 'products'
+  content: {
+    header?: {
+      icon?: string
+      title?: string
+      view_all?: {
+        label?: string
+        visible?: boolean
+      }
+    }
+    products: ProductCarouselItem[]
+    intro_text?: string
+    description_text?: string
+    closing_text?: string
+  }
+  config?: {
+    style?: {
+      text_styles?: Record<
+        string,
+        {
+          color?: string
+          font_size?: number
+          font_family?: string
+          font_weight?: number | string
+          line_height?: number | string
+          text_transform?: string
+        }
+      >
+      [key: string]: unknown
+    }
+    layout?: {
+      scroll_type?: string
+      visible_items?: number
+      show_pagination_dots?: boolean
+    }
+    carousel?: {
+      scrollable?: boolean
+      visible_items?: number
+    }
+    visibility?: {
+      show_code?: boolean
+      show_title?: boolean
+      show_actions?: boolean
+      show_copy_code?: boolean
+      show_description?: boolean
+      [key: string]: boolean | undefined
+    }
+    product_card?: {
+      show_image?: boolean
+      show_action?: boolean
+      [key: string]: boolean | undefined
+    }
+    [key: string]: unknown
+  }
+}
+
+export type CarouselTemplate = OffersCarouselTemplate | ProductsCarouselTemplate
+
+export interface ProductSlotAction {
+  id?: string
+  action_ulid?: string
+  type: 'add_product' | string
+  label?: string
+  payload?: {
+    slot_id?: string
+    product_id?: string
+    source_template_type?: string
+    [key: string]: unknown
+  }
+}
+
+export interface ProductSlotRecommendedProduct {
+  id: string
+  name: string
+  brand?: string
+  image?: string
+  price: {
+    old?: number
+    current: number
+    currency: string
+  }
+  discount?: {
+    label: string
+    percentage: number
+  }
+  actions?: ProductSlotAction[]
+}
+
+export interface ProductSlotItem {
+  id: string
+  order?: number
+  title: string
+  category?: string
+  goal?: string
+  description?: string
+  how_to_use?: string
+  when_to_use?: string[]
+  recommended_product?: ProductSlotRecommendedProduct
+}
+
+export interface ProductSlotsTemplate {
+  type: 'product_slots'
+  content: {
+    slots: ProductSlotItem[]
+    intro_text?: string
+    description_text?: string
+    closing_text?: string
+  }
+  config?: {
+    slot?: {
+      show_goal?: boolean
+      show_order?: boolean
+      show_action?: boolean
+      show_category?: boolean
+      timing_badges?: {
+        enabled?: boolean
+        supported_values?: string[]
+      }
+      show_how_to_use?: boolean
+      show_description?: boolean
+      show_when_to_use?: boolean
+      recommended_product?: {
+        label?: string
+        show_name?: boolean
+        show_brand?: boolean
+        show_image?: boolean
+        show_label?: boolean
+        show_action?: boolean
+        show_discount?: boolean
+        show_old_price?: boolean
+      }
+    }
+    [key: string]: unknown
+  }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -543,6 +711,7 @@ export type WidgetTemplate =
   | OrderStatusTemplate
   | WishlistProductsTemplate
   | CarouselTemplate
+  | ProductSlotsTemplate
 
 /**
  * Messages list response (matches actual API response)

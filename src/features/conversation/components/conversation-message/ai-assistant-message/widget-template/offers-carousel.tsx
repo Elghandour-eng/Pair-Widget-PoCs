@@ -1,13 +1,13 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
-import type { CarouselTemplate } from '@/features/conversation/types/message'
+import type { OffersCarouselTemplate } from '@/features/conversation/types/message'
 import useEmblaCarousel from 'embla-carousel-react'
 import { BadgePercent, Check, Copy } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 interface OffersCarouselProps {
-  template: CarouselTemplate
+  template: OffersCarouselTemplate
   sourceMessageUlid: string
 }
 
@@ -78,7 +78,9 @@ export function OffersCarousel({ template, sourceMessageUlid }: OffersCarouselPr
     }
   }
 
-  const handleAction = async (act: NonNullable<CarouselTemplate['content']['items'][number]['actions']>[number]) => {
+  const handleAction = async (
+    act: NonNullable<OffersCarouselTemplate['content']['items'][number]['actions']>[number],
+  ) => {
     if (!conversationId) {
       toast.error('Conversation ID is missing')
       return
