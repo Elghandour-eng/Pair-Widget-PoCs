@@ -1,4 +1,4 @@
-import Pusher, { type Channel, type ChannelAuthorizationCallback } from 'pusher-js'
+import Pusher, { type Channel, type ChannelAuthorizationCallback, type Options } from 'pusher-js'
 
 import { env } from '@/core/env'
 import { authenticatePusherChannel } from '@/pusher/apis/pusher-auth'
@@ -23,6 +23,9 @@ export function getPusherClient(): Pusher {
   logger.debug('getPusherClient', 'Creating new Pusher instance', {
     appKey: env.pusherAppKey,
     cluster: env.pusherCluster,
+    host: env.pusherHost,
+    port: env.pusherPort,
+    forceTLS: env.pusherForceTls,
   })
 
   const widgetId = getWidgetId()
@@ -32,8 +35,8 @@ export function getPusherClient(): Pusher {
     throw new Error('Widget ID is required to create Pusher instance')
   }
 
-  pusherInstance = new Pusher(env.pusherAppKey, {
-    cluster: env.pusherCluster,
+  const pusherOptions: Options = {
+    cluster: env.pusherCluster || 'mt1',
 
     // Use custom authorizer to send JSON instead of form data
     authorizer: (channel: Channel) => {
@@ -65,7 +68,23 @@ export function getPusherClient(): Pusher {
         },
       }
     },
-  })
+  }
+
+  // Configure self-hosted Pusher if host is provided
+  if (env.pusherHost) {
+    pusherOptions.wsHost = env.pusherHost
+    pusherOptions.disableStats = true
+    if (env.pusherForceTls !== undefined) {
+      pusherOptions.forceTLS = env.pusherForceTls
+    }
+    if (env.pusherPort) {
+      pusherOptions.wsPort = env.pusherPort
+      pusherOptions.wssPort = env.pusherPort
+    }
+    pusherOptions.enabledTransports = ['ws', 'wss']
+  }
+
+  pusherInstance = new Pusher(env.pusherAppKey, pusherOptions)
 
   // Set up connection event handlers
   pusherInstance.connection.bind('error', (err: Error) => {
