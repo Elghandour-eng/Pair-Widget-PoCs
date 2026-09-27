@@ -144,6 +144,11 @@ export const embedPreviewUrl = (widgetId: string, s: EmbedSettings) =>
 
 /** The snippet a customer pastes into their own site. */
 export function embedSnippet(widgetId: string, sdkBaseUrl: string, s: EmbedSettings): string {
+  // The server hands back a relative '/sdk' when it is serving the SDK itself,
+  // because it cannot know its own public origin from behind a proxy. A snippet
+  // is pasted on someone else's site, so it needs an absolute one — and this
+  // page is on that origin.
+  const base = sdkBaseUrl.startsWith('/') ? window.location.origin + sdkBaseUrl : sdkBaseUrl
   // The SDK builds the panel before the config has loaded, so its size travels
   // in the snippet rather than in the config; otherwise the panel would be
   // built at the old fixed size and resize under the visitor.
@@ -156,7 +161,7 @@ export function embedSnippet(widgetId: string, sdkBaseUrl: string, s: EmbedSetti
     beBaseUrl: ${JSON.stringify(window.location.origin)},
   }
   ;(function (d, t) {
-    var BASE_URL = ${JSON.stringify(sdkBaseUrl)}
+    var BASE_URL = ${JSON.stringify(base)}
     var g = d.createElement(t),
       s = d.getElementsByTagName(t)[0]
     g.src = BASE_URL + '/sdk.js'

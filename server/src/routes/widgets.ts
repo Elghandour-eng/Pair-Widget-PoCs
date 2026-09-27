@@ -81,7 +81,7 @@ widgetsRouter.get(
     const [widget, storedConfig, audit] = await Promise.all([
       getWidget(req.params.widgetId), getStoredConfig(req.params.widgetId), getAudit(req.params.widgetId),
     ])
-    res.json({ widget, storedConfig, hasStoredConfig: !!storedConfig, audit, sdkBaseUrl: sdkBaseUrl(req) })
+    res.json({ widget, storedConfig, hasStoredConfig: !!storedConfig, audit, sdkBaseUrl: sdkBaseUrl() })
   }),
 )
 

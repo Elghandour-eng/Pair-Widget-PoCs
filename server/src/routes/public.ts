@@ -519,8 +519,10 @@ publicRouter.get(
     const pageMode = one(req.query.surface) === 'page'
     // Safe-area inset for phone-frame previews: pushes the widget below a camera cutout.
     const inset = Math.min(80, Math.max(0, Number(one(req.query.inset)) || 0))
-    const sdkBase = sdkBaseUrl(req)
-    const sdkOrigin = new URL(sdkBase).origin
+    const sdkBase = sdkBaseUrl()
+    // A relative base is this origin, which 'self' already covers.
+    const localSdk = sdkBase.startsWith('/')
+    const sdkOrigin = localSdk ? '' : new URL(sdkBase).origin
     const selfOrigin = `${req.protocol}://${req.get('host')}`
     // View overrides: the config is served already translated and/or re-themed.
     const wlang = one(req.query.wlang) === 'ar' ? 'ar' : one(req.query.wlang) === 'en' ? 'en' : ''
@@ -536,7 +538,7 @@ publicRouter.get(
         `font-src https://fonts.gstatic.com data: ${sdkOrigin}`,
         'img-src * data: blob:',
         'media-src * data: blob:',
-        `connect-src 'self' ${sdkOrigin} https://system.trypair.ai wss://${new URL(sdkBase).host}`,
+        `connect-src 'self' ${sdkOrigin} https://system.trypair.ai ${localSdk ? '' : `wss://${new URL(sdkBase).host}`}`,
         `frame-src 'self' ${sdkOrigin}`,
       ].join('; '),
     )
@@ -574,7 +576,7 @@ publicRouter.get(
 <script>
   window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, beBaseUrl: ${js(beBase)} }
   ;(function (d, t) {
-    var BASE_URL = ${js(sdkBase)}
+    var BASE_URL = ${localSdk ? `location.origin + ${js(sdkBase)}` : js(sdkBase)}
     var g = d.createElement(t), s = d.getElementsByTagName(t)[0]
     g.src = BASE_URL + '/sdk.js'
     g.async = true
