@@ -17,6 +17,7 @@ import { heroImageDataUri, renderHeroSvg, type HeroSvgSlide } from '../lib/heroS
 import { isDrawableSendIcon, sendGlyphDataUri } from '../lib/sendGlyph.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
 import { applyWidgetTheme, isWidgetTheme } from '../lib/widgetTheme.js'
+import { sdkBaseUrl } from '../lib/sdkBase.js'
 import { asyncHandler } from '../middleware/error.js'
 import { getWidget, resolveConfig } from '../services/widgets.js'
 import { uploadsDir } from './uploads.js'
@@ -518,7 +519,7 @@ publicRouter.get(
     const pageMode = one(req.query.surface) === 'page'
     // Safe-area inset for phone-frame previews: pushes the widget below a camera cutout.
     const inset = Math.min(80, Math.max(0, Number(one(req.query.inset)) || 0))
-    const sdkBase = env.WIDGET_SDK_BASE_URL
+    const sdkBase = sdkBaseUrl(req)
     const sdkOrigin = new URL(sdkBase).origin
     const selfOrigin = `${req.protocol}://${req.get('host')}`
     // View overrides: the config is served already translated and/or re-themed.

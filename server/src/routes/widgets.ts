@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { badRequest } from '../lib/errors.js'
+import { sdkBaseUrl } from '../lib/sdkBase.js'
 import { FEEDBACK_STATUSES, queryFeedback, setFeedbackStatus, type FeedbackStatus } from '../lib/mongo.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { asyncHandler } from '../middleware/error.js'
@@ -12,13 +13,6 @@ import {
   createWidget, deleteWidget, getAudit, getStoredConfig, getWidget, importFromApi,
   listWidgets, resolveConfig, saveStoredConfig, sourceSchema, updateWidget,
 } from '../services/widgets.js'
-
-/**
- * Where the embed snippet should load the SDK from: this origin when a local
- * build is being served, the hosted SDK otherwise.
- */
-const sdkBaseUrl = (req: { protocol: string; get: (h: string) => string | undefined }): string =>
-  env.WIDGET_SDK_DIST ? `${req.protocol}://${req.get('host')}/sdk` : env.WIDGET_SDK_BASE_URL
 
 export const widgetsRouter = Router()
 widgetsRouter.use(requireAuth, loadWidgetAccess)
