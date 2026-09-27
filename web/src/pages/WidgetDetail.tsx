@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PreviewStage, stageSize, type PreviewDevice } from '@/components/WidgetPreview'
 import { EmbedPanel } from '@/components/EmbedPanel'
+import { normalizeLauncher } from '@/lib/inputDesign'
 import { Select } from '@/components/Select'
 import { MediaInput } from '@/components/MediaInput'
 import { CopyIcon, FitScale, Loading, Modal, Pagination, SectionHead, Spinner } from '@/components/ui'
@@ -200,7 +201,7 @@ export function WidgetDetail() {
                 </p>
               </div>
             )}
-            {tab === 'embed' && <EmbedPanel widget={widget} sdkBaseUrl={sdkBaseUrl} />}
+            {tab === 'embed' && <EmbedPanel widget={widget} sdkBaseUrl={sdkBaseUrl} panel={normalizeLauncher((stored as Record<string, unknown> | null)?.launcher_design).panel} />}
             {tab === 'compare' && <Compare live={live} liveErr={liveErr} stored={stored} onRefresh={loadLive} />}
             {tab === 'notes' && <NotesPanel widgetId={widgetId} editor={editor} />}
             {tab === 'activity' && (

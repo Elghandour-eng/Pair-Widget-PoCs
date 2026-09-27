@@ -24,8 +24,8 @@ import {
 } from '@/lib/heroDesign'
 import {
   BORDER_STYLES, BUTTON_SHAPES, FONT_WEIGHTS, INPUT_LAYOUTS, LAUNCHER_ATTENTION, LAUNCHER_ENTRANCES,
-  CHIP_LAYOUTS, ICON_POSITIONS, LAUNCHER_ICONS, LOADING_TYPES, SEND_POSITIONS, TEXT_ALIGNS,
-  TOAST_POSITIONS,
+  CARD_LAYOUTS, CHIP_LAYOUTS, ICON_POSITIONS, IMAGE_FITS, LAUNCHER_ICONS, LOADING_TYPES,
+  SEND_POSITIONS, TEXT_ALIGNS, TOAST_POSITIONS,
 } from '@/lib/inputDesign'
 import { useI18n, type MsgKey } from '@/lib/i18n'
 import { useToast } from '@/lib/toast'
@@ -900,8 +900,12 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
 
 interface QuickLinkCard { id?: string; title?: string; subtitle?: string; url?: string; active?: boolean; message?: string }
 
+const QUICKLINKS = 'widget_v2_config.quick_links.design'
+
 function QuickLinksPage({ get, set, disabled }: PageProps) {
   const { t } = useI18n()
+  const q = (k: string) => `${QUICKLINKS}.${k}`
+  const carousel = (get(q('layout')) ?? 'carousel') === 'carousel'
   const PATH = 'widget_v2_config.quick_links.quickLinkCards'
   const cards: QuickLinkCard[] = Array.isArray(get(PATH)) ? get(PATH) : []
   const update = (next: QuickLinkCard[]) => set(PATH, next)
@@ -979,6 +983,64 @@ function QuickLinksPage({ get, set, disabled }: PageProps) {
           </li>
         ))}
       </ul>
+
+      <Disclosure summary={t('builder.cards.layout')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.cards.layoutMode')} path={q('layout')} options={[...CARD_LAYOUTS]} keyPrefix="builder.cards.layoutMode" fallback="carousel" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.chips.gap')} path={q('gap')} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+          {carousel && (
+            <>
+              <ToggleField label={t('builder.cards.autoScroll')} path={q('autoScroll')} get={get} set={set} disabled={disabled} />
+              <ToggleField label={t('builder.cards.loop')} path={q('loop')} get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.cards.interval')} path={q('intervalMs')} min={800} max={20000} step={100} fallback={3000} unit="ms" get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.cards.cardWidth')} path={q('cardWidth')} min={48} max={320} step={2} fallback={92} unit="px" get={get} set={set} disabled={disabled} />
+            </>
+          )}
+        </div>
+        {carousel && <p className="fine mt-2">{t('builder.cards.autoScrollHint')}</p>}
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cards.surface')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.chips.bg')} path={q('background')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={q('radius')} min={0} max={60} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.borderStyle')} path={q('borderStyle')} options={[...BORDER_STYLES]} keyPrefix="builder.input.borderStyle" fallback="solid" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.borderWidth')} path={q('borderWidth')} min={0} max={8} step={0.5} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={q('borderColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cards.padding')} path={q('padding')} min={0} max={40} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.chips.hoverBg')} path={q('hoverBackground')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.chips.hoverBorder')} path={q('hoverBorderColor')} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={q('shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cards.imageStyle')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.cards.showImage')} path={q('showImage')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cards.imageHeight')} path={q('imageHeight')} min={0} max={260} step={2} fallback={84} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.cards.imageFit')} path={q('imageFit')} options={[...IMAGE_FITS]} keyPrefix="builder.cards.imageFit" fallback="cover" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cards.imageRadius')} path={q('imageRadius')} min={0} max={60} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cards.text')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.cards.showCardTitle')} path={q('showTitle')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cards.showSubtitle')} path={q('showSubtitle')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.cards.titleColor')} path={q('titleColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cards.titleSize')} path={q('titleSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.cards.titleWeight')} path={q('titleWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="700" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.cards.titleFont')} path={q('titleFont')} get={get} set={set} disabled={disabled} allowInherit />
+          <BrandColorField label={t('builder.cards.subColor')} path={q('subtitleColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cards.subSize')} path={q('subtitleSize')} min={7} max={24} step={0.5} fallback={10.5} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.cards.subWeight')} path={q('subtitleWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.cards.subFont')} path={q('subtitleFont')} get={get} set={set} disabled={disabled} allowInherit />
+          <ChoiceField label={t('builder.chips.align')} path={q('align')} options={[...TEXT_ALIGNS]} keyPrefix="builder.align" fallback="start" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
     </div>
   )
 }
@@ -1363,6 +1425,17 @@ function LauncherPage({ get, set, disabled }: PageProps) {
           <FontField label={t('builder.input.font')} path={p('label.fontFamily')} get={get} set={set} disabled={disabled} allowInherit />
         </div>
         {!expanded && <p className="fine mt-2">{t('builder.launcher.labelHint')}</p>}
+      </Disclosure>
+
+      <Disclosure summary={t('builder.panel.head')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumField label={t('builder.panel.width')} path={p('panel.width')} min={260} max={720} step={4} fallback={400} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.panel.maxHeight')} path={p('panel.maxHeight')} min={320} max={1200} step={10} fallback={700} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.panel.minHeight')} path={p('panel.minHeight')} min={200} max={800} step={10} fallback={250} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.panel.bottom')} path={p('panel.bottom')} min={0} max={220} step={2} fallback={104} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={p('panel.radius')} min={0} max={48} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="fine mt-2">{t('builder.panel.hint')}</p>
       </Disclosure>
 
       <Disclosure summary={t('builder.launcher.motion')}>

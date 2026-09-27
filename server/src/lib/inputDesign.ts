@@ -1,6 +1,6 @@
 /**
- * The widget's chrome — chat input, launcher, loading state, toast and prompt
- * chips: the full set of values a channel can style.
+ * The widget's chrome — chat input, launcher, loading state, toast, prompt
+ * chips and quick-link cards: the full set of values a channel can style.
  *
  * The widget already accepted a raw CSS blob for the composer, the placeholder
  * and the send button, and another for the launcher. That is powerful and
@@ -61,6 +61,12 @@ export type IconPosition = (typeof ICON_POSITIONS)[number]
 
 export const TEXT_ALIGNS = ['start', 'center', 'end'] as const
 export type TextAlign = (typeof TEXT_ALIGNS)[number]
+
+export const CARD_LAYOUTS = ['carousel', 'grid', 'stack'] as const
+export type CardLayout = (typeof CARD_LAYOUTS)[number]
+
+export const IMAGE_FITS = ['cover', 'contain'] as const
+export type ImageFit = (typeof IMAGE_FITS)[number]
 
 export const TOAST_POSITIONS = [
   'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right',
@@ -180,6 +186,19 @@ export interface LauncherLabelDesign {
   weight: FontWeight
 }
 
+/**
+ * The panel the widget opens into. It was fixed at 400x(100vh-124px) capped at
+ * 700px, and an auto-opened panel had no cap at all, which is what made it run
+ * the full height of a tall browser window.
+ */
+export interface PanelDesign {
+  width: number
+  maxHeight: number
+  minHeight: number
+  bottom: number
+  radius: number
+}
+
 export interface LauncherDesign {
   type: 'standard' | 'expanded_bubble' | 'chat_icon' | 'icon_only'
   position: 'left' | 'right'
@@ -202,6 +221,7 @@ export interface LauncherDesign {
   entrance: LauncherEntrance
   attention: LauncherAttention
   hoverScale: number
+  panel: PanelDesign
 }
 
 /**
@@ -287,6 +307,46 @@ export interface PromptsDesign {
   iconColor: string
   iconSize: number
   iconPosition: IconPosition
+}
+
+/**
+ * Quick-link cards. The widget could already lay them out as a carousel, but
+ * autoplay was tied to looping and its interval was fixed, and the card itself
+ * was a raw CSS blob with the image and text sizes hardcoded.
+ */
+export interface QuickLinksDesign {
+  showTitle: boolean
+  showSubtitle: boolean
+  layout: CardLayout
+  /** Advance the carousel on its own. */
+  autoScroll: boolean
+  intervalMs: number
+  loop: boolean
+  gap: number
+  /** Narrowest a card may get before the carousel shows fewer of them. */
+  cardWidth: number
+  background: string
+  borderWidth: number
+  borderColor: string
+  borderStyle: BorderStyle
+  radius: number
+  padding: number
+  shadow: Shadow
+  hoverBackground: string
+  hoverBorderColor: string
+  showImage: boolean
+  imageHeight: number
+  imageFit: ImageFit
+  imageRadius: number
+  align: TextAlign
+  titleColor: string
+  titleSize: number
+  titleWeight: FontWeight
+  titleFont: string
+  subtitleColor: string
+  subtitleSize: number
+  subtitleWeight: FontWeight
+  subtitleFont: string
 }
 
 /* ------------------------------- normalising ------------------------------ */
@@ -414,6 +474,7 @@ export const LAUNCHER_DEFAULTS: LauncherDesign = {
   entrance: 'pop',
   attention: 'none',
   hoverScale: 1.04,
+  panel: { width: 400, maxHeight: 700, minHeight: 250, bottom: 104, radius: 16 },
 }
 
 export const LOADING_DEFAULTS: LoadingDesign = {
@@ -566,6 +627,76 @@ export function normalizePrompts(raw: unknown): PromptsDesign {
   }
 }
 
+export const QUICK_LINKS_DEFAULTS: QuickLinksDesign = {
+  showTitle: true,
+  showSubtitle: true,
+  layout: 'carousel',
+  autoScroll: false,
+  intervalMs: 3000,
+  loop: false,
+  gap: 8,
+  cardWidth: 92,
+  background: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#ECECED',
+  borderStyle: 'solid',
+  radius: 14,
+  padding: 10,
+  shadow: { size: 0, y: 0, blur: 0, color: '#000000', opacity: 0 },
+  hoverBackground: '',
+  hoverBorderColor: '',
+  showImage: true,
+  imageHeight: 84,
+  imageFit: 'cover',
+  imageRadius: 10,
+  align: 'start',
+  titleColor: '#1A1A1A',
+  titleSize: 12,
+  titleWeight: '700',
+  titleFont: '',
+  subtitleColor: '#6E6E73',
+  subtitleSize: 10.5,
+  subtitleWeight: '400',
+  subtitleFont: '',
+}
+
+export function normalizeQuickLinks(raw: unknown): QuickLinksDesign {
+  const r = (raw ?? {}) as Record<string, any>
+  const d = QUICK_LINKS_DEFAULTS
+  return {
+    showTitle: bool(r.showTitle, d.showTitle),
+    showSubtitle: bool(r.showSubtitle, d.showSubtitle),
+    layout: pick(r.layout, CARD_LAYOUTS, d.layout),
+    autoScroll: bool(r.autoScroll, d.autoScroll),
+    intervalMs: num(r.intervalMs, d.intervalMs, 800, 20000),
+    loop: bool(r.loop, d.loop),
+    gap: num(r.gap, d.gap, 0, 32),
+    cardWidth: num(r.cardWidth, d.cardWidth, 48, 320),
+    background: color(r.background, d.background),
+    borderWidth: num(r.borderWidth, d.borderWidth, 0, 8),
+    borderColor: color(r.borderColor, d.borderColor),
+    borderStyle: pick(r.borderStyle, BORDER_STYLES, d.borderStyle),
+    radius: num(r.radius, d.radius, 0, 60),
+    padding: num(r.padding, d.padding, 0, 40),
+    shadow: shadow(r.shadow, d.shadow),
+    hoverBackground: r.hoverBackground ? color(r.hoverBackground, '') : '',
+    hoverBorderColor: r.hoverBorderColor ? color(r.hoverBorderColor, '') : '',
+    showImage: bool(r.showImage, d.showImage),
+    imageHeight: num(r.imageHeight, d.imageHeight, 0, 260),
+    imageFit: pick(r.imageFit, IMAGE_FITS, d.imageFit),
+    imageRadius: num(r.imageRadius, d.imageRadius, 0, 60),
+    align: pick(r.align, TEXT_ALIGNS, d.align),
+    titleColor: color(r.titleColor, d.titleColor),
+    titleSize: num(r.titleSize, d.titleSize, 8, 28),
+    titleWeight: pick(String(r.titleWeight), FONT_WEIGHTS, d.titleWeight),
+    titleFont: font(r.titleFont, d.titleFont),
+    subtitleColor: color(r.subtitleColor, d.subtitleColor),
+    subtitleSize: num(r.subtitleSize, d.subtitleSize, 7, 24),
+    subtitleWeight: pick(String(r.subtitleWeight), FONT_WEIGHTS, d.subtitleWeight),
+    subtitleFont: font(r.subtitleFont, d.subtitleFont),
+  }
+}
+
 export function normalizeChatInput(raw: unknown): ChatInputDesign {
   const r = (raw ?? {}) as Record<string, any>
   const d = CHAT_INPUT_DEFAULTS
@@ -683,6 +814,13 @@ export function normalizeLauncher(raw: unknown): LauncherDesign {
     entrance: pick(r.entrance, LAUNCHER_ENTRANCES, d.entrance),
     attention: pick(r.attention, LAUNCHER_ATTENTION, d.attention),
     hoverScale: num(r.hoverScale, d.hoverScale, 1, 1.3),
+    panel: {
+      width: num(r.panel?.width, d.panel.width, 260, 720),
+      maxHeight: num(r.panel?.maxHeight, d.panel.maxHeight, 320, 1200),
+      minHeight: num(r.panel?.minHeight, d.panel.minHeight, 200, 800),
+      bottom: num(r.panel?.bottom, d.panel.bottom, 0, 220),
+      radius: num(r.panel?.radius, d.panel.radius, 0, 48),
+    },
   }
 }
 
@@ -704,9 +842,16 @@ export const shadowCss = (s: Shadow, brand: string): string =>
 const radiusOf = (shape: ButtonShape, radius: number): number =>
   shape === 'circle' ? 999 : shape === 'square' ? 0 : radius
 
-/** The composer's own box, as the CSS blob the widget already spreads onto it. */
+/**
+ * The composer's own box, as the CSS blob the widget already spreads onto it.
+ *
+ * `direction` rides along as real CSS rather than a field of its own, so a
+ * widget build that knows nothing of these designs still lays the composer out
+ * the right way round.
+ */
 export function inputCss(d: ChatInputDesign, brand: string): CSSProperties {
   return {
+    ...(d.direction === 'auto' ? {} : { direction: d.direction }),
     backgroundColor: resolve(d.field.background, brand),
     borderWidth: `${d.field.borderWidth}px`,
     borderColor: resolve(d.field.borderColor, brand),
@@ -816,6 +961,48 @@ export function loadingCss(d: LoadingDesign, brand: string): CSSProperties {
     '--pair-skel-speed': `${d.speedMs}ms`,
     '--pair-skel-radius': `${d.radius}px`,
   }
+}
+
+/** A quick-link card's surface. `flexDirection` is how the widget tells a stack from a carousel. */
+export function cardCss(d: QuickLinksDesign, brand: string): CSSProperties {
+  return {
+    background: resolve(d.background, brand),
+    borderWidth: `${d.borderWidth}px`,
+    borderStyle: d.borderWidth > 0 ? d.borderStyle : undefined,
+    borderColor: resolve(d.borderColor, brand),
+    borderRadius: `${d.radius}px`,
+    padding: `${d.padding}px`,
+    boxShadow: shadowCss(d.shadow, brand),
+    textAlign: d.align,
+    flexDirection: d.layout === 'stack' ? 'column' : undefined,
+  }
+}
+
+/** A card's title and subtitle. */
+export function cardTextCss(d: QuickLinksDesign, brand: string): CSSProperties {
+  return {
+    color: resolve(d.titleColor, brand),
+    fontSize: `${d.titleSize}px`,
+    fontWeight: d.titleWeight,
+    fontFamily: d.titleFont || undefined,
+  }
+}
+
+export function cardSubtitleCss(d: QuickLinksDesign, brand: string): CSSProperties {
+  return {
+    color: resolve(d.subtitleColor, brand),
+    fontSize: `${d.subtitleSize}px`,
+    fontWeight: d.subtitleWeight,
+    fontFamily: d.subtitleFont || undefined,
+  }
+}
+
+/** The card hover, which needs a rule rather than an inline style. */
+export function cardHoverCss(d: QuickLinksDesign, brand: string, selector: string): string {
+  const parts: string[] = []
+  if (d.hoverBackground) parts.push(`background-color:${resolve(d.hoverBackground, brand)}`)
+  if (d.hoverBorderColor) parts.push(`border-color:${resolve(d.hoverBorderColor, brand)}`)
+  return parts.length ? `${selector}:hover{${parts.join(';')}}` : ''
 }
 
 /** One prompt chip's surface and text. */

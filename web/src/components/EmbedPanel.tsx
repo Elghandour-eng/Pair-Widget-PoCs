@@ -2,7 +2,7 @@ import { Check, Codepen, Copy, ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Select } from './Select'
 import { SectionHead } from './ui'
-import { embedPreviewUrl, embedSnippet, type EmbedSettings, type Widget } from '@/lib/api'
+import { embedPreviewUrl, embedSnippet, type EmbedSettings, type PanelSize, type Widget } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { useToast } from '@/lib/toast'
 
@@ -13,13 +13,16 @@ const TYPES = ['standard', 'expanded_bubble', 'chat_icon', 'icon_only'] as const
  * Everything needed to put this widget on a real site: the snippet, a live host page,
  * and a one-click CodePen with the snippet already in it.
  */
-export function EmbedPanel({ widget, sdkBaseUrl }: { widget: Widget; sdkBaseUrl: string }) {
+export function EmbedPanel({ widget, sdkBaseUrl, panel }: { widget: Widget; sdkBaseUrl: string; panel?: PanelSize }) {
   const { t } = useI18n()
   const toast = useToast()
   const [settings, setSettings] = useState<EmbedSettings>({ position: 'right', type: 'standard', launcherTitle: 'Chat with us!' })
+  // The saved panel size rides along, so a pasted snippet builds the panel at
+  // the size the channel was designed at rather than the SDK's old default.
+  const withPanel = useMemo<EmbedSettings>(() => ({ ...settings, panel }), [settings, panel])
   const [copied, setCopied] = useState(false)
 
-  const snippet = useMemo(() => embedSnippet(widget.widgetId, sdkBaseUrl, settings), [widget.widgetId, sdkBaseUrl, settings])
+  const snippet = useMemo(() => embedSnippet(widget.widgetId, sdkBaseUrl, withPanel), [widget.widgetId, sdkBaseUrl, withPanel])
   const previewUrl = embedPreviewUrl(widget.widgetId, settings)
 
   const copy = async () => {

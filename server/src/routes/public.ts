@@ -9,11 +9,12 @@ import { badRequest } from '../lib/errors.js'
 import { addFeedback, logEvent } from '../lib/mongo.js'
 import { normalizeHeroCarousel, normalizeHeroSlides } from '../lib/heroDesign.js'
 import {
-  chipCss, inputCss, launcherCss, loadingCss, normalizeChatInput, normalizeLauncher,
-  resolve as resolveColor,
+  cardCss, cardSubtitleCss, cardTextCss, chipCss, inputCss, launcherCss, loadingCss,
+  normalizeChatInput, normalizeLauncher, normalizeQuickLinks, resolve as resolveColor,
   normalizeLoading, normalizePrompts, normalizeToast, placeholderCss, sendCss, toastCss,
 } from '../lib/inputDesign.js'
 import { heroImageDataUri, renderHeroSvg, type HeroSvgSlide } from '../lib/heroSvg.js'
+import { isDrawableSendIcon, sendGlyphDataUri } from '../lib/sendGlyph.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
 import { applyWidgetTheme, isWidgetTheme } from '../lib/widgetTheme.js'
 import { asyncHandler } from '../middleware/error.js'
@@ -79,20 +80,13 @@ function materializeChrome<T>(config: T): T {
   const hasToast = !!c?.toast_design
   const hasSendIcon = !!c?.widget_v2_config?.chat_input?.sendButtonIcon?.icon
   const hasPrompts = !!c?.widget_v2_config?.trending_prompts?.design
-  if (!hasInput && !hasLauncher && !hasLoading && !hasToast && !hasSendIcon && !hasPrompts) return config
+  const hasCards = !!c?.widget_v2_config?.quick_links?.design
+  if (!hasInput && !hasLauncher && !hasLoading && !hasToast && !hasSendIcon && !hasPrompts && !hasCards) {
+    return config
+  }
 
   const next = structuredClone(c)
   const brand = one(next.widget_color) ?? '#E30613'
-
-  // An SDK build that predates `design` draws the send glyph from `variant` and
-  // knows only two of them, so the chosen icon is mapped onto the nearer one.
-  // It is set whether or not a design block exists, because `sendButtonIcon.icon`
-  // can also have been written by hand.
-  const sendIcon = one(next.widget_v2_config?.chat_input?.sendButtonIcon?.icon)
-  if (sendIcon) {
-    const ci = next.widget_v2_config.chat_input
-    ci.sendButtonIcon.variant = ci.sendButtonIcon.variant ?? (/-up$/.test(sendIcon) ? 'arrow-up' : 'send')
-  }
 
   if (hasInput) {
     const design = normalizeChatInput(next.widget_v2_config.chat_input.design)
@@ -118,6 +112,24 @@ function materializeChrome<T>(config: T): T {
       variant: /-up$/.test(String(icon)) ? 'arrow-up' : 'send',
       styles: { ...(ci.sendButtonIcon?.styles ?? {}), ...sendCss(design, brand) },
     }
+    // A build that ships only two glyphs still draws the channel's own mark: it
+    // arrives as a background image on the send button, with the built-in glyph
+    // made transparent (see lib/sendGlyph.ts).
+    const rtl = /^(ar|he|fa|ur)/i.test(one(next.locale) ?? 'en')
+    const glyph =
+      icon === 'custom'
+        ? one(design.send.url) || one(ci.sendButtonIcon?.url)
+        : sendGlyphDataUri(String(icon), design.send.iconColor, rtl) ?? undefined
+    if (glyph && (icon === 'custom' ? true : isDrawableSendIcon(icon))) {
+      ci.sendButtonIcon.styles = {
+        ...ci.sendButtonIcon.styles,
+        backgroundImage: `url("${glyph}")`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        backgroundSize: `${design.send.iconSize}px`,
+        iconColor: 'transparent',
+      }
+    }
     ci.inputLayout = { ...(ci.inputLayout ?? {}), type: design.layout }
     ci.inputActions = {
       ...(ci.inputActions ?? {}),
@@ -135,6 +147,22 @@ function materializeChrome<T>(config: T): T {
     ls.type = design.type === 'spinner' || design.type === 'dots' ? 'spinner' : 'shimmer'
     ls.styles = { ...(ls.styles ?? {}), ...loadingCss(design, brand) }
     ls.design = design
+  }
+
+  if (hasCards) {
+    const design = normalizeQuickLinks(next.widget_v2_config.quick_links.design)
+    const ql = next.widget_v2_config.quick_links
+    ql.cardStyle = { ...(ql.cardStyle ?? {}), ...cardCss(design, brand) }
+    ql.textStyle = { ...(ql.textStyle ?? {}), ...cardTextCss(design, brand) }
+    ql.subtitleStyle = { ...(ql.subtitleStyle ?? {}), ...cardSubtitleCss(design, brand) }
+    ql.displaySettings = {
+      ...(ql.displaySettings ?? {}),
+      showTitle: design.showTitle,
+      showSubtitle: design.showSubtitle,
+      // The widget tells a stack from a carousel by the card's flexDirection.
+      carouselLoop: design.loop,
+    }
+    ql.design = design
   }
 
   if (hasPrompts) {
@@ -365,6 +393,11 @@ widgetViewRouter.get(
 )
 
 const LAUNCHER_POSITIONS = new Set(['left', 'right'])
+/** A query value, only when it names one of the allowed choices. */
+const LAUNCHER_ONE = (v: unknown, allowed: Set<string>): string | undefined => {
+  const s = one(v)
+  return s && allowed.has(s) ? s : undefined
+}
 const LAUNCHER_TYPES = new Set(['standard', 'expanded_bubble', 'chat_icon', 'icon_only'])
 
 const esc = (s: string) =>
@@ -443,9 +476,20 @@ publicRouter.get(
   asyncHandler(async (req, res) => {
     const widget = await getWidget(req.params.widgetId)
 
-    const position = LAUNCHER_POSITIONS.has(one(req.query.position) ?? '') ? (one(req.query.position) as string) : 'right'
-    const type = LAUNCHER_TYPES.has(one(req.query.type) ?? '') ? (one(req.query.type) as string) : 'standard'
-    const launcherTitle = (one(req.query.launcherTitle) ?? 'Chat with us!').slice(0, 120)
+    // The launcher's own settings are part of the design, so the test page opens
+    // with what the builder saved. A query parameter still wins, which is how the
+    // embed panel previews a launcher the design has not been given yet.
+    const { config: liveConfig } = await resolveConfig(req.params.widgetId)
+    const lc = liveConfig as Record<string, any>
+    const savedPosition = one(lc.launcher_design?.position) ?? one(lc.launcher_position)
+    const savedType = one(lc.launcher_design?.type) ?? one(lc.launcher_style)
+    const savedTitle = one(lc.launcher_design?.label?.text) ?? one(lc.launcher_title)
+    const pick = (q: unknown, saved: string | undefined, allowed: Set<string>, fallback: string) =>
+      LAUNCHER_ONE(q, allowed) ?? (saved && allowed.has(saved) ? saved : fallback)
+
+    const position = pick(req.query.position, savedPosition, LAUNCHER_POSITIONS, 'right')
+    const type = pick(req.query.type, savedType, LAUNCHER_TYPES, 'standard')
+    const launcherTitle = (one(req.query.launcherTitle) ?? savedTitle ?? 'Chat with us!').slice(0, 120)
     const frameMode = req.query.frame === '1'
     // Page mode runs the widget on this document, so the SDK snippet is rendered
     // into the page rather than injected later — exactly as on a customer's site.
@@ -475,26 +519,32 @@ publicRouter.get(
     )
     res.setHeader('Cache-Control', 'no-store')
 
-    /** Replaces the widget's own powered-by line with the real wordmark. */
+    /**
+     * Replaces the widget's own powered-by line with the real wordmark, and hides
+     * the scrollbar the widget's iframe draws on its right edge.
+     *
+     * Both are done in CSS alone. The wordmark used to be a node appended into
+     * the widget's holder on a timer, which the widget's own re-renders kept
+     * wiping — so it was re-added a second later, flickering and costing a
+     * repaint every tick. Pseudo-elements belong to our stylesheet instead, so
+     * nothing re-renders them away and no timer has to run at all.
+     */
     const poweredCss = `
-  .pair-powered { position: absolute; bottom: 0; left: 0; right: 0; height: 24px; z-index: 3; pointer-events: none;
-    direction: ltr; display: flex; align-items: center; justify-content: center; gap: 5px;
-    backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1);
-    border-radius: 0 0 15px 15px; font: 600 9px Montserrat, system-ui, sans-serif; color: #97a0a8 }
-  .pair-powered img { height: 9px; display: block; opacity: .9 }
-  /* The widget's own scrollbar sits on its right edge; the holder clips it off. */
+  /* The widget positions this holder itself (fixed, docked to its corner), so its
+     position is left alone — the pseudo-elements below hang off it as it is. */
   #pair-ai-widget-holder { overflow: hidden !important }
-  #pair-ai-widget-iframe { width: calc(100% + 17px) !important }`
+  #pair-ai-widget-holder::after {
+    content: 'Powered by'; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; z-index: 4;
+    pointer-events: none; direction: ltr; display: flex; align-items: center; justify-content: center;
+    padding-inline-end: 46px; border-radius: 0 0 15px 15px;
+    backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    font: 600 9px Montserrat, system-ui, sans-serif; color: #97a0a8 }
+  #pair-ai-widget-holder::before {
+    content: ''; position: absolute; bottom: 7px; left: 50%; transform: translateX(6px); width: 38px; height: 10px; z-index: 5;
+    pointer-events: none; opacity: .9; background: url(/pair-wordmark.svg) left center / contain no-repeat }
+  /* The widget's scrollbar sits on its iframe's right edge, which the holder clips off. */
+  #pair-ai-widget-iframe { width: calc(100% + 17px) !important; max-width: none !important }`
 
-    const poweredJs = `
-  setInterval(function () {
-    var h = document.getElementById('pair-ai-widget-holder')
-    if (!h || h.querySelector('.pair-powered')) return
-    var d = document.createElement('div')
-    d.className = 'pair-powered'
-    d.innerHTML = '<span>Powered by</span><img src="/pair-wordmark.svg" alt="Pair AI" />'
-    h.appendChild(d)
-  }, 1200)`
 
     /** The stock Pair embed snippet — what a customer pastes into their own site. */
     const sdkSnippet = `
@@ -528,7 +578,6 @@ publicRouter.get(
 </style>
 </head>
 <body>
-<script>${poweredJs}</script>
 ${sdkSnippet}
 </body>
 </html>`)
@@ -1466,7 +1515,6 @@ ${sdkSnippet}
   else if (!(tester && tester.name)) showGate(null)
 </script>
 <style>${poweredCss}</style>
-<script>${poweredJs}</script>
 ${pageMode ? sdkSnippet : ''}
 </body>
 </html>`)

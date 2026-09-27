@@ -1,11 +1,12 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Check } from 'lucide-react'
 import type { WidgetConfig } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/lib/heroDesign'
 import {
   actionCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, loadingCss,
-  chipCss, chipHoverCss, normalizeChatInput, normalizeLauncher, normalizeLoading,
+  cardCss, cardHoverCss, cardSubtitleCss, cardTextCss, chipCss, chipHoverCss,
+  normalizeChatInput, normalizeLauncher, normalizeLoading, normalizeQuickLinks,
   normalizePrompts as normalizeChatInputPrompts, normalizeToast, resolve, shadowCss,
   textCss, toastCss, type ChatInputDesign, type LauncherDesign, type LoadingDesign, type ToastDesign,
 } from '@/lib/inputDesign'
@@ -47,6 +48,7 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
       carousel: normalizeHeroCarousel(hs?.carousel),
     }
   }, [heroKey])
+
 
   // What the designer has typed into the preview's own field.
   const [typed, setTyped] = useState('')
@@ -110,6 +112,39 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const surface = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
   const titleStyle: CSSProperties = { ...(get(v2, 'header.titleStyle') ?? {}) }
   const cardStyle: CSSProperties = { ...(get(v2, 'quick_links.cardStyle') ?? {}) }
+  // Quick-link cards: layout, surface, image and text, all from the config.
+  const ql = normalizeQuickLinks(get(v2, 'quick_links.design'))
+
+  // Auto-scroll the card track, so choosing it shows what it does. It yields
+  // while the visitor is touching the track and never runs for someone who
+  // asked for reduced motion — the same rules the widget follows.
+  const cardTrackRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = cardTrackRef.current
+    if (!el || ql.layout !== 'carousel' || !ql.autoScroll || quickLinks.length < 2) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    let held = false
+    const hold = () => { held = true }
+    const release = () => { held = false }
+    el.addEventListener('pointerdown', hold)
+    el.addEventListener('pointerup', release)
+    el.addEventListener('pointerleave', release)
+    const id = window.setInterval(() => {
+      if (held) return
+      const max = el.scrollWidth - el.clientWidth
+      if (max <= 0) return
+      const step = el.clientWidth * 0.6
+      const next = el.scrollLeft + step
+      el.scrollTo({ left: next >= max - 2 ? (ql.loop ? 0 : max) : next, behavior: 'smooth' })
+    }, ql.intervalMs)
+    return () => {
+      window.clearInterval(id)
+      el.removeEventListener('pointerdown', hold)
+      el.removeEventListener('pointerup', release)
+      el.removeEventListener('pointerleave', release)
+    }
+  }, [ql.layout, ql.autoScroll, ql.intervalMs, ql.loop, quickLinks.length])
+
   // Prompt chips: the whole look, from the config. The legacy chipStyle blob is
   // layered on last so a config tuned by hand still wins.
   const pr = normalizeChatInputPrompts(get(v2, 'trending_prompts.design'))
@@ -204,19 +239,46 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
               <span style={{ color: brand }} className="rtl:-scale-x-100">‹</span>
               {quickLinksTitle}
             </p>
-            <div className="flex gap-2 overflow-hidden">
-              {quickLinks.slice(0, 3).map((q, i) => (
+            <style>{cardHoverCss(ql, brand, '.pv-card')}</style>
+            <div
+              ref={cardTrackRef}
+              className={
+                ql.layout === 'stack'
+                  ? 'flex flex-col'
+                  : ql.layout === 'grid'
+                    ? 'grid grid-cols-2'
+                    : 'flex overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+              }
+              style={{ gap: ql.gap }}
+            >
+              {quickLinks.map((q, i) => (
                 <button
                   key={q.id ?? i}
                   type="button"
                   onClick={() => setSent(String(q.message ?? '').trim() || String(q.title ?? '').trim() || null)}
-                  className="w-[150px] shrink-0 cursor-pointer overflow-hidden rounded-lg text-start transition-transform duration-150 hover:scale-[1.03] active:scale-95"
-                  style={{ background: surface, ...cardStyle }}
+                  className="pv-card flex shrink-0 cursor-pointer flex-col overflow-hidden transition-all duration-200 active:scale-95"
+                  style={{
+                    ...(cardCss(ql, brand) as CSSProperties),
+                    width: ql.layout === 'carousel' ? ql.cardWidth * 1.6 : undefined,
+                    ...cardStyle,
+                  }}
                 >
-                  <div className="h-20" style={{ background: q.url ? `url(${q.url}) center/cover` : `linear-gradient(135deg, ${shade(brand, 20)}, ${brand})` }} />
-                  <div className="p-2">
-                    <p className="truncate text-[11px] font-bold">{q.title}</p>
-                    <p className="line-clamp-2 text-[9px]" style={{ color: muted }}>{q.subtitle}</p>
+                  {ql.showImage && ql.imageHeight > 0 && (
+                    <div
+                      style={{
+                        height: ql.imageHeight,
+                        borderRadius: ql.imageRadius,
+                        background: q.url
+                          ? `url(${q.url}) center/${ql.imageFit} no-repeat`
+                          : `linear-gradient(135deg, ${shade(brand, 20)}, ${brand})`,
+                      }}
+                    />
+                  )}
+                  <div className={ql.showImage && ql.imageHeight > 0 ? 'pt-2' : ''}>
+                    {ql.showTitle && <p className="truncate" style={cardTextCss(ql, brand) as CSSProperties}>{q.title}</p>}
+                    {ql.showSubtitle && (
+                      <p className="line-clamp-2" style={cardSubtitleCss(ql, brand) as CSSProperties}>{q.subtitle}</p>
+                    )}
                   </div>
                 </button>
               ))}

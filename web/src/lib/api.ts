@@ -127,7 +127,15 @@ export const api = {
 
 export const publicConfigUrl = (widgetId: string) => `${window.location.origin}/api/public/widget/${encodeURIComponent(widgetId)}/config`
 
-export interface EmbedSettings { position: 'left' | 'right'; type: string; launcherTitle: string }
+export interface PanelSize { width: number; maxHeight: number; minHeight: number; bottom: number; radius: number }
+
+export interface EmbedSettings {
+  position: 'left' | 'right'
+  type: string
+  launcherTitle: string
+  /** The panel's size, which the SDK needs before the config has loaded. */
+  panel?: PanelSize
+}
 
 /** The standalone page that renders this widget with the real SDK. */
 export const embedPreviewUrl = (widgetId: string, s: EmbedSettings) =>
@@ -136,11 +144,15 @@ export const embedPreviewUrl = (widgetId: string, s: EmbedSettings) =>
 
 /** The snippet a customer pastes into their own site. */
 export function embedSnippet(widgetId: string, sdkBaseUrl: string, s: EmbedSettings): string {
+  // The SDK builds the panel before the config has loaded, so its size travels
+  // in the snippet rather than in the config; otherwise the panel would be
+  // built at the old fixed size and resize under the visitor.
+  const panel = s.panel ? `\n    panel: ${JSON.stringify(s.panel)},` : ''
   return `<script>
   window.PairAiWidgetSettings = {
     position: ${JSON.stringify(s.position)},
     type: ${JSON.stringify(s.type)},
-    launcherTitle: ${JSON.stringify(s.launcherTitle)},
+    launcherTitle: ${JSON.stringify(s.launcherTitle)},${panel}
     beBaseUrl: ${JSON.stringify(window.location.origin)},
   }
   ;(function (d, t) {
