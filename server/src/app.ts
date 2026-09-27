@@ -7,11 +7,15 @@ import helmet from 'helmet'
 import { pinoHttp } from 'pino-http'
 import { env } from './config/env.js'
 import { logger } from './lib/logger.js'
+import { mongoStatus } from './lib/mongo.js'
 import { redis } from './lib/redis.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
-import { publicRouter } from './routes/public.js'
+import { pairProxyRouter } from './routes/pairProxy.js'
+import { publicRouter, widgetLangRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
+import { logsRouter } from './routes/logs.js'
+import { uploadsRouter, uploadsStatic } from './routes/uploads.js'
 import { widgetsRouter } from './routes/widgets.js'
 
 export function createApp() {
@@ -50,13 +54,27 @@ export function createApp() {
 
   app.get('/api/health', async (_req, res) => {
     const redisOk = redis.status === 'ready'
-    res.status(redisOk ? 200 : 503).json({ status: redisOk ? 'ok' : 'degraded', redis: redis.status, uptime: process.uptime() })
+    res.status(redisOk ? 200 : 503).json({ status: redisOk ? 'ok' : 'degraded', redis: redis.status, mongo: mongoStatus(), uptime: process.uptime() })
   })
 
+  app.use('/api/public/uploads', publicCors, uploadsStatic)
   app.use('/api/public', publicCors, publicRouter)
+  // Alias with Pair's own path shape (GET /v1/widget/:id/config), so the widget's
+  // beBaseUrl can point at this server and the design is served per the widget's source.
+  // The widget iframe (on the SDK's origin) POSTs chat messages here too, so this
+  // mount needs full CORS; whatever the studio doesn't serve itself is proxied to Pair.
+  const widgetCors = cors({ origin: '*' })
+  app.use('/v1', widgetCors, publicRouter)
+  app.use('/v1', widgetCors, pairProxyRouter)
+  // Language-forced variant for the test page's widget-language switch: the config
+  // arrives already translated, everything else proxies to Pair as usual.
+  app.use('/lang/:lng/v1', widgetCors, widgetLangRouter)
+  app.use('/lang/:lng/v1', widgetCors, pairProxyRouter)
   app.use('/api/auth', dashboardCors, authRouter)
   app.use('/api/users', dashboardCors, usersRouter)
   app.use('/api/widgets', dashboardCors, widgetsRouter)
+  app.use('/api/logs', dashboardCors, logsRouter)
+  app.use('/api/uploads', dashboardCors, uploadsRouter)
 
   // Serve the built dashboard (web/dist) from the same origin in production.
   const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist')

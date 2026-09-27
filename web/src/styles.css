@@ -1,34 +1,227 @@
 @import 'tailwindcss';
 
+/* ------------------------------------------------------------------ *
+ * Pair design tokens — Figma reference (Pair Document Design v1.0)
+ * Colours, type and radii below mirror the published Pair spec.
+ * ------------------------------------------------------------------ */
 @theme {
   --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --color-pair-50: #eef5fe;
-  --color-pair-100: #d9e8fc;
-  --color-pair-200: #b6d1f9;
-  --color-pair-300: #86b3f4;
-  --color-pair-400: #5497ee;
-  --color-pair-500: #2f80ed;
-  --color-pair-600: #1f66cc;
-  --color-pair-700: #1a52a3;
-  --color-ink-900: #0f1b2d;
-  --color-ink-700: #2c3a4f;
-  --color-ink-500: #5b6b82;
-  --color-ink-300: #a8b3c2;
-  --color-ink-100: #e6ebf2;
-  --color-ink-50: #f5f8fc;
+  --font-arabic: 'IBM Plex Sans Arabic', 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Menlo, ui-monospace, monospace;
+
+  /* Accent */
+  --color-accent: #4d98e2;
+  --color-accent-deep: #1f6fb8;
+  --color-accent-50: #f2f8fe;
+  --color-accent-100: #e2eefb;
+  --color-accent-200: #c9e0f7;
+  --color-accent-300: #a3caf0;
+
+  /* Text */
+  --color-ink: #0f1216;
+  --color-body: #181b1f;
+  --color-muted: #52555b;
+  --color-faint: #606369;
+
+  /* Surfaces & rules */
+  --color-line: #bdd1e0;
+  --color-surface: #f7fdff;
+  --color-divider: #d3e0ea;
+  --color-code: #f0f6fa;
+  --color-bubble: #ebeff2;
+  --color-page: #f4f9fe;
+
+  /* Functional only — never decoration */
+  --color-alert: #b4372f;
+  --color-alert-soft: #fdf1f0;
+
+  /* The spec caps radius at 10–12px; the whole scale respects that. */
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 12px;
 }
 
-html, body, #root { height: 100%; }
-body { @apply bg-ink-50 text-ink-900 antialiased; background-image: radial-gradient(1200px 600px at 85% -10%, #e3eefc 0%, transparent 60%); background-attachment: fixed; }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes rise { from { opacity: 0; transform: translate3d(0, 14px, 0) } to { opacity: 1; transform: none } }
+@keyframes pop { from { opacity: 0; transform: scale(0.97) translate3d(0, 8px, 0) } to { opacity: 1; transform: none } }
+@keyframes sweep { from { opacity: 0; transform: scaleX(0) } to { opacity: 1; transform: scaleX(1) } }
+@keyframes toast-in { from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.96) } to { opacity: 1; transform: none } }
+@keyframes track { 0% { transform: translateX(-120%) } 100% { transform: translateX(320%) } }
+@keyframes drawer-in { from { opacity: 0; transform: translateX(calc(-100% * var(--dir-sign, 1))) } to { opacity: 1; transform: none } }
+@keyframes draw { from { stroke-dashoffset: var(--len, 120) } to { stroke-dashoffset: 0 } }
+@keyframes float-slow { 0%, 100% { transform: translate3d(0, 0, 0) } 50% { transform: translate3d(0, -10px, 0) } }
+@keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1) } 33% { transform: translate3d(3%, -4%, 0) scale(1.06) } 66% { transform: translate3d(-3%, 3%, 0) scale(0.97) } }
+@keyframes shake { 10%, 90% { transform: translateX(-1px) } 30%, 70% { transform: translateX(2px) } 50% { transform: translateX(-2px) } }
+@keyframes sheen { from { transform: translateX(-120%) } to { transform: translateX(220%) } }
 
-.card { @apply rounded-2xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(15,27,45,0.04),0_8px_24px_-12px_rgba(15,27,45,0.12)]; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-pair-500 text-white hover:bg-pair-600 active:bg-pair-700 shadow-[0_6px_16px_-6px_rgba(47,128,237,0.6)]; }
-.btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-ink-100 bg-white text-ink-700 hover:border-pair-200 hover:text-pair-600; }
-.btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-red-100 bg-white text-red-600 hover:bg-red-50; }
-.input { @apply w-full rounded-xl border border-ink-100 bg-white px-3.5 py-2.5 text-sm text-ink-900 outline-none transition placeholder:text-ink-300 focus:border-pair-400 focus:ring-4 focus:ring-pair-100; }
-.label { @apply mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-pair-600; }
-.badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider; }
-.eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-pair-600; }
-.mono { font-family: var(--font-mono); }
+/* Sign-in mock: the builder appears to be edited on its own. */
+@keyframes brand-cycle {
+  0%, 22% { background-color: #4d98e2 }
+  28%, 50% { background-color: #e0542f }
+  56%, 78% { background-color: #1f9d6b }
+  84%, 100% { background-color: #4d98e2 }
+}
+@keyframes brand-cycle-text {
+  0%, 22% { color: #4d98e2 }
+  28%, 50% { color: #e0542f }
+  56%, 78% { color: #1f9d6b }
+  84%, 100% { color: #4d98e2 }
+}
+@keyframes caret { 0%, 45% { opacity: 1 } 50%, 100% { opacity: 0 } }
+@keyframes chip-in { 0%, 100% { opacity: 0.35; transform: translateY(2px) } 12%, 60% { opacity: 1; transform: none } }
+@keyframes tick { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes screen-in { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.985) } to { opacity: 1; transform: none } }
+@keyframes screen-out { from { opacity: 1; transform: none } to { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.985) } }
+
+/* ------------------------------------------------------------------ *
+ * Page frame — the document never scrolls. Only panes scroll.
+ * ------------------------------------------------------------------ */
+@layer base {
+  html, body, #root { height: 100% }
+  html, body { overflow: hidden; overscroll-behavior: none }
+  :root { --dir-sign: 1 }
+  [dir='rtl'] { --dir-sign: -1 }
+
+  body {
+    @apply bg-page text-body antialiased;
+    font-family: var(--app-font, var(--font-sans));
+    background-image:
+      radial-gradient(760px 420px at 88% -12%, rgba(164, 220, 255, 0.5) 0%, transparent 74%),
+      radial-gradient(620px 420px at 6% 104%, rgba(177, 226, 255, 0.34) 0%, transparent 76%);
+    background-attachment: fixed;
+  }
+
+  /* Arabic switches the whole app to IBM Plex Sans Arabic, per the spec. */
+  :root:lang(ar) { --app-font: var(--font-arabic) }
+  /* IDs, JSON and e-mail stay left-to-right even inside an RTL layout. */
+  .mono, code, kbd { font-family: var(--font-mono); font-variant-ligatures: none }
+  :lang(ar) .mono, :lang(ar) code { direction: ltr; unicode-bidi: isolate; text-align: start }
+
+  ::selection { background: var(--color-accent-200); color: var(--color-ink) }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px }
+
+  /* Every scrollbar in the app (and in the preview frame) matches the page:
+     a slim rounded thumb on a transparent track, in both engines. */
+  * { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent }
+  ::-webkit-scrollbar { width: 10px; height: 10px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 999px; border: 3px solid transparent; background-clip: content-box }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-accent-300); background-clip: content-box }
+  ::-webkit-scrollbar-corner { background: transparent }
+}
+
+@layer components {
+  /* The only scrolling elements in the app. */
+  .scroll-pane {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+  }
+  .scroll-pane::-webkit-scrollbar { width: 10px; height: 10px }
+  .scroll-pane::-webkit-scrollbar-track { background: transparent }
+  .scroll-pane::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 999px; border: 3px solid transparent; background-clip: content-box }
+  .scroll-pane::-webkit-scrollbar-thumb:hover { background: var(--color-accent-300); background-clip: content-box }
+
+  /* Designed hero slides carry their own keyframes inside the SVG (see
+     lib/heroDesign.ts), so nothing about a design is declared globally here.
+     What the carousel owns is when a slide's motion should run at all: a
+     drifting pattern is the only thing on this screen with a per-frame cost,
+     and only the slide on show should be paying it. */
+  .hero-slide[data-active='false'] svg, .hero-slide[data-active='false'] svg * { animation-play-state: paused }
+
+  /* Components 5.1 – 5.6 of the Pair spec */
+  .card { @apply rounded-xl border border-line bg-white/85 }
+  .card-soft { @apply rounded-xl border border-line bg-surface/70 }
+  .card-accent { @apply rounded-xl border-2 border-accent bg-white }
+  .raise { @apply shadow-[0_1px_2px_rgba(15,18,22,0.04),0_18px_44px_-28px_rgba(31,111,184,0.32)] }
+
+  .btn { @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-45 }
+  .btn-primary { @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-45 bg-accent text-white hover:bg-accent-deep active:scale-[0.98] }
+  .btn-ghost { @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-45 border border-line bg-white text-muted hover:border-accent-300 hover:text-accent-deep active:scale-[0.98] }
+  .btn-quiet { @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-45 bg-transparent text-muted hover:bg-accent-50 hover:text-accent-deep }
+  .btn-danger { @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-45 border border-alert/25 bg-white text-alert hover:bg-alert-soft active:scale-[0.98] }
+  .btn-sm { @apply px-2.5 py-1.5 }
+
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-body outline-none transition-all duration-200;
+    @apply placeholder:text-faint/55 focus:border-accent focus:ring-[3px] focus:ring-accent-200 disabled:bg-code disabled:text-faint;
+  }
+  select.input {
+    @apply cursor-pointer appearance-none bg-no-repeat pe-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352555B' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-size: 16px;
+    background-position: right 0.75rem center;
+  }
+  [dir='rtl'] select.input { background-position: left 0.75rem center }
+
+  .label { @apply mb-1.5 block text-[10px] font-bold uppercase tracking-[0.09em] text-accent }
+  .eyebrow { @apply text-[10px] font-bold uppercase tracking-[0.09em] text-accent }
+  .rule-head { @apply flex items-center gap-2 border-b-[1.5px] border-accent pb-1.5 text-[11px] font-bold uppercase tracking-[0.07em] text-accent }
+  .badge { @apply inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.07em] whitespace-nowrap }
+  .callout { @apply border-s-[3px] border-accent ps-3 text-[12.5px] leading-[1.6] break-words text-muted }
+  .code-block { @apply rounded-xs bg-code font-mono text-[11px] leading-[1.45] }
+  .fine { @apply text-[11px] leading-[1.5] text-faint }
+
+  .th { @apply px-4 py-2.5 text-[9.5px] font-bold uppercase tracking-[0.06em] text-accent }
+  .td { @apply px-4 py-3 align-middle }
+
+  /* Tab with an animated accent rule */
+  .tab { @apply relative rounded-t-md px-3 py-2.5 text-[13px] font-bold text-muted transition-colors duration-200 hover:text-ink }
+  .tab[data-active='true'] { @apply text-accent-deep }
+  .tab[data-active='true']::after {
+    content: '';
+    @apply absolute inset-x-1 bottom-0 h-[2px] rounded-full bg-accent;
+    animation: sweep 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Entrance helpers */
+  .anim-fade { animation: fade-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both }
+  .anim-rise { animation: rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both }
+  .anim-pop { animation: pop 0.26s cubic-bezier(0.22, 1, 0.36, 1) both }
+  .stagger > * { animation: rise 0.44s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--d, 0) * 42ms) }
+  .row-in { animation: fade-in 0.4s ease-out both; animation-delay: calc(var(--d, 0) * 26ms) }
+
+  .anim-shake { animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both }
+  .anim-float { animation: float-slow 7s ease-in-out infinite }
+  .brand-cycle { animation: brand-cycle 9s ease-in-out infinite }
+  .brand-cycle-text { animation: brand-cycle-text 9s ease-in-out infinite }
+  .caret { animation: caret 1.1s step-end infinite }
+  .chip-in { animation: chip-in 9s ease-in-out infinite; animation-delay: calc(var(--d, 0) * 260ms) }
+  .screen-in { animation: screen-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: 0.12s }
+  .screen-out { animation: screen-out 0.34s cubic-bezier(0.4, 0, 1, 1) both }
+  .anim-drift { animation: drift 22s ease-in-out infinite }
+
+  /* Sign-in hero: the spec's diagram shapes, drawn in sequence. */
+  .flow-node { animation: pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--d, 0) * 130ms + 260ms) }
+  .flow-line { stroke-dasharray: var(--len, 120); animation: draw 0.5s ease-out both; animation-delay: calc(var(--d, 0) * 130ms + 380ms) }
+
+  /* Light sweep across the primary button on hover. */
+  .sheen { position: relative; overflow: hidden }
+  .sheen::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 45%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+    transform: translateX(-120%);
+  }
+  .sheen:hover::after { animation: sheen 0.75s ease-out }
+
+  .lift { @apply transition-all duration-200 ease-out }
+  .lift:hover { @apply -translate-y-px border-accent-300 }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .scroll-pane { scroll-behavior: auto }
+}

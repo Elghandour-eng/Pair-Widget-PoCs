@@ -11,6 +11,13 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('12h'),
   PAIR_API_BASE_URL: z.string().url().default('https://system.trypair.ai'),
   PAIR_API_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
+  WIDGET_SDK_BASE_URL: z.string().url().default('https://widgets-test.trypair.ai'),
+  // Optional: when set, system logs are also written to MongoDB.
+  MONGODB_URI: z.string().optional(),
+  MONGODB_DB: z.string().default('pair_widget_studio'),
+  MONGODB_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
+  MONGODB_LOG_TTL_DAYS: z.coerce.number().int().positive().default(90),
+  UPLOAD_DIR: z.string().default('data/uploads'),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_USERS: z.string().default(''),

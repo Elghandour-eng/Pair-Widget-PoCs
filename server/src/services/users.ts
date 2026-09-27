@@ -16,6 +16,11 @@ export interface UserRecord {
   createdAt: string
   updatedAt: string
   lastLoginAt?: string
+  /**
+   * Widgets this user may see. Absent = every widget. Admins always see everything,
+   * so the list is only kept for editors and viewers.
+   */
+  widgetIds?: string[]
 }
 export type PublicUser = Omit<UserRecord, 'passwordHash'>
 
@@ -43,7 +48,9 @@ export async function listUsers(): Promise<PublicUser[]> {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
-export async function createUser(input: { email: string; name: string; password: string; role: Role }): Promise<PublicUser> {
+export async function createUser(
+  input: { email: string; name: string; password: string; role: Role; widgetIds?: string[] },
+): Promise<PublicUser> {
   const email = input.email.toLowerCase().trim()
   if (await redis.exists(keys.userByEmail(email))) throw conflict('A user with this email already exists')
   const now = new Date().toISOString()
@@ -55,6 +62,7 @@ export async function createUser(input: { email: string; name: string; password:
     passwordHash: await bcrypt.hash(input.password, 12),
     createdAt: now,
     updatedAt: now,
+    ...(input.role !== 'admin' && input.widgetIds ? { widgetIds: [...new Set(input.widgetIds)] } : {}),
   }
   await redis
     .multi()
@@ -67,16 +75,31 @@ export async function createUser(input: { email: string; name: string; password:
 
 export async function updateUser(
   id: string,
-  patch: Partial<{ name: string; role: Role; password: string }>,
+  patch: Partial<{ name: string; role: Role; password: string; widgetIds: string[] | null }>,
 ): Promise<PublicUser> {
   const user = await getUserById(id)
   if (!user) throw notFound('User not found')
   if (patch.name !== undefined) user.name = patch.name.trim()
   if (patch.role !== undefined) user.role = patch.role
   if (patch.password !== undefined) user.passwordHash = await bcrypt.hash(patch.password, 12)
+  // null clears the restriction (back to "all widgets"); admins never carry one.
+  if (patch.widgetIds !== undefined) {
+    if (patch.widgetIds === null) delete user.widgetIds
+    else user.widgetIds = [...new Set(patch.widgetIds)]
+  }
+  if (user.role === 'admin') delete user.widgetIds
   user.updatedAt = new Date().toISOString()
   await redis.set(keys.user(id), JSON.stringify(user))
   return toPublic(user)
+}
+
+/** When a restricted editor registers a widget, they get access to it automatically. */
+export async function grantWidgetAccess(userId: string, widgetId: string): Promise<void> {
+  const user = await getUserById(userId)
+  if (!user || !user.widgetIds || user.widgetIds.includes(widgetId)) return
+  user.widgetIds.push(widgetId)
+  user.updatedAt = new Date().toISOString()
+  await redis.set(keys.user(userId), JSON.stringify(user))
 }
 
 export async function deleteUser(id: string): Promise<void> {

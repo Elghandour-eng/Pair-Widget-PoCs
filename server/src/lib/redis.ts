@@ -27,4 +27,6 @@ export const keys = {
   widgets: () => 'widgets',
   apiCache: (widgetId: string) => `cache:api:${widgetId}`,
   audit: (widgetId: string) => `widget:${widgetId}:audit`,
+  syslog: () => 'syslog',
+  feedback: (widgetId: string) => `widget:${widgetId}:feedback`,
 }
