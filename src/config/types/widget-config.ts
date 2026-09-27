@@ -1,3 +1,4 @@
+import type { ChatInputDesignDto, LauncherDesignDto, LoadingDesignDto, ToastDesignDto } from './widget-config-dto'
 import type { CSSProperties } from 'react'
 
 export interface HeaderConfig {
@@ -95,6 +96,8 @@ export interface WidgetConfig {
   chatInput: ChatInputConfig
   messagesConfig?: MessagesConfig
   launcherStyles?: CSSProperties
+  launcherDesign?: LauncherDesignDto
+  toastDesign?: ToastDesignDto
   headerConfig?: HeaderConfig
 }
 
@@ -176,6 +179,7 @@ export type LoadingStateType = 'shimmer' | 'spinner'
 export interface LoadingStateConfig {
   type: LoadingStateType
   styles?: CSSProperties
+  design?: LoadingDesignDto
 }
 
 export interface IntroScreenConfig {
@@ -214,6 +218,8 @@ export interface ChatInputConfig {
   }
   // TODO: update this when BE supports it
   sendButtonIcon: SendButtonIconConfig
+  /** The studio's compiled design, for what CSS on the container cannot reach. */
+  design?: ChatInputDesignDto
 }
 
 // TODO: Start consuming this configuration in the message and feedback UI components

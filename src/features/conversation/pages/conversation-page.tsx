@@ -101,7 +101,11 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
               widgetConfig.widgetBgColor ? { background: widgetConfig.widgetBgColor } : { backgroundColor: '#FAFAFA' }
             }
           >
-            <AiAssistantMessageShimmer cardStyles={widgetConfig.messagesConfig?.aiMessages?.CardStyles} />
+            <AiAssistantMessageShimmer
+              cardStyles={widgetConfig.messagesConfig?.aiMessages?.CardStyles}
+              design={widgetConfig.introScreen?.loadingState?.design}
+              containerStyle={widgetConfig.introScreen?.loadingState?.styles}
+            />
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center">

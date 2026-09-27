@@ -129,6 +129,7 @@ export interface HeroSection {
 }
 
 export interface LoadingState {
+  design?: LoadingDesignDto
   type: LoadingStateType
   styles: CSSProperties
 }
@@ -250,6 +251,94 @@ export interface SendButtonIconDto {
   }
 }
 
+/**
+ * The studio's compiled chat-input design. Most of it also arrives as the CSS
+ * blobs above; this block carries the parts that are not reachable by CSS on a
+ * container — the typed text, the action buttons, and the padding around them.
+ */
+export interface ChatInputDesignDto {
+  layout?: 'floating_pill' | 'full_width_bar' | 'inset_card'
+  direction?: 'auto' | 'ltr' | 'rtl'
+  field?: {
+    gap?: number
+    focusBorderColor?: string
+    focusRingWidth?: number
+    focusRingColor?: string
+    focusRingOpacity?: number
+  }
+  text?: { fontFamily?: string; size?: number; weight?: string; color?: string; lineHeight?: number }
+  send?: {
+    size?: number
+    iconSize?: number
+    disabledOpacity?: number
+    hoverBackground?: string
+    position?: 'inside' | 'outside'
+  }
+  actions?: {
+    voice?: boolean
+    attach?: boolean
+    emoji?: boolean
+    voiceIcon?: string
+    voiceUrl?: string
+    attachIcon?: string
+    attachUrl?: string
+    emojiIcon?: string
+    emojiUrl?: string
+    size?: number
+    shape?: 'circle' | 'rounded' | 'square'
+    radius?: number
+    background?: string
+    iconColor?: string
+    iconSize?: number
+    hoverBackground?: string
+    gap?: number
+  }
+  container?: { background?: string; paddingX?: number; paddingTop?: number; paddingBottom?: number }
+}
+
+/** The studio's compiled loading placeholder; colours and speed arrive as custom properties. */
+export interface LoadingDesignDto {
+  type?: 'shimmer' | 'spinner' | 'dots' | 'pulse'
+  lines?: number
+  lineHeight?: number
+  cards?: number
+  cardHeight?: number
+  spinnerColor?: string
+  spinnerSize?: number
+  spinnerThickness?: number
+  labelShow?: boolean
+  labelText?: string
+  labelColor?: string
+  labelSize?: number
+}
+
+/** The studio's compiled toast, including the style to put on each toast. */
+export interface ToastDesignDto {
+  position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'
+  offset?: number
+  durationMs?: number
+  showIcon?: boolean
+  iconColor?: string
+  fullWidth?: boolean
+  styles?: CSSProperties
+}
+
+/** The studio's compiled launcher design; the rest arrives in `launcher_styles`. */
+export interface LauncherDesignDto {
+  size?: number
+  radius?: number
+  offsetX?: number
+  offsetY?: number
+  icon?: string
+  iconUrl?: string
+  iconSize?: number
+  iconColor?: string
+  label?: { show?: boolean; text?: string; color?: string; fontFamily?: string; size?: number; weight?: string }
+  entrance?: 'pop' | 'slide' | 'fade' | 'none'
+  attention?: 'none' | 'pulse' | 'bounce' | 'wiggle'
+  hoverScale?: number
+}
+
 export interface ChatInput {
   styles: CSSProperties
   inputLayout: { type: InputLayoutType }
@@ -257,6 +346,7 @@ export interface ChatInput {
   placeholderText: PlaceholderText
   // TODO: update this when BE supports it
   sendButtonIcon?: SendButtonIconDto
+  design?: ChatInputDesignDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -375,4 +465,6 @@ export interface WidgetConfigDto {
   launcher_styles?: CSSProperties
   powered_by_pair_ai?: boolean
   launcher_title?: string
+  launcher_design?: LauncherDesignDto
+  toast_design?: ToastDesignDto
 }

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { EmojiPicker } from '@/components/emoji-picker'
 import { AttachIcon } from '@/components/icons/attach-icon'
 import { EmojiIcon } from '@/components/icons/emoji-icon'
@@ -244,6 +245,40 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
 
   const isFullWidth = widgetConfig.chatInput.layout === 'full_width_bar'
 
+  // The studio's design for the parts CSS on the container cannot reach: the
+  // typed text, the action buttons, and the padding around the whole composer.
+  const design = widgetConfig.chatInput.design
+  const px = (v: number | undefined, fallback: number) => `${typeof v === 'number' ? v : fallback}px`
+  const actionStyle: CSSProperties = {
+    width: px(design?.actions?.size, 36),
+    height: px(design?.actions?.size, 36),
+    borderRadius:
+      design?.actions?.shape === 'square'
+        ? '0'
+        : design?.actions?.shape === 'rounded'
+          ? px(design?.actions?.radius, 12)
+          : '999px',
+    backgroundColor: design?.actions?.background,
+    color: design?.actions?.iconColor,
+  }
+  const actionIcon: CSSProperties = {
+    width: px(design?.actions?.iconSize, 16),
+    height: px(design?.actions?.iconSize, 16),
+  }
+  const containerStyle: CSSProperties = {
+    backgroundColor: design?.container?.background,
+    paddingInline: design?.container ? px(design.container.paddingX, 16) : undefined,
+    paddingTop: design?.container ? px(design.container.paddingTop, 16) : undefined,
+    paddingBottom: design?.container ? px(design.container.paddingBottom, 24) : undefined,
+  }
+  const textStyle: CSSProperties = {
+    fontFamily: design?.text?.fontFamily || undefined,
+    fontSize: design?.text?.size ? `${design.text.size}px` : undefined,
+    fontWeight: design?.text?.weight,
+    color: design?.text?.color,
+    lineHeight: design?.text?.lineHeight ? String(design.text.lineHeight) : undefined,
+  }
+
   // ─── Voice mode ────────────────────────────────────────────────────────────
 
   if (isVoiceMode) {
@@ -263,7 +298,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   }
 
   return (
-    <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'}>
+    <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'} style={containerStyle}>
       <input
         type="file"
         ref={fileInputRef}
@@ -327,12 +362,19 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
         {widgetConfig.chatInput.actions.showFileUpload && !isGenerating ? (
           <button
             type="button"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6] disabled:cursor-not-allowed disabled:opacity-40"
+            className="pair-action flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F3] text-[#626A6A] transition-colors hover:bg-[#E4E4E6] disabled:cursor-not-allowed disabled:opacity-40"
+            style={actionStyle}
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing || canSend}
             aria-label="Attach file"
           >
-            {isProcessing ? <Spinner className="size-4" /> : <AttachIcon className="size-3 fill-[#474747]" />}
+            {isProcessing ? (
+              <Spinner className="size-4" />
+            ) : design?.actions?.attachIcon === 'custom' && design.actions.attachUrl ? (
+              <img src={design.actions.attachUrl} alt="" style={actionIcon} />
+            ) : (
+              <AttachIcon className="size-3 fill-[#474747]" style={actionIcon} />
+            )}
           </button>
         ) : null}
 
@@ -351,6 +393,7 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={isGenerating || isSendMessagePending || isProcessing}
+            style={textStyle}
             className={cn(
               'custom-chat-textarea block w-full resize-none border-0 bg-transparent p-0 focus:ring-0 focus:outline-none',
               isGenerating
@@ -361,18 +404,23 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
         </div>
 
         {/* Right actions (Emoji picker, mic, send) */}
-        <div className="mr-px flex shrink-0 items-center gap-0.5">
+        <div className="mr-px flex shrink-0 items-center gap-0.5" style={{ gap: px(design?.actions?.gap, 2) }}>
           {isEmojiPickerEnabled && (
             <div className="relative flex items-center">
               <button
                 ref={emojiButtonRef}
                 type="button"
-                className="hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-[#626A6A] transition-colors hover:bg-[#F2F2F3] disabled:cursor-not-allowed disabled:opacity-40"
+                className="pair-action hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-[#626A6A] transition-colors hover:bg-[#F2F2F3] disabled:cursor-not-allowed disabled:opacity-40"
+                style={actionStyle}
                 onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
                 disabled={isGenerating}
                 aria-label="Insert emoji"
               >
-                <EmojiIcon className="size-4" />
+                {design?.actions?.emojiIcon === 'custom' && design.actions.emojiUrl ? (
+                  <img src={design.actions.emojiUrl} alt="" style={actionIcon} />
+                ) : (
+                  <EmojiIcon className="size-4" style={actionIcon} />
+                )}
               </button>
               <EmojiPicker
                 isOpen={isEmojiPickerOpen}
@@ -386,11 +434,16 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
           {canRecordVoice && (
             <button
               type="button"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full fill-white transition-colors hover:bg-[#E4E4E6]"
+              className="pair-action flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#E4E4E6]"
+              style={actionStyle}
               onClick={() => setIsVoiceMode(true)}
               aria-label="Record voice message"
             >
-              <MicIcon className="size-4 text-white" />
+              {design?.actions?.voiceIcon === 'custom' && design.actions.voiceUrl ? (
+                <img src={design.actions.voiceUrl} alt="" style={actionIcon} />
+              ) : (
+                <MicIcon className="size-4" style={actionIcon} />
+              )}
             </button>
           )}
 

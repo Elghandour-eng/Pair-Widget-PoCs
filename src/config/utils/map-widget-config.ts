@@ -171,6 +171,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
           ? {
               type: rawIntro.loadingState.type,
               styles: rawIntro.loadingState.styles,
+              design: rawIntro.loadingState.design,
             }
           : undefined,
       }
@@ -341,6 +342,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       : undefined,
     welcomeTagline: apiResponse.welcome_tagline || undefined,
     launcherStyles: apiResponse.launcher_styles || apiResponse.styles,
+    launcherDesign: apiResponse.launcher_design,
+    toastDesign: apiResponse.toast_design,
     headerConfig,
   }
 }

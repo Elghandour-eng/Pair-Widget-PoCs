@@ -3,8 +3,13 @@ import { cn } from '@/lib/utils'
 import { getWidgetId } from '@/utils/widget-id'
 import type { CSSProperties } from 'react'
 
+import type { LoadingDesignDto } from '@/config/types/widget-config-dto'
+
 interface AiAssistantMessageShimmerProps {
   cardStyles?: CSSProperties
+  /** The studio's loading design; its colours and speed arrive as custom properties. */
+  design?: LoadingDesignDto
+  containerStyle?: CSSProperties
 }
 
 export function HiroLoading(_props: AiAssistantMessageShimmerProps) {
@@ -42,7 +47,7 @@ export function HiroLoading(_props: AiAssistantMessageShimmerProps) {
   )
 }
 
-export function AiAssistantMessageShimmer({ cardStyles }: AiAssistantMessageShimmerProps) {
+export function AiAssistantMessageShimmer({ cardStyles, design, containerStyle }: AiAssistantMessageShimmerProps) {
   const currentWidgetId = getWidgetId()
   const hiroWidgetId = env.hiroWidgetId
 
@@ -54,27 +59,49 @@ export function AiAssistantMessageShimmer({ cardStyles }: AiAssistantMessageShim
 
   const hasCardStyles = cardStyles && Object.keys(cardStyles).length > 0
 
+  // Shape comes from the config; the colours, speed and radius ride in on the
+  // custom properties the container carries.
+  const lines = design?.lines ?? 3
+  const lineHeight = design?.lineHeight ?? 10
+  const cards = design?.cards ?? 3
+  const cardHeight = design?.cardHeight ?? 288
+  const block = design?.type === 'pulse' ? 'skeleton-pulse' : 'shimmer-skeleton'
+  const caption = design?.labelShow && design.labelText?.trim()
+
   return (
-    <div className="w-full">
+    <div className="w-full" style={containerStyle}>
       {/* Text Area Skeleton */}
-      <div
-        className={cn(
-          'mt-1 flex w-full flex-col gap-2.5',
-          hasCardStyles && 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
-        )}
-        style={hasCardStyles ? cardStyles : undefined}
-      >
-        <div className="shimmer-skeleton h-2.5 w-full rounded-[6px]" />
-        <div className="shimmer-skeleton h-2.5 w-full rounded-[6px]" />
-        <div className="shimmer-skeleton h-2.5 w-full rounded-[6px]" />
-      </div>
+      {lines > 0 && (
+        <div
+          className={cn(
+            'mt-1 flex w-full flex-col gap-2.5',
+            hasCardStyles && 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
+          )}
+          style={hasCardStyles ? cardStyles : undefined}
+        >
+          {Array.from({ length: lines }, (_, i) => (
+            <div key={i} className={cn(block, 'w-full')} style={{ height: lineHeight }} />
+          ))}
+        </div>
+      )}
 
       {/* Suggestions Section Skeleton */}
-      <div className="mt-2 flex w-full gap-2">
-        <div className="shimmer-skeleton h-72 flex-1 rounded-2xl" />
-        <div className="shimmer-skeleton h-72 flex-1 rounded-2xl" />
-        <div className="shimmer-skeleton h-72 flex-1 rounded-2xl" />
-      </div>
+      {cards > 0 && (
+        <div className="mt-2 flex w-full gap-2">
+          {Array.from({ length: cards }, (_, i) => (
+            <div key={i} className={cn(block, 'flex-1')} style={{ height: cardHeight }} />
+          ))}
+        </div>
+      )}
+
+      {caption && (
+        <p
+          className="mt-3 text-center"
+          style={{ color: design?.labelColor, fontSize: design?.labelSize ? `${design.labelSize}px` : undefined }}
+        >
+          {design?.labelText}
+        </p>
+      )}
     </div>
   )
 }

@@ -108,11 +108,39 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Toasts follow the channel's design: where they sit, how long they stay, and
+ * how they look. `richColors` is dropped once a design is present, since it
+ * would otherwise override the chosen colours with sonner's own.
+ */
+function WidgetToaster() {
+  const { widgetConfig } = useWidgetConfigContext()
+  const design = widgetConfig.toastDesign
+
+  if (!design) return <Toaster position="top-center" richColors />
+
+  return (
+    <Toaster
+      position={design.position ?? 'bottom-center'}
+      offset={design.offset ?? 16}
+      duration={design.durationMs ?? 3000}
+      icons={design.showIcon === false ? { success: null, info: null, warning: null, error: null } : undefined}
+      toastOptions={{
+        style: {
+          ...(design.styles as React.CSSProperties),
+          ...(design.iconColor ? ({ '--pair-toast-icon': design.iconColor } as React.CSSProperties) : {}),
+        },
+        className: design.fullWidth ? 'pair-toast pair-toast-wide' : 'pair-toast',
+      }}
+    />
+  )
+}
+
 function WidgetLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <WidgetLayoutContent>{children}</WidgetLayoutContent>
-      <Toaster position="top-center" richColors />
+      <WidgetToaster />
     </>
   )
 }
