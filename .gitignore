@@ -6,3 +6,6 @@ dist/
 
 # Uploaded media
 data/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
