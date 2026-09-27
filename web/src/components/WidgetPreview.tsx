@@ -64,15 +64,9 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   // The channel's own font, pulled in so the preview renders it rather than a fallback.
   useWebFont((config as Any)?.styles?.fontFamily)
 
-  if (!config) {
-    return (
-      <div className="card-soft flex size-full items-center justify-center p-6 text-center text-[12.5px] text-faint/80">
-        {t('preview.none')}
-      </div>
-    )
-  }
-
-  const c = config as Any
+  // Derived before the empty state returns, so every hook below stays
+  // unconditional; `get` and the normalisers already tolerate a missing config.
+  const c = (config ?? {}) as Any
   const v2: Any = c.widget_v2_config ?? {}
   const brand: string = c.widget_color || '#4d98e2'
   const bg = get(v2, 'intro_screen.widgetBackground.background') || (dark ? '#0b0b0d' : '#ffffff')
@@ -144,6 +138,15 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
       el.removeEventListener('pointerleave', release)
     }
   }, [ql.layout, ql.autoScroll, ql.intervalMs, ql.loop, quickLinks.length])
+
+  if (!config) {
+    return (
+      <div className="card-soft flex size-full items-center justify-center p-6 text-center text-[12.5px] text-faint/80">
+        {t('preview.none')}
+      </div>
+    )
+  }
+
 
   // Prompt chips: the whole look, from the config. The legacy chipStyle blob is
   // layered on last so a config tuned by hand still wins.
