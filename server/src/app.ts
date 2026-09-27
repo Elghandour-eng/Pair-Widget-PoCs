@@ -86,7 +86,31 @@ export function createApp() {
   if (env.WIDGET_SDK_DIST) {
     const sdkDist = path.resolve(env.WIDGET_SDK_DIST)
     if (existsSync(sdkDist)) {
-      app.use('/sdk', publicCors, express.static(sdkDist, { maxAge: '5m' }))
+      // The widget is a separate app that runs in an iframe on any site, and it
+      // has its own inline bootstrap. The dashboard's policy — script-src 'self'
+      // with no inline — is the wrong one for it and blocks it outright, so
+      // these responses carry a policy of their own.
+      app.use(
+        '/sdk',
+        publicCors,
+        (_req, res, next) => {
+          res.setHeader(
+            'Content-Security-Policy',
+            [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              'font-src https://fonts.gstatic.com data: *',
+              'img-src * data: blob:',
+              'media-src * data: blob:',
+              'connect-src *',
+              'frame-ancestors *',
+            ].join('; '),
+          )
+          next()
+        },
+        express.static(sdkDist, { maxAge: '5m' }),
+      )
       logger.info({ sdkDist }, 'serving a local widget SDK at /sdk')
     } else {
       logger.warn({ sdkDist }, 'WIDGET_SDK_DIST is set but does not exist; using the hosted SDK')
