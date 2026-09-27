@@ -84,7 +84,15 @@ export function createApp() {
   const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist')
   if (existsSync(webDist)) {
     app.use(express.static(webDist, { index: false, maxAge: '1y', immutable: true, setHeaders: (res, p) => { if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache') } }))
-    app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(webDist, 'index.html'), { headers: { 'Cache-Control': 'no-cache' } }))
+    // The SPA fallback answers routes, not files. A build asset that is not on
+    // disk has to 404: answering it with index.html hands the browser HTML
+    // where it asked for JavaScript, which is what turns a stale chunk in an
+    // already-open tab into an unexplained "failed to load" instead of a
+    // straight 404 the app can recover from.
+    app.get(/^(?!\/api\/).*/, (req, res, next) => {
+      if (req.path.startsWith('/assets/') || path.extname(req.path)) return next()
+      res.sendFile(path.join(webDist, 'index.html'), { headers: { 'Cache-Control': 'no-cache' } })
+    })
     logger.info({ webDist }, 'serving dashboard static files')
   }
 
