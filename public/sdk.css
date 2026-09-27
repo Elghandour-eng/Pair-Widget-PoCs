@@ -377,12 +377,14 @@
 /* ========== WIDGET HOLDER (PANEL) ========== */
 .pair-ai-widget-holder {
   position: fixed;
-  bottom: 104px;
-  width: 400px;
-  height: calc(100vh - 104px - 20px);
-  max-height: 700px;
-  min-height: 250px;
-  border-radius: 16px;
+  /* Sized by custom properties so a channel can set the panel's dimensions.
+     The fallbacks are the sizes this used to be hardcoded to. */
+  bottom: var(--pair-panel-bottom, 104px);
+  width: var(--pair-panel-width, 400px);
+  height: var(--pair-panel-height, calc(100vh - var(--pair-panel-bottom, 104px) - 20px));
+  max-height: var(--pair-panel-max-height, 700px);
+  min-height: var(--pair-panel-min-height, 250px);
+  border-radius: var(--pair-panel-radius, 16px);
   overflow: hidden;
   box-shadow: 0 5px 40px rgba(0, 0, 0, 0.16);
   z-index: 2147483000;
@@ -396,9 +398,11 @@
 
 @media (min-width: 668px) {
   .pair-ai-widget-holder.pair-ai-widget-holder--auto-open {
-    bottom: 16px;
-    height: calc(100vh - 32px);
-    max-height: none;
+    bottom: var(--pair-panel-bottom, 16px);
+    height: var(--pair-panel-height, calc(100vh - 32px));
+    /* Previously `none`, which is what made an auto-opened panel run the full
+       height of a tall browser window. The cap is still a channel's to raise. */
+    max-height: var(--pair-panel-max-height, 700px);
   }
 }
 

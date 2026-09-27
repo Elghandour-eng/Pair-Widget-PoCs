@@ -1,4 +1,10 @@
-import type { ChatInputDesignDto, LauncherDesignDto, LoadingDesignDto, ToastDesignDto } from './widget-config-dto'
+import type {
+  ChatInputDesignDto,
+  LauncherDesignDto,
+  LoadingDesignDto,
+  QuickLinksDesignDto,
+  ToastDesignDto,
+} from './widget-config-dto'
 import type { CSSProperties } from 'react'
 
 export interface HeaderConfig {
@@ -110,6 +116,9 @@ export interface QuickLinksConfig {
   links: QuickLinkData[]
   showTitle?: boolean
   showSubtitle?: boolean
+  subtitleStyle?: CSSProperties
+  /** Layout, auto-scroll and image sizing from the studio. */
+  design?: QuickLinksDesignDto
 }
 
 export interface QuickLinkData {
@@ -134,9 +143,13 @@ export interface TrendingPromptsConfig {
   // TODO: update this when BE supports it
   showTitle?: boolean
   carouselLoop?: boolean
+  /** Size and colour for drawn chip glyphs. */
+  iconStyle?: { size?: number; color?: string }
 }
 
 export interface TrendingPromptData {
+  /** A drawn glyph's name, when the chip has no uploaded image. */
+  icon?: string
   id: string
   text: string
   iconUrl?: string

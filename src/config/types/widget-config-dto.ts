@@ -176,6 +176,8 @@ export type QuickLinkPosition = 'under_welcome' | 'above_welcome'
 export interface QuickLinkDisplaySettings {
   position: QuickLinkPosition
   carouselLoop: boolean
+  showTitle?: boolean
+  showSubtitle?: boolean
 }
 
 export interface QuickLinkCard {
@@ -189,6 +191,8 @@ export interface QuickLinkCard {
 }
 
 export interface QuickLinks {
+  design?: QuickLinksDesignDto
+  subtitleStyle?: CSSProperties
   cardStyle: CSSProperties
   textStyle: CSSProperties
   quickLinkCards: QuickLinkCard[]
@@ -203,6 +207,7 @@ export interface QuickLinks {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface PromptChip {
+  icon?: string
   text: string
   iconId?: string
   iconUrl?: string
@@ -218,7 +223,28 @@ export interface TrendingPromptDisplaySettings {
   carouselLoop?: boolean
 }
 
+/** The studio's compiled quick-link design; the card surface arrives in `cardStyle`. */
+export interface QuickLinksDesignDto {
+  layout?: 'carousel' | 'grid' | 'stack'
+  autoScroll?: boolean
+  intervalMs?: number
+  loop?: boolean
+  gap?: number
+  cardWidth?: number
+  showImage?: boolean
+  imageHeight?: number
+  imageFit?: 'cover' | 'contain'
+  imageRadius?: number
+}
+
+/** The studio's compiled prompt-chip design; the surface arrives in `chipStyle`. */
+export interface PromptsDesignDto {
+  iconSize?: number
+  iconColor?: string
+}
+
 export interface TrendingPrompts {
+  design?: PromptsDesignDto
   chipStyle: CSSProperties
   textStyle: CSSProperties
   promptChips: PromptChip[]

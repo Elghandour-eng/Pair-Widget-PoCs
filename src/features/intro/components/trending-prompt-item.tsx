@@ -1,10 +1,38 @@
 import type { CSSProperties } from 'react'
 
-import { TrendingUp } from 'lucide-react'
+import {
+  CircleHelp,
+  Clapperboard,
+  Phone,
+  Popcorn,
+  Search,
+  Sparkles,
+  Star,
+  Ticket,
+  TrendingUp,
+  Utensils,
+} from 'lucide-react'
 
 import { Spinner } from '@/components/ui/spinner'
 import type { TrendingPromptData } from '@/config/types/widget-config'
 import { cn } from '@/lib/utils'
+
+/**
+ * The glyphs a prompt can carry, by the name the studio stores. An uploaded
+ * image still wins; this is what a named icon resolves to, so choosing one in
+ * the builder does not mean uploading a file first.
+ */
+const PROMPT_GLYPHS = {
+  film: Clapperboard,
+  food: Utensils,
+  ticket: Ticket,
+  popcorn: Popcorn,
+  phone: Phone,
+  help: CircleHelp,
+  search: Search,
+  star: Star,
+  spark: Sparkles,
+} as const
 
 interface TrendingPromptItemProps {
   prompt: TrendingPromptData
@@ -15,6 +43,8 @@ interface TrendingPromptItemProps {
   disabled?: boolean
   isLoading?: boolean
   isCardLayout?: boolean
+  /** Size and colour for a drawn glyph; an uploaded image only takes the size. */
+  iconStyle?: { size?: number; color?: string }
 }
 
 export function TrendingPromptItem({
@@ -26,8 +56,11 @@ export function TrendingPromptItem({
   disabled,
   isLoading,
   isCardLayout,
+  iconStyle,
 }: TrendingPromptItemProps) {
   const isColumn = isCardLayout ?? chipStyles?.flexDirection === 'column'
+  const Glyph = PROMPT_GLYPHS[prompt.icon as keyof typeof PROMPT_GLYPHS]
+  const iconSize = iconStyle?.size ?? 24
 
   return (
     <button
@@ -44,9 +77,16 @@ export function TrendingPromptItem({
       ) : (
         showIcon &&
         (prompt.iconUrl ? (
-          <img src={prompt.iconUrl} alt={prompt.text} className="size-6 object-contain" />
+          <img
+            src={prompt.iconUrl}
+            alt={prompt.text}
+            className="object-contain"
+            style={{ width: iconSize, height: iconSize }}
+          />
+        ) : Glyph ? (
+          <Glyph size={iconSize} style={{ color: iconStyle?.color }} />
         ) : (
-          <TrendingUp className="size-6" size={24} />
+          <TrendingUp size={iconSize} style={{ color: iconStyle?.color }} />
         ))
       )}
       <span

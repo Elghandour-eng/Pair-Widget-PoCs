@@ -19,14 +19,20 @@ export function QuickLinksList() {
       return orderA - orderB
     })
 
-  // Carousel is active when layout is NOT column (i.e. flexDirection !== 'column')
-  const isCarousel = quickLinksConfig.cardStyles?.flexDirection !== 'column'
+  // The studio names the layout outright; without one, a column card style is
+  // still how a stacked list used to be expressed.
+  const design = quickLinksConfig.design
+  const isCarousel = design ? design.layout === 'carousel' : quickLinksConfig.cardStyles?.flexDirection !== 'column'
 
   const { containerRef, emblaRef, basisPercentage } = useCarousel({
     itemCount: sortedLinks.length,
     active: isCarousel,
-    loop: quickLinksConfig.carouselLoop,
-    autoplay: quickLinksConfig.carouselLoop,
+    loop: design?.loop ?? quickLinksConfig.carouselLoop,
+    // Auto-scroll is its own choice now, rather than riding on looping.
+    autoplay: design ? design.autoScroll === true : quickLinksConfig.carouselLoop,
+    autoplayInterval: design?.intervalMs,
+    minCardWidth: design?.cardWidth,
+    gap: design?.gap,
   })
 
   if (sortedLinks.length === 0) {

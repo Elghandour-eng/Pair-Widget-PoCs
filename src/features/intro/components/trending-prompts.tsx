@@ -19,7 +19,7 @@ export function TrendingPrompts() {
     return null
   }
 
-  const { showIcon, chipStyles, textStyle, prompts, titleStyle } = config
+  const { showIcon, chipStyles, textStyle, prompts, titleStyle, iconStyle } = config
   const title = config.title ?? 'Trending prompts'
 
   const isPending = isConversationsLoading || isSendPending
@@ -69,6 +69,7 @@ export function TrendingPrompts() {
                   style={{ flex: `0 0 ${basisPercentage}%` }}
                 >
                   <TrendingPromptItem
+                    iconStyle={iconStyle}
                     prompt={prompt}
                     showIcon={showIcon}
                     chipStyles={chipStyles}
@@ -87,6 +88,7 @@ export function TrendingPrompts() {
             {prompts.map((prompt) => (
               <li key={prompt.id}>
                 <TrendingPromptItem
+                  iconStyle={iconStyle}
                   prompt={prompt}
                   showIcon={showIcon}
                   chipStyles={chipStyles}

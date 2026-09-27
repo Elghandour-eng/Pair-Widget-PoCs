@@ -190,8 +190,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         }
       : undefined,
     textStyle: rawQL.textStyle,
-    showTitle: rawQL.showTitle ?? true,
-    showSubtitle: rawQL.showSubtitle ?? true,
+    subtitleStyle: rawQL.subtitleStyle,
+    design: rawQL.design,
+    showTitle: rawQL.displaySettings?.showTitle ?? rawQL.showTitle ?? true,
+    showSubtitle: rawQL.displaySettings?.showSubtitle ?? rawQL.showSubtitle ?? true,
     links: (rawQL.quickLinkCards ?? []).map((card, idx) => ({
       id: card.id,
       text: card.title,
@@ -218,9 +220,13 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         layout: v2Trending.displaySettings?.layout ?? 'chip',
         // TODO: This carouselLoop property is mocked for now. Sync with BE when they support carouselLoop in displaySettings.
         carouselLoop: v2Trending.displaySettings?.carouselLoop ?? false,
+        iconStyle: v2Trending.design
+          ? { size: v2Trending.design.iconSize, color: v2Trending.design.iconColor }
+          : undefined,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
           id: `trending-prompt-${idx}`,
           text: chip.text,
+          icon: chip.icon,
           iconUrl: chip.iconUrl,
         })),
       }

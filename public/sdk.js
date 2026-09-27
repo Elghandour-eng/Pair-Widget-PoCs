@@ -170,6 +170,30 @@
     }
   }
 
+  // Panel size. sdk.css reads these custom properties and falls back to the
+  // sizes the panel used to be fixed at, so a host that sets nothing is
+  // unaffected. A bare number is taken as pixels.
+  function applyPanelSize(holder) {
+    var panel = config.panel
+    if (!holder || !panel) return
+    var px = function (v) {
+      return typeof v === 'number' ? v + 'px' : v
+    }
+    var map = {
+      '--pair-panel-width': panel.width,
+      '--pair-panel-height': panel.height,
+      '--pair-panel-max-height': panel.maxHeight,
+      '--pair-panel-min-height': panel.minHeight,
+      '--pair-panel-bottom': panel.bottom,
+      '--pair-panel-radius': panel.radius,
+    }
+    for (var name in map) {
+      if (map[name] !== undefined && map[name] !== null && map[name] !== '') {
+        holder.style.setProperty(name, px(map[name]))
+      }
+    }
+  }
+
   // Create widget holder with iframe
   function createWidgetHolder() {
     if (document.getElementById(WIDGET_HOLDER_ID)) return
@@ -183,6 +207,7 @@
       holderClass += ' pair-ai-widget-holder--auto-open'
     }
     widgetHolder.className = holderClass
+    applyPanelSize(widgetHolder)
 
     // Hide immediately with inline styles (before CSS loads) to prevent flash
     widgetHolder.style.opacity = '0'
