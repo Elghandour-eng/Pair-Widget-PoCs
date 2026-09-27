@@ -9,3 +9,6 @@ count.txt
 .tanstack
 .wrangler
 !.vscode/settings.json
+
+# A build made with --base=/sdk/ for the studio to serve locally.
+dist-local
