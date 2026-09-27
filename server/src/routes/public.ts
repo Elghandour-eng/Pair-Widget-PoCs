@@ -63,6 +63,28 @@ const heroOf = (config: Record<string, any>) => {
 }
 
 /**
+ * Merges a compiled design over the styles already in a config.
+ *
+ * The old blocks carry shorthands (`border`, `background`) while the compiled
+ * design writes longhands (`borderColor`, `backgroundColor`). Both would end up
+ * in the same style object, and which one wins then depends on key order —
+ * so the shorthand a design has superseded is dropped outright.
+ */
+function mergeStyles(existing: Record<string, any> | undefined, compiled: Record<string, any>): Record<string, any> {
+  const out = { ...(existing ?? {}), ...compiled }
+  if ('borderColor' in compiled || 'borderWidth' in compiled || 'borderStyle' in compiled) delete out.border
+  if ('background' in compiled) delete out.backgroundColor
+  if ('backgroundColor' in compiled) delete out.background
+  if ('padding' in compiled) {
+    delete out.paddingTop
+    delete out.paddingRight
+    delete out.paddingBottom
+    delete out.paddingLeft
+  }
+  return out
+}
+
+/**
  * Compiles the chat input and launcher designs into the fields the widget
  * reads.
  *
@@ -94,10 +116,10 @@ function materializeChrome<T>(config: T): T {
     // The design is what the builder edits, so it wins over the generated
     // `styles` block. Keys the design does not set (a theme's own additions)
     // are kept, so nothing else in the config is lost.
-    ci.styles = { ...(ci.styles ?? {}), ...inputCss(design, brand) }
+    ci.styles = mergeStyles(ci.styles, inputCss(design, brand))
     ci.placeholderText = {
       ...(ci.placeholderText ?? {}),
-      styles: { ...(ci.placeholderText?.styles ?? {}), ...placeholderCss(design, brand) },
+      styles: mergeStyles(ci.placeholderText?.styles, placeholderCss(design, brand)),
     }
     // The builder edits the design, so it is what decides the glyph too.
     const icon = design.send.icon || ci.sendButtonIcon?.icon
@@ -110,7 +132,7 @@ function materializeChrome<T>(config: T): T {
       // keeps the button pointing the right way there; a build that reads
       // `design` uses `icon` above and ignores this.
       variant: /-up$/.test(String(icon)) ? 'arrow-up' : 'send',
-      styles: { ...(ci.sendButtonIcon?.styles ?? {}), ...sendCss(design, brand) },
+      styles: mergeStyles(ci.sendButtonIcon?.styles, sendCss(design, brand)),
     }
     // A build that ships only two glyphs still draws the channel's own mark: it
     // arrives as a background image on the send button, with the built-in glyph
@@ -145,16 +167,16 @@ function materializeChrome<T>(config: T): T {
     const ls = next.widget_v2_config.intro_screen.loadingState
     // The widget switches on `type`, and reads the rest off custom properties.
     ls.type = design.type === 'spinner' || design.type === 'dots' ? 'spinner' : 'shimmer'
-    ls.styles = { ...(ls.styles ?? {}), ...loadingCss(design, brand) }
+    ls.styles = mergeStyles(ls.styles, loadingCss(design, brand))
     ls.design = design
   }
 
   if (hasCards) {
     const design = normalizeQuickLinks(next.widget_v2_config.quick_links.design)
     const ql = next.widget_v2_config.quick_links
-    ql.cardStyle = { ...(ql.cardStyle ?? {}), ...cardCss(design, brand) }
-    ql.textStyle = { ...(ql.textStyle ?? {}), ...cardTextCss(design, brand) }
-    ql.subtitleStyle = { ...(ql.subtitleStyle ?? {}), ...cardSubtitleCss(design, brand) }
+    ql.cardStyle = mergeStyles(ql.cardStyle, cardCss(design, brand))
+    ql.textStyle = mergeStyles(ql.textStyle, cardTextCss(design, brand))
+    ql.subtitleStyle = mergeStyles(ql.subtitleStyle, cardSubtitleCss(design, brand))
     ql.displaySettings = {
       ...(ql.displaySettings ?? {}),
       showTitle: design.showTitle,
@@ -169,7 +191,7 @@ function materializeChrome<T>(config: T): T {
     const design = normalizePrompts(next.widget_v2_config.trending_prompts.design)
     const tp = next.widget_v2_config.trending_prompts
     const chip = chipCss(design, brand)
-    tp.chipStyle = { ...(tp.chipStyle ?? {}), ...chip }
+    tp.chipStyle = mergeStyles(tp.chipStyle, chip)
     // The widget styles a chip's text separately from its surface.
     tp.textStyle = {
       ...(tp.textStyle ?? {}),
@@ -210,7 +232,7 @@ function materializeChrome<T>(config: T): T {
 
   if (hasLauncher) {
     const design = normalizeLauncher(next.launcher_design)
-    next.launcher_styles = { ...(next.launcher_styles ?? {}), ...launcherCss(design, brand) }
+    next.launcher_styles = mergeStyles(next.launcher_styles, launcherCss(design, brand))
     next.launcher_style = design.type
     next.launcher_position = design.position
     if (design.label.text.trim()) next.launcher_title = design.label.text

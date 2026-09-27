@@ -12,6 +12,10 @@ const schema = z.object({
   PAIR_API_BASE_URL: z.string().url().default('https://system.trypair.ai'),
   PAIR_API_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
   WIDGET_SDK_BASE_URL: z.string().url().default('https://widgets-test.trypair.ai'),
+  // A local build of the widget SDK to serve at /sdk. Set it and the studio
+  // hands out its own origin as the SDK base, so a design change lands without
+  // waiting for the hosted SDK to be redeployed. Blank = use the hosted one.
+  WIDGET_SDK_DIST: z.string().default(''),
   // Optional: when set, system logs are also written to MongoDB.
   MONGODB_URI: z.string().optional(),
   MONGODB_DB: z.string().default('pair_widget_studio'),

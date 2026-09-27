@@ -13,6 +13,13 @@ import {
   listWidgets, resolveConfig, saveStoredConfig, sourceSchema, updateWidget,
 } from '../services/widgets.js'
 
+/**
+ * Where the embed snippet should load the SDK from: this origin when a local
+ * build is being served, the hosted SDK otherwise.
+ */
+const sdkBaseUrl = (req: { protocol: string; get: (h: string) => string | undefined }): string =>
+  env.WIDGET_SDK_DIST ? `${req.protocol}://${req.get('host')}/sdk` : env.WIDGET_SDK_BASE_URL
+
 export const widgetsRouter = Router()
 widgetsRouter.use(requireAuth, loadWidgetAccess)
 
@@ -80,7 +87,7 @@ widgetsRouter.get(
     const [widget, storedConfig, audit] = await Promise.all([
       getWidget(req.params.widgetId), getStoredConfig(req.params.widgetId), getAudit(req.params.widgetId),
     ])
-    res.json({ widget, storedConfig, hasStoredConfig: !!storedConfig, audit, sdkBaseUrl: env.WIDGET_SDK_BASE_URL })
+    res.json({ widget, storedConfig, hasStoredConfig: !!storedConfig, audit, sdkBaseUrl: sdkBaseUrl(req) })
   }),
 )
 

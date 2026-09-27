@@ -80,6 +80,19 @@ export function createApp() {
   app.use('/api/logs', dashboardCors, logsRouter)
   app.use('/api/uploads', dashboardCors, uploadsRouter)
 
+  // Serve a local build of the widget SDK, when one is configured. The embed
+  // snippet can then point at this origin instead of the hosted SDK, which is
+  // the only way a change to the widget itself is visible before it ships.
+  if (env.WIDGET_SDK_DIST) {
+    const sdkDist = path.resolve(env.WIDGET_SDK_DIST)
+    if (existsSync(sdkDist)) {
+      app.use('/sdk', publicCors, express.static(sdkDist, { maxAge: '5m' }))
+      logger.info({ sdkDist }, 'serving a local widget SDK at /sdk')
+    } else {
+      logger.warn({ sdkDist }, 'WIDGET_SDK_DIST is set but does not exist; using the hosted SDK')
+    }
+  }
+
   // Serve the built dashboard (web/dist) from the same origin in production.
   const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist')
   if (existsSync(webDist)) {
