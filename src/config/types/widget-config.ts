@@ -146,6 +146,26 @@ export interface IntroHeroImage {
   containerStyles?: CSSProperties
 }
 
+/** Resolved carousel dots: colours are real colours by this point. */
+export interface IntroHeroDots {
+  show: boolean
+  shape: 'pill' | 'dot' | 'bar'
+  size: number
+  activeWidth: number
+  gap: number
+  activeColor: string
+  inactiveColor: string
+  inactiveOpacity: number
+  position: 'below' | 'overlay'
+}
+
+export interface IntroHeroCarousel {
+  autoplay: boolean
+  intervalMs: number
+  transition: 'fade' | 'slide'
+  dots: IntroHeroDots
+}
+
 export interface WidgetBackgroundConfig {
   type: 'color' | 'gradient'
   background: string
@@ -165,6 +185,9 @@ export interface IntroScreenConfig {
   welcomeSubtitle: string
   welcomeSubtitleStyles?: CSSProperties
   heroImage?: IntroHeroImage
+  /** Every hero slide, in order. One entry means no carousel and no dots. */
+  heroSlides?: string[]
+  heroCarousel?: IntroHeroCarousel
   widgetBackground?: WidgetBackgroundConfig
   loadingState?: LoadingStateConfig
 }

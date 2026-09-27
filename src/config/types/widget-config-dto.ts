@@ -89,12 +89,43 @@ export interface HeroImage {
   media_ulid?: string
 }
 
+/** A carousel slide: an uploaded image, or a design the studio draws itself. */
+export interface HeroSlide {
+  type?: 'image' | 'design'
+  url?: string | null
+  /** Opaque here: a design is rendered upstream and reaches the widget as `url`. */
+  design?: unknown
+}
+
+export interface HeroDotsConfig {
+  show?: boolean
+  shape?: 'pill' | 'dot' | 'bar'
+  size?: number
+  activeWidth?: number
+  gap?: number
+  /** A hex value, or `#brand` to follow the widget colour. */
+  activeColor?: string
+  inactiveColor?: string
+  inactiveOpacity?: number
+  position?: 'below' | 'overlay'
+}
+
+export interface HeroCarouselConfig {
+  autoplay?: boolean
+  intervalMs?: number
+  transition?: 'fade' | 'slide'
+  dots?: HeroDotsConfig
+}
+
 export interface HeroSection {
   enabled: {
     value: boolean
     styles: CSSProperties
   }
   heroImage: HeroImage
+  /** The full slide list. `heroImage` stays as the single-image fallback. */
+  heroImages?: HeroSlide[]
+  carousel?: HeroCarouselConfig
 }
 
 export interface LoadingState {

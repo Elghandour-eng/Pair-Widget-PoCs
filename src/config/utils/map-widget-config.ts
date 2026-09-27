@@ -8,8 +8,53 @@ import type {
   TrendingPromptsConfig,
   WidgetConfig,
 } from '@/config/types/widget-config'
-import type { WidgetConfigDto } from '../types/widget-config-dto'
+import type { HeroSection, WidgetConfigDto } from '../types/widget-config-dto'
 import { formatWelcomeTitle } from './format-welcome-title'
+
+/** `#brand` in a dot colour follows the widget colour; anything else is taken as given. */
+function resolveDotColor(value: string | undefined, fallback: string, brand: string | undefined): string {
+  if (!value) return fallback
+  return value === '#brand' ? (brand ?? fallback) : value
+}
+
+const clamp = (value: number | undefined, fallback: number, min: number, max: number): number =>
+  typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
+
+/**
+ * The hero's slide list and how its carousel behaves.
+ *
+ * Designed slides are drawn upstream and arrive as image URLs, so the widget
+ * only ever deals in URLs here. A hero with one slide carries no carousel.
+ */
+function mapHero(section: HeroSection | undefined, brand: string | undefined) {
+  const slides = (section?.heroImages ?? [])
+    .map((slide) => (typeof slide === 'string' ? slide : slide?.url))
+    .filter((url): url is string => typeof url === 'string' && url.trim() !== '')
+  const single = section?.heroImage?.url
+  const all = slides.length ? slides : typeof single === 'string' && single.trim() ? [single] : []
+
+  const raw = section?.carousel
+  const dots = raw?.dots
+  return {
+    slides: all,
+    carousel: {
+      autoplay: raw?.autoplay !== false,
+      intervalMs: clamp(raw?.intervalMs, 3500, 800, 30000),
+      transition: raw?.transition === 'slide' ? ('slide' as const) : ('fade' as const),
+      dots: {
+        show: dots?.show !== false,
+        shape: dots?.shape === 'dot' || dots?.shape === 'bar' ? dots.shape : ('pill' as const),
+        size: clamp(dots?.size, 5, 2, 20),
+        activeWidth: clamp(dots?.activeWidth, 16, 2, 60),
+        gap: clamp(dots?.gap, 6, 0, 24),
+        activeColor: resolveDotColor(dots?.activeColor, brand ?? '#E30613', brand),
+        inactiveColor: resolveDotColor(dots?.inactiveColor, '#A1A1A6', brand),
+        inactiveOpacity: clamp(dots?.inactiveOpacity, 0.35, 0, 1),
+        position: dots?.position === 'overlay' ? ('overlay' as const) : ('below' as const),
+      },
+    },
+  }
+}
 
 /**
  * Check if widget is running in SDK mode (embedded via SDK)
@@ -94,6 +139,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   // intro screen
   const rawIntro = apiResponse.widget_v2_config?.intro_screen
+  const hero = mapHero(rawIntro?.heroSection, apiResponse.widget_color)
   const introScreen: IntroScreenConfig | undefined = rawIntro
     ? {
         show: rawIntro.showIntroScreen.value,
@@ -113,6 +159,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
                 containerStyles: rawIntro.heroSection.enabled.styles,
               }
             : undefined,
+        heroSlides: rawIntro.heroSection?.enabled?.value ? hero.slides : undefined,
+        heroCarousel: rawIntro.heroSection?.enabled?.value ? hero.carousel : undefined,
         widgetBackground: rawIntro.widgetBackground
           ? {
               type: rawIntro.widgetBackground.type,

@@ -1,5 +1,6 @@
 import { WidgetContent } from '@/components/widget-content'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { HeroCarousel } from '@/features/intro/components/hero-carousel'
 import { QuickLinksList } from '@/features/intro/components/quick-links-list'
 import { TrendingPrompts } from '@/features/intro/components/trending-prompts'
 import { cn } from '@/lib/utils'
@@ -14,18 +15,23 @@ export function IntroContent() {
   const heroImageStyles = introConfig?.heroImage?.styles as Record<string, unknown> | undefined
   const hasExplicitHeight = !!(heroImageStyles?.height || heroImageStyles?.maxHeight || heroImageStyles?.['max-height'])
 
-  const heroImage = introConfig?.heroImage && (
-    <div
-      className={cn('w-full', !hasQuickLinks && 'flex justify-center')}
-      style={introConfig.heroImage.containerStyles}
-    >
-      <img
-        src={introConfig.heroImage.url}
-        alt="Hero image"
-        className={cn(!hasExplicitHeight && 'max-h-31', 'w-full rounded object-cover', !hasQuickLinks && 'mx-auto')}
-        style={introConfig.heroImage.styles}
-      />
-    </div>
+  // The hero is a slide list. `heroImage` remains the single-slide fallback for
+  // configs written before the list existed.
+  const heroSlides = introConfig?.heroSlides?.length
+    ? introConfig.heroSlides
+    : introConfig?.heroImage
+      ? [introConfig.heroImage.url]
+      : []
+
+  const heroImage = heroSlides.length > 0 && introConfig?.heroCarousel && (
+    <HeroCarousel
+      slides={heroSlides}
+      carousel={introConfig.heroCarousel}
+      containerStyle={introConfig.heroImage?.containerStyles}
+      style={introConfig.heroImage?.styles}
+      className={cn(!hasExplicitHeight && 'max-h-31', !hasQuickLinks && 'mx-auto')}
+      centered={!hasQuickLinks}
+    />
   )
 
   const showQuickLinksAbove = hasQuickLinks && quickLinksConfig?.position === 'above_welcome'
