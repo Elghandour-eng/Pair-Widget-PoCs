@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { env } from '../config/env.js'
 import { badRequest } from '../lib/errors.js'
 import { addFeedback, logEvent } from '../lib/mongo.js'
-import { normalizeHeroSlides } from '../lib/heroDesign.js'
+import { normalizeHeroCarousel, normalizeHeroSlides } from '../lib/heroDesign.js'
 import { heroImageDataUri, renderHeroSvg, type HeroSvgSlide } from '../lib/heroSvg.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
 import { asyncHandler } from '../middleware/error.js'
@@ -54,19 +54,33 @@ const heroOf = (config: Record<string, any>) => {
  */
 function materializeHero<T>(config: T, origin: string, widgetId: string, lng?: string): T {
   const c = config as Record<string, any>
-  const { slides } = heroOf(c)
-  const needsDrawing = slides.some((s) => s.type === 'design')
-  if (!needsDrawing && slides.length < 2) return config
+  const { slides, carousel } = heroOf(c)
+  if (!slides.length) return config
   const next = structuredClone(c)
   const hs = next.widget_v2_config.intro_screen.heroSection
   const rtl = /^(ar|he|fa|ur)/i.test(one(next.locale) ?? 'en')
-  const q = new URLSearchParams({ widget: widgetId, dir: rtl ? 'rtl' : 'ltr' })
-  if (lng) q.set('lng', lng)
+  const dir = rtl ? 'rtl' : 'ltr'
+  const drawn = (params: Record<string, string>) => {
+    const q = new URLSearchParams({ widget: widgetId, dir, ...params })
+    if (lng) q.set('lng', lng)
+    return `${origin}/api/public/hero.svg?${q.toString()}`
+  }
+
+  // Every slide leaves as a URL: an upload keeps its own, a design becomes one
+  // that draws just that slide. An SDK reading the list therefore gets a real
+  // carousel, and the normalised carousel block tells it how to run it.
+  hs.heroImages = slides.map((slide, i) =>
+    slide.type === 'design' ? { url: drawn({ slide: String(i) }) } : { url: slide.url })
+  hs.carousel = normalizeHeroCarousel(carousel)
+
+  // `heroImage` stays the single-slide fallback: one image holding the whole
+  // list, for a build that does not read `heroImages`.
+  const single = slides.length === 1 && slides[0].type === 'image' ? slides[0].url : drawn({})
   hs.heroImage = {
     styles: { width: '100%', height: '220px', objectFit: 'cover', borderRadius: '20px' },
     position: 'top',
     ...(hs.heroImage ?? {}),
-    url: `${origin}/api/public/hero.svg?${q.toString()}`,
+    url: single,
   }
   return next as T
 }
@@ -81,7 +95,7 @@ function materializeHero<T>(config: T, origin: string, widgetId: string, lng?: s
 const svgCache = new Map<string, { etag: string; body: string }>()
 
 publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
-  const { widget, dir, lng } = req.query
+  const { widget, dir, lng, slide } = req.query
   if (typeof widget !== 'string') {
     res.status(400).json({ error: { code: 'bad_hero', message: 'A widget id is required' } })
     return
@@ -90,13 +104,19 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
   const language = lng === 'ar' || lng === 'en' ? lng : undefined
   const { config } = await resolveConfig(widget)
   const c = (language ? applyWidgetLanguage(config, language) : config) as Record<string, any>
-  const { slides, carousel } = heroOf(c)
+  const hero = heroOf(c)
+  // ?slide=<i> draws that one slide, which is what a carousel-aware SDK asks
+  // for; without it the whole list is baked into one crossfading image.
+  const only = typeof slide === 'string' ? Number(slide) : NaN
+  const picked = Number.isInteger(only) && only >= 0 && only < hero.slides.length
+  const slides = picked ? [hero.slides[only]] : hero.slides
+  const carousel = picked ? { autoplay: false } : hero.carousel
   // Keyed on the hero itself (plus brand and direction, which it is drawn with),
   // so an unrelated edit elsewhere in the config does not throw the render away.
   const revision = createHash('sha1')
     .update(JSON.stringify({ slides, carousel, brand: c.widget_color, locale: c.locale }))
     .digest('base64url')
-  const key = `${widget}|${revision}|${dir === 'rtl' || dir === 'ltr' ? dir : ''}`
+  const key = `${widget}|${revision}|${dir === 'rtl' || dir === 'ltr' ? dir : ''}|${picked ? only : 'all'}`
   let hit = svgCache.get(key)
 
   if (!hit) {

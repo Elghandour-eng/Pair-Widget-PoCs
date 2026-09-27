@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n'
 import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/lib/heroDesign'
 import { PairWordmark } from './brand'
 import { SendIcon, asSendIcon } from './sendIcons'
+import { useWebFont } from '@/lib/webfont'
 import { HeroCarousel } from './HeroCarousel'
 
 /**
@@ -48,6 +49,9 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
     return () => clearTimeout(id)
   }, [sent])
 
+  // The channel's own font, pulled in so the preview renders it rather than a fallback.
+  useWebFont((config as Any)?.styles?.fontFamily)
+
   if (!config) {
     return (
       <div className="card-soft flex size-full items-center justify-center p-6 text-center text-[12.5px] text-faint/80">
@@ -74,6 +78,10 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const placeholder = get(v2, 'chat_input.placeholderText.text') || t('preview.placeholder')
   const inputLayout = get(v2, 'chat_input.inputLayout.type') || 'floating_pill'
   const voice = get(v2, 'chat_input.inputActions.voiceMessages') !== false
+  const attach = get(v2, 'chat_input.inputActions.attachmentMenu') !== false
+  // Action icons default to the muted text colour; a channel can pin its own.
+  const actionColor = get(v2, 'chat_input.inputActions.iconColor')
+  const sendIcon = asSendIcon(get(v2, 'chat_input.sendButtonIcon.icon'))
   const poweredBy = c.powered_by_pair_ai !== false
 
   const locale: string = typeof c.locale === 'string' ? c.locale : 'en'
@@ -228,19 +236,22 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
             ...(get(v2, 'chat_input.styles') ?? {}),
           }}
         >
-          <span className="grid size-8 shrink-0 place-items-center rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
-            <Plus className="size-4" style={{ color: muted }} />
-          </span>
+          {attach && (
+            <span className="grid size-8 shrink-0 place-items-center rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
+              <Plus className="size-4" style={{ color: actionColor || muted }} />
+            </span>
+          )}
           {/* dir="auto" keeps the ellipsis and bidi punctuation on the reading side of the text itself. */}
           <span dir="auto" className="min-w-0 flex-1 truncate px-1 text-start text-[11.5px]" style={{ color: muted }}>{placeholder}</span>
-          {voice && <Mic className="size-4 shrink-0" style={{ color: muted }} />}
+          {voice && <Mic className="size-4 shrink-0" style={{ color: actionColor || muted }} />}
           {/* Same icon and color the real widget's send button uses */}
           <span
             className="flex size-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
             style={{ background: get(v2, 'chat_input.sendButtonIcon.styles.backgroundColor') || brand }}
           >
             <SendIcon
-              name={asSendIcon(get(v2, 'chat_input.sendButtonIcon.icon'))}
+              name={sendIcon}
+              url={get(v2, 'chat_input.sendButtonIcon.url')}
               className="size-3.5"
               style={{ color: get(v2, 'chat_input.sendButtonIcon.styles.iconColor') || '#ffffff' }}
             />

@@ -7,6 +7,7 @@ import { Link, useParams } from 'react-router-dom'
 import { MediaInput } from '@/components/MediaInput'
 import { Select } from '@/components/Select'
 import { SEND_ICONS, SendIcon, asSendIcon } from '@/components/sendIcons'
+import { FONT_PRESETS } from '@/lib/webfont'
 import { Disclosure, FitScale, Loading, SectionHead, Spinner } from '@/components/ui'
 import { api, type Widget, type WidgetConfig } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -443,6 +444,16 @@ function ThemePage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfi
           <Field label={t('form.name')} path="name" get={get} set={set} disabled={disabled} />
           <ColorField label={t('form.color')} path="widget_color" get={get} set={set} disabled={disabled} />
           <ColorField label={t('form.widgetBg')} path="widget_v2_config.intro_screen.widgetBackground.background" get={get} set={set} disabled={disabled} />
+          <div>
+            <label className="label">{t('builder.theme.fontPreset')}</label>
+            <Select
+              label={t('builder.theme.fontPreset')}
+              value={FONT_PRESETS.some((f) => f.value === get('styles.fontFamily')) ? get('styles.fontFamily') : 'custom'}
+              onChange={(v) => v !== 'custom' && set('styles.fontFamily', v)}
+              disabled={disabled}
+              options={[...FONT_PRESETS, { value: 'custom', label: t('builder.theme.fontCustom') }]}
+            />
+          </div>
           <Field label={t('form.fontFamily')} path="styles.fontFamily" get={get} set={set} disabled={disabled} placeholder="'Jost', Futura, sans-serif" />
         </div>
       </section>
@@ -965,6 +976,18 @@ function InputPage({ get, set, disabled }: PageProps) {
             />
           </div>
           <ColorField label={t('builder.input.sendBg')} path="widget_v2_config.chat_input.sendButtonIcon.styles.backgroundColor" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.input.sendFg')} path="widget_v2_config.chat_input.sendButtonIcon.styles.iconColor" get={get} set={set} disabled={disabled} />
+          {asSendIcon(get('widget_v2_config.chat_input.sendButtonIcon.icon')) === 'custom' && (
+            <div className="sm:col-span-2">
+              <MediaInput
+                label={t('builder.input.sendIcon.customImage')}
+                value={get('widget_v2_config.chat_input.sendButtonIcon.url') ?? ''}
+                onChange={(v) => set('widget_v2_config.chat_input.sendButtonIcon.url', v)}
+                disabled={disabled}
+              />
+            </div>
+          )}
+          <ColorField label={t('builder.input.actionColor')} path="widget_v2_config.chat_input.inputActions.iconColor" get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.input.fieldBg')} path="widget_v2_config.chat_input.styles.backgroundColor" get={get} set={set} disabled={disabled} />
           <Field label={t('builder.input.padding')} path="widget_v2_config.chat_input.styles.padding" get={get} set={set} disabled={disabled} placeholder="10px 16px" />
           <ToggleField label={t('form.voice')} path="widget_v2_config.chat_input.inputActions.voiceMessages" get={get} set={set} disabled={disabled} />
