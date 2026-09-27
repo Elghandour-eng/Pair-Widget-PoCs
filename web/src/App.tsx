@@ -16,21 +16,33 @@ function Guard({ role }: { role?: 'admin' | 'editor' }) {
   return <Outlet />
 }
 
-function ChunkErrorNotice() {
+function ChunkErrorNotice({ detail }: { detail?: string }) {
   const { t } = useI18n()
   return (
-    <div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
+    <div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 p-4 text-center">
       <p className="text-sm font-bold text-ink">{t('common.chunkError')}</p>
+      {/* The message itself, not just the generic line: a boundary that catches
+          every error and shows one sentence makes a real fault unreportable. */}
+      {detail && <p className="mono max-w-full overflow-auto text-[11px] leading-snug text-alert">{detail}</p>}
       <button className="btn-ghost btn-sm" onClick={() => location.reload()}>{t('common.reload')}</button>
     </div>
   )
 }
 
-/** A page chunk can fail to download (offline, or a stale deploy); offer a reload instead of a blank screen. */
-class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() { return { failed: true } }
-  render() { return this.state.failed ? <ChunkErrorNotice /> : this.props.children }
+/**
+ * Catches a page-level failure — a chunk that would not download after a
+ * deploy, or a fault in the page itself — and offers a reload instead of a
+ * blank screen. The error is logged and shown, so it can be acted on.
+ */
+class ChunkBoundary extends Component<{ children: ReactNode }, { detail?: string; failed: boolean }> {
+  state: { detail?: string; failed: boolean } = { failed: false }
+  static getDerivedStateFromError(error: unknown) {
+    return { failed: true, detail: error instanceof Error ? `${error.name}: ${error.message}` : String(error) }
+  }
+  componentDidCatch(error: unknown, info: unknown) {
+    console.error('[pair-studio] page failed', error, info)
+  }
+  render() { return this.state.failed ? <ChunkErrorNotice detail={this.state.detail} /> : this.props.children }
 }
 
 function Page({ children }: { children: ReactNode }) {
