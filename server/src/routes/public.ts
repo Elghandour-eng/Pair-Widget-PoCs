@@ -523,11 +523,15 @@ publicRouter.get(
     // A relative base is this origin, which 'self' already covers.
     const localSdk = sdkBase.startsWith('/')
     const sdkOrigin = localSdk ? '' : new URL(sdkBase).origin
-    const selfOrigin = `${req.protocol}://${req.get('host')}`
+    // A path, not an absolute URL: this server sits behind a proxy that rewrites
+    // the Host header, so an origin derived from the request would point the
+    // visitor's browser at the proxy's target — `localhost` — instead of here.
+    // The page resolves it against its own origin at runtime.
+    const bePath = ''
     // View overrides: the config is served already translated and/or re-themed.
     const wlang = one(req.query.wlang) === 'ar' ? 'ar' : one(req.query.wlang) === 'en' ? 'en' : ''
     const wtheme = one(req.query.wtheme) === 'dark' ? 'dark' : one(req.query.wtheme) === 'light' ? 'light' : ''
-    const beBase = wlang || wtheme ? `${selfOrigin}/pv/${wlang || 'x'}/${wtheme || 'x'}` : selfOrigin
+    const beBase = wlang || wtheme ? `/pv/${wlang || 'x'}/${wtheme || 'x'}` : bePath
 
     res.setHeader(
       'Content-Security-Policy',
@@ -535,7 +539,7 @@ publicRouter.get(
         "default-src 'self'",
         `script-src 'self' 'unsafe-inline' ${sdkOrigin}`,
         `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${sdkOrigin}`,
-        `font-src https://fonts.gstatic.com data: ${sdkOrigin}`,
+        `font-src 'self' https://fonts.gstatic.com data: ${sdkOrigin}`,
         'img-src * data: blob:',
         'media-src * data: blob:',
         `connect-src 'self' ${sdkOrigin} https://system.trypair.ai ${localSdk ? '' : `wss://${new URL(sdkBase).host}`}`,
@@ -574,7 +578,7 @@ publicRouter.get(
     /** The stock Pair embed snippet — what a customer pastes into their own site. */
     const sdkSnippet = `
 <script>
-  window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, beBaseUrl: ${js(beBase)} }
+  window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, beBaseUrl: location.origin + ${js(beBase)} }
   ;(function (d, t) {
     var BASE_URL = ${localSdk ? `location.origin + ${js(sdkBase)}` : js(sdkBase)}
     var g = d.createElement(t), s = d.getElementsByTagName(t)[0]
@@ -1004,8 +1008,8 @@ ${sdkSnippet}
 
 <script>
   var WIDGET_ID = ${js(widget.widgetId)}
-  var SDK_BASE = ${js(sdkBase)}
-  var BE_BASE = ${js(beBase)}
+  var SDK_BASE = ${localSdk ? `location.origin + ${js(sdkBase)}` : js(sdkBase)}
+  var BE_BASE = location.origin + ${js(beBase)}
   var SETTINGS = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)} }
   var WLANG = ${js(wlang)}
   var WTHEME = ${js(wtheme)}
