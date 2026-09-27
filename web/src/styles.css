@@ -74,6 +74,13 @@
 @keyframes caret { 0%, 45% { opacity: 1 } 50%, 100% { opacity: 0 } }
 @keyframes chip-in { 0%, 100% { opacity: 0.35; transform: translateY(2px) } 12%, 60% { opacity: 1; transform: none } }
 @keyframes tick { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes pv-sweep { from { background-position: -110% 0 } to { background-position: 210% 0 } }
+@keyframes pv-skel-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
+@keyframes pv-spin { to { transform: rotate(360deg) } }
+@keyframes pv-slide { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: none } }
+@keyframes pv-pulse { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.07) } }
+@keyframes pv-bounce { 0%, 60%, 100% { transform: translateY(0) } 30% { transform: translateY(-7px) } }
+@keyframes pv-wiggle { 0%, 88%, 100% { transform: rotate(0) } 92% { transform: rotate(-9deg) } 96% { transform: rotate(9deg) } }
 @keyframes screen-in { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.985) } to { opacity: 1; transform: none } }
 @keyframes screen-out { from { opacity: 1; transform: none } to { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.985) } }
 
@@ -134,6 +141,40 @@
      drifting pattern is the only thing on this screen with a per-frame cost,
      and only the slide on show should be paying it. */
   .hero-slide[data-active='false'] svg, .hero-slide[data-active='false'] svg * { animation-play-state: paused }
+
+  /* Loading placeholders. One keyframe each; the colours, speed and radius come
+     from the config as custom properties (see loadingCss in lib/inputDesign.ts). */
+  .pv-skel, .pv-skel-pulse {
+    display: block;
+    border-radius: var(--pair-skel-radius, 12px);
+    background: var(--pair-skel-base, #ECECEE);
+  }
+  .pv-skel {
+    background-image: linear-gradient(90deg, transparent 0%, var(--pair-skel-hi, #F7F7F8) 50%, transparent 100%);
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: pv-sweep var(--pair-skel-speed, 1600ms) linear infinite;
+  }
+  .pv-skel-pulse { animation: pv-skel-pulse var(--pair-skel-speed, 1600ms) ease-in-out infinite }
+  .pv-spin { animation: pv-spin var(--pair-skel-speed, 1600ms) linear infinite }
+  .pv-dot { animation: pv-bounce var(--pair-skel-speed, 1600ms) ease-in-out infinite }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-skel, .pv-skel-pulse, .pv-spin, .pv-dot { animation: none }
+  }
+
+  /* Launcher entrance, replayed whenever the choice changes. */
+  .pv-enter-pop { animation: pop .34s cubic-bezier(.22, 1, .36, 1) both }
+  .pv-enter-slide { animation: pv-slide .4s cubic-bezier(.22, 1, .36, 1) both }
+  .pv-enter-fade { animation: fade-in .45s ease-out both }
+
+  /* Launcher attention loops, so the choice is visible while it is being made. */
+  .pv-launch-pulse { animation: pv-pulse 2s ease-in-out infinite }
+  .pv-launch-bounce { animation: pv-bounce 1.6s ease-in-out infinite }
+  .pv-launch-wiggle { animation: pv-wiggle 2.4s ease-in-out infinite }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-launch-pulse, .pv-launch-bounce, .pv-launch-wiggle,
+    .pv-enter-pop, .pv-enter-slide, .pv-enter-fade { animation: none }
+  }
 
   /* Components 5.1 – 5.6 of the Pair spec */
   .card { @apply rounded-xl border border-line bg-white/85 }

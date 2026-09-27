@@ -19,11 +19,13 @@ export const HeroCarousel = memo(function HeroCarousel({
   brand,
   rtl,
   overlay,
+  badgeFallback,
 }: {
   slides: HeroSlide[]
   carousel: HeroCarouselCfg
   brand: string
   rtl: boolean
+  badgeFallback?: string
   /** The widget's own welcome copy, drawn over a slide that carries none of its own. */
   overlay?: (slide: HeroSlide) => ReactNode
 }) {
@@ -75,7 +77,7 @@ export const HeroCarousel = memo(function HeroCarousel({
                     className="absolute inset-0 size-full object-cover"
                   />
                 ) : (
-                  <HeroDesignSlide design={slide.design} brand={brand} rtl={rtl} uid={`hs${i}`} />
+                  <HeroDesignSlide design={slide.design} brand={brand} rtl={rtl} uid={`hs${i}`} badgeFallback={badgeFallback} />
                 )}
                 {overlay?.(slide)}
               </div>

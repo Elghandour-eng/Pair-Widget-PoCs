@@ -5,6 +5,7 @@ import {
   HERO_ART_H,
   HERO_ART_W,
   buildHeroSvg,
+  dotColor,
   normalizeHeroCarousel,
   type HeroCarousel,
   type HeroDesign,
@@ -63,10 +64,106 @@ function crossfadeCss(uid: string, n: number, holdMs: number): string {
     `0%,${pc(holdMs - fade)}%{opacity:1}`,
     `${pc(holdMs)}%,${pc(cycle - fade)}%{opacity:0}`,
     `100%{opacity:1}}`,
-    `#${uid} > .sl{animation:${uid}cf ${cycle}ms linear infinite}`,
+    // Slides and their dot rows share the keyframes, so a row can never show a
+    // different slide's dot as active.
+    `#${uid} .sl{animation:${uid}cf ${cycle}ms linear infinite}`,
     // A visitor who asked for less motion gets the first slide, held still.
-    `@media (prefers-reduced-motion:reduce){#${uid} > .sl{animation:none;opacity:0}#${uid} > .sl:first-of-type{opacity:1}}`,
+    `@media (prefers-reduced-motion:reduce){#${uid} .sl{animation:none;opacity:0}#${uid} .sl:first-of-type{opacity:1}}`,
   ].join('')
+}
+
+/**
+ * The carousel dots, drawn into the image itself.
+ *
+ * The dashboard draws real dots next to the hero; an SDK that only renders one
+ * image has nowhere to put them, so they are baked in — same shape, size, gap
+ * and colours the config carries. One row per active slide, crossfading on the
+ * same keyframes as the slides, so the row always matches the slide on screen.
+ * `position: 'below'` has no room of its own inside an image, so it is drawn
+ * where `overlay` is: just inside the bottom edge.
+ */
+function dotsMarkup(uid: string, n: number, carousel: HeroCarousel, brand: string): string {
+  const d = carousel.dots
+  if (!d.show || n < 2) return ''
+  const activeColor = dotColor(d.activeColor, brand, '#E30613')
+  const inactiveColor = dotColor(d.inactiveColor, brand, '#A1A1A6')
+  const height = d.shape === 'bar' ? Math.max(2, d.size * 0.6) : d.size
+  const radius = d.shape === 'bar' ? 2 : 999
+  const widthOf = (on: boolean) => (d.shape === 'dot' ? d.size : on ? d.activeWidth : d.size)
+  const y = HERO_ART_H - 8 - height
+
+  const rows = Array.from({ length: n }, (_, active) => {
+    const widths = Array.from({ length: n }, (_, i) => widthOf(i === active))
+    const total = widths.reduce((a, b) => a + b, 0) + d.gap * (n - 1)
+    let x = (HERO_ART_W - total) / 2
+    const rects = widths.map((w, i) => {
+      const on = i === active
+      const rect = `<rect x="${x.toFixed(2)}" y="${y}" width="${w}" height="${height}" rx="${Math.min(radius, height / 2)}" fill="${
+        on ? activeColor : inactiveColor
+      }"${on ? '' : ` opacity="${d.inactiveOpacity}"`}/>`
+      x += w + d.gap
+      return rect
+    })
+    return `<g class="sl" style="animation-delay:${-active * carousel.intervalMs}ms;opacity:${active === 0 ? 1 : 0}">${rects.join('')}</g>`
+  })
+  return `<g id="${uid}d">${rows.join('')}</g>`
+}
+
+/**
+ * The widget's own welcome copy, drawn over a slide.
+ *
+ * The dashboard lays this text over the hero; an SDK that renders the hero as a
+ * plain image puts its own copy underneath instead, which reads as a different
+ * design. Baking it in — same scrim, same sizes — is what makes the two agree,
+ * and the served config then blanks the SDK's own copy so it is never doubled.
+ */
+function overlayMarkup(uid: string, title: string, subtitle: string, rtl: boolean): string {
+  if (!title && !subtitle) return ''
+  const pad = 12
+  // In SVG, `text-anchor: start` under `direction: rtl` anchors the text's right
+  // edge at x and lets it run leftwards; `end` would push it off the artboard.
+  const anchor = 'start'
+  const x = rtl ? HERO_ART_W - pad : pad
+  const dir = rtl ? ' direction="rtl"' : ''
+  const font = "Montserrat, 'IBM Plex Sans Arabic', Jost, system-ui, sans-serif"
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  // There are no text metrics here, so lines break on an average glyph width.
+  const wrap = (text: string, size: number, maxLines: number): string[] => {
+    const maxChars = Math.max(8, Math.floor((HERO_ART_W - pad * 2) / (size * 0.52)))
+    const out: string[] = []
+    let cur = ''
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      const cand = cur ? cur + ' ' + word : word
+      if (cand.length > maxChars && cur) { out.push(cur); cur = word } else cur = cand
+    }
+    if (cur) out.push(cur)
+    if (out.length > maxLines) { out.length = maxLines; out[maxLines - 1] += '\u2026' }
+    return out
+  }
+
+  const titleLines = title ? wrap(title, 15, 2) : []
+  const subLines = subtitle ? wrap(subtitle, 10.5, 2) : []
+  const titleLH = 18
+  const subLH = 13
+  const blockH = titleLines.length * titleLH + (subLines.length ? subLines.length * subLH + 3 : 0)
+  let y = HERO_ART_H - pad - blockH
+
+  const lines: string[] = []
+  for (const line of titleLines) {
+    y += titleLH
+    lines.push(`<text x="${x}" y="${y - 4}" text-anchor="${anchor}"${dir} font-family="${font}" font-size="15" font-weight="800" fill="#FFFFFF">${esc(line)}</text>`)
+  }
+  if (subLines.length) y += 3
+  for (const line of subLines) {
+    y += subLH
+    lines.push(`<text x="${x}" y="${y - 3}" text-anchor="${anchor}"${dir} font-family="${font}" font-size="10.5" fill="#FFFFFF" opacity="0.9">${esc(line)}</text>`)
+  }
+
+  return `<defs><linearGradient id="${uid}sc" x1="0" y1="1" x2="0" y2="0">
+    <stop offset="0%" stop-color="#000000" stop-opacity="0.6"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+  </linearGradient></defs>
+  <rect x="0" y="0" width="${HERO_ART_W}" height="${HERO_ART_H}" fill="url(#${uid}sc)"/>
+  ${lines.join('\n  ')}`
 }
 
 export function renderHeroSvg(opts: {
@@ -74,6 +171,10 @@ export function renderHeroSvg(opts: {
   brand?: string
   rtl?: boolean
   carousel?: unknown
+  /** The channel's name, for a design whose badge carries no text of its own. */
+  badgeFallback?: string
+  /** The widget's welcome copy, laid over any slide that carries none of its own. */
+  overlay?: { title?: string; subtitle?: string }
 }): string {
   const carousel: HeroCarousel = normalizeHeroCarousel(opts.carousel)
   const rtl = opts.rtl === true
@@ -84,12 +185,24 @@ export function renderHeroSvg(opts: {
   const cycling = n > 1 && carousel.autoplay
   const shown = cycling ? slides : slides.slice(0, 1)
 
+  const ovTitle = opts.overlay?.title?.trim() ?? ''
+  const ovSub = opts.overlay?.subtitle?.trim() ?? ''
+
   const layers = shown.map((slide, i) => {
-    const inner =
+    const art =
       slide.kind === 'image'
         ? `<image href="${slide.dataUri}" x="0" y="0" width="${HERO_ART_W}" height="${HERO_ART_H}" preserveAspectRatio="xMidYMid slice"/>`
         : // A nested <svg> keeps each design's own ids, styles and viewBox intact.
-          buildHeroSvg(slide.design, { uid: `${uid}s${i}`, patternHref, rtl, brand: opts.brand })
+          buildHeroSvg(slide.design, {
+            uid: `${uid}s${i}`,
+            patternHref,
+            rtl,
+            brand: opts.brand,
+            badgeFallback: opts.badgeFallback,
+          })
+    // A design carrying copy of its own keeps it, exactly as the dashboard does.
+    const carriesText = slide.kind === 'design' && (slide.design.title.show || slide.design.subtitle.show)
+    const inner = carriesText ? art : art + overlayMarkup(`${uid}o${i}`, ovTitle, ovSub, rtl)
     const style = cycling ? ` class="sl" style="animation-delay:${-i * carousel.intervalMs}ms;opacity:${i === 0 ? 1 : 0}"` : ''
     return `<g${style}>${inner}</g>`
   })
@@ -99,6 +212,7 @@ export function renderHeroSvg(opts: {
   }
 <rect width="${HERO_ART_W}" height="${HERO_ART_H}" fill="#000000"/>
 ${layers.join('\n')}
+${cycling ? dotsMarkup(uid, n, carousel, opts.brand ?? '#E30613') : ''}
 </svg>`
 }
 

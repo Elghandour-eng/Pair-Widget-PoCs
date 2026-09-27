@@ -21,6 +21,7 @@ import {
 export function PreviewFrame() {
   const [config, setConfig] = useState<WidgetConfig | null>(null)
   const [dark, setDark] = useState(false)
+  const [focus, setFocus] = useState<string | undefined>(undefined)
   const [lang, setLang] = useState<WidgetLang | null>(null)
   const [theme, setTheme] = useState<ThemeName | null>(null)
 
@@ -30,6 +31,7 @@ export function PreviewFrame() {
       if (isPreviewInMsg(e.data)) {
         setConfig(e.data.config)
         setDark(e.data.dark)
+        setFocus(e.data.focus)
         return
       }
       if (isPreviewEventMsg(e.data)) {
@@ -54,7 +56,7 @@ export function PreviewFrame() {
 
   return (
     <div className="h-dvh w-dvw overflow-hidden">
-      <WidgetPreview config={rendered} dark={dark} frame={false} />
+      <WidgetPreview config={rendered} dark={dark} frame={false} focus={focus} />
     </div>
   )
 }

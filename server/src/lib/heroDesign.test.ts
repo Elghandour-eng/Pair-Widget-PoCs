@@ -21,9 +21,9 @@ const svgOf = (design: Parameters<typeof buildHeroSvg>[0], rtl = false) =>
 describe('heroDesign is mirrored between the two workspaces', () => {
   // The server workspace cannot import from web/, so the module is duplicated.
   // This is the guard that the copies never drift.
-  it('server/src/lib/heroDesign.ts is byte-identical to web/src/lib/heroDesign.ts', () => {
-    const mine = readFileSync(path.join(here, 'heroDesign.ts'))
-    const theirs = readFileSync(path.resolve(here, '../../../web/src/lib/heroDesign.ts'))
+  it.each(['heroDesign.ts', 'inputDesign.ts'])('server/src/lib/%s is byte-identical to the web copy', (file) => {
+    const mine = readFileSync(path.join(here, file))
+    const theirs = readFileSync(path.resolve(here, `../../../web/src/lib/${file}`))
     expect(theirs.equals(mine)).toBe(true)
   })
 })

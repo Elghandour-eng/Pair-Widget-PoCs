@@ -8,8 +8,14 @@ import { env } from '../config/env.js'
 import { badRequest } from '../lib/errors.js'
 import { addFeedback, logEvent } from '../lib/mongo.js'
 import { normalizeHeroCarousel, normalizeHeroSlides } from '../lib/heroDesign.js'
+import {
+  chipCss, inputCss, launcherCss, loadingCss, normalizeChatInput, normalizeLauncher,
+  resolve as resolveColor,
+  normalizeLoading, normalizePrompts, normalizeToast, placeholderCss, sendCss, toastCss,
+} from '../lib/inputDesign.js'
 import { heroImageDataUri, renderHeroSvg, type HeroSvgSlide } from '../lib/heroSvg.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
+import { applyWidgetTheme, isWidgetTheme } from '../lib/widgetTheme.js'
 import { asyncHandler } from '../middleware/error.js'
 import { getWidget, resolveConfig } from '../services/widgets.js'
 import { uploadsDir } from './uploads.js'
@@ -39,10 +45,151 @@ function absolutizeUploads<T>(value: T, origin: string): T {
   return value
 }
 
+/**
+ * The welcome copy the dashboard lays over the hero. It is drawn into the hero
+ * image, so the SDK's own copy is blanked in the served config (see
+ * `materializeHero`) and the text appears once, in the place a designer put it.
+ */
+const heroOverlayOf = (config: Record<string, any>) => ({
+  title: one(config?.widget_v2_config?.intro_screen?.welcomeTitle?.text) ?? one(config?.welcome_title) ?? '',
+  subtitle: one(config?.widget_v2_config?.intro_screen?.welcomeSubtitle?.text) ?? one(config?.welcome_tagline) ?? '',
+})
+
 /** A config's hero, read through the shared normaliser so both sides agree on it. */
 const heroOf = (config: Record<string, any>) => {
   const hs = config?.widget_v2_config?.intro_screen?.heroSection
   return { slides: normalizeHeroSlides(hs?.heroImages), carousel: hs?.carousel }
+}
+
+/**
+ * Compiles the chat input and launcher designs into the fields the widget
+ * reads.
+ *
+ * The widget already accepted a raw CSS blob for the composer, the placeholder,
+ * the send button and the launcher, so most of a design lands by filling those
+ * in — no widget change needed, and older builds get the styling too. The
+ * structured block travels alongside for the parts the widget had to be taught
+ * (the typed text, the action buttons, the launcher's icon and geometry).
+ */
+function materializeChrome<T>(config: T): T {
+  const c = config as Record<string, any>
+  const hasInput = !!c?.widget_v2_config?.chat_input?.design
+  const hasLauncher = !!c?.launcher_design
+  const hasLoading = !!c?.widget_v2_config?.intro_screen?.loadingState?.design
+  const hasToast = !!c?.toast_design
+  const hasSendIcon = !!c?.widget_v2_config?.chat_input?.sendButtonIcon?.icon
+  const hasPrompts = !!c?.widget_v2_config?.trending_prompts?.design
+  if (!hasInput && !hasLauncher && !hasLoading && !hasToast && !hasSendIcon && !hasPrompts) return config
+
+  const next = structuredClone(c)
+  const brand = one(next.widget_color) ?? '#E30613'
+
+  // An SDK build that predates `design` draws the send glyph from `variant` and
+  // knows only two of them, so the chosen icon is mapped onto the nearer one.
+  // It is set whether or not a design block exists, because `sendButtonIcon.icon`
+  // can also have been written by hand.
+  const sendIcon = one(next.widget_v2_config?.chat_input?.sendButtonIcon?.icon)
+  if (sendIcon) {
+    const ci = next.widget_v2_config.chat_input
+    ci.sendButtonIcon.variant = ci.sendButtonIcon.variant ?? (/-up$/.test(sendIcon) ? 'arrow-up' : 'send')
+  }
+
+  if (hasInput) {
+    const design = normalizeChatInput(next.widget_v2_config.chat_input.design)
+    const ci = next.widget_v2_config.chat_input
+    // The design is what the builder edits, so it wins over the generated
+    // `styles` block. Keys the design does not set (a theme's own additions)
+    // are kept, so nothing else in the config is lost.
+    ci.styles = { ...(ci.styles ?? {}), ...inputCss(design, brand) }
+    ci.placeholderText = {
+      ...(ci.placeholderText ?? {}),
+      styles: { ...(ci.placeholderText?.styles ?? {}), ...placeholderCss(design, brand) },
+    }
+    // The builder edits the design, so it is what decides the glyph too.
+    const icon = design.send.icon || ci.sendButtonIcon?.icon
+    ci.sendButtonIcon = {
+      ...(ci.sendButtonIcon ?? {}),
+      icon,
+      url: design.send.url || ci.sendButtonIcon?.url,
+      // An SDK build that predates `design` draws the send glyph from `variant`,
+      // and knows only two of them. Mapping the chosen icon onto the nearer one
+      // keeps the button pointing the right way there; a build that reads
+      // `design` uses `icon` above and ignores this.
+      variant: /-up$/.test(String(icon)) ? 'arrow-up' : 'send',
+      styles: { ...(ci.sendButtonIcon?.styles ?? {}), ...sendCss(design, brand) },
+    }
+    ci.inputLayout = { ...(ci.inputLayout ?? {}), type: design.layout }
+    ci.inputActions = {
+      ...(ci.inputActions ?? {}),
+      voiceMessages: design.actions.voice,
+      attachmentMenu: design.actions.attach,
+      showEmojiPicker: design.actions.emoji,
+    }
+    ci.design = design
+  }
+
+  if (hasLoading) {
+    const design = normalizeLoading(next.widget_v2_config.intro_screen.loadingState.design)
+    const ls = next.widget_v2_config.intro_screen.loadingState
+    // The widget switches on `type`, and reads the rest off custom properties.
+    ls.type = design.type === 'spinner' || design.type === 'dots' ? 'spinner' : 'shimmer'
+    ls.styles = { ...(ls.styles ?? {}), ...loadingCss(design, brand) }
+    ls.design = design
+  }
+
+  if (hasPrompts) {
+    const design = normalizePrompts(next.widget_v2_config.trending_prompts.design)
+    const tp = next.widget_v2_config.trending_prompts
+    const chip = chipCss(design, brand)
+    tp.chipStyle = { ...(tp.chipStyle ?? {}), ...chip }
+    // The widget styles a chip's text separately from its surface.
+    tp.textStyle = {
+      ...(tp.textStyle ?? {}),
+      color: chip.color,
+      fontSize: chip.fontSize,
+      fontWeight: chip.fontWeight,
+      fontFamily: chip.fontFamily,
+      textAlign: chip.textAlign,
+    }
+    tp.displaySettings = {
+      ...(tp.displaySettings ?? {}),
+      showTitle: design.showTitle,
+      showIcons: design.showIcon,
+      layout: design.layout === 'stack' ? 'chip' : (tp.displaySettings?.layout ?? 'chip'),
+      styles: {
+        ...(tp.displaySettings?.styles ?? {}),
+        color: resolveColor(design.titleColor, brand),
+        fontSize: `${design.titleSize}px`,
+        fontWeight: design.titleWeight,
+        ...(design.titleFont ? { fontFamily: design.titleFont } : {}),
+      },
+    }
+    // A chip's own uploaded icon is the only one the widget can fetch; a named
+    // glyph travels in `design` for a build that knows how to draw it.
+    if (Array.isArray(tp.promptChips)) {
+      tp.promptChips = tp.promptChips.map((c: any) => ({
+        ...c,
+        iconUrl: c?.icon === 'custom' ? c.iconUrl : c?.iconUrl,
+      }))
+    }
+    tp.design = design
+  }
+
+  if (hasToast) {
+    const design = normalizeToast(next.toast_design)
+    next.toast_design = { ...design, styles: toastCss(design, brand) }
+  }
+
+  if (hasLauncher) {
+    const design = normalizeLauncher(next.launcher_design)
+    next.launcher_styles = { ...(next.launcher_styles ?? {}), ...launcherCss(design, brand) }
+    next.launcher_style = design.type
+    next.launcher_position = design.position
+    if (design.label.text.trim()) next.launcher_title = design.label.text
+    next.launcher_design = design
+  }
+
+  return next as T
 }
 
 /**
@@ -66,21 +213,30 @@ function materializeHero<T>(config: T, origin: string, widgetId: string, lng?: s
     return `${origin}/api/public/hero.svg?${q.toString()}`
   }
 
-  // Every slide leaves as a URL: an upload keeps its own, a design becomes one
-  // that draws just that slide. An SDK reading the list therefore gets a real
-  // carousel, and the normalised carousel block tells it how to run it.
-  hs.heroImages = slides.map((slide, i) =>
-    slide.type === 'design' ? { url: drawn({ slide: String(i) }) } : { url: slide.url })
+  // Every slide leaves as a drawn URL, uploads included: the welcome copy is laid
+  // over the slide the way the dashboard shows it, which an SDK cannot do to a
+  // bare image. An SDK reading the list therefore gets a real carousel, and the
+  // normalised carousel block tells it how to run it.
+  hs.heroImages = slides.map((_slide, i) => ({ url: drawn({ slide: String(i) }) }))
   hs.carousel = normalizeHeroCarousel(carousel)
 
   // `heroImage` stays the single-slide fallback: one image holding the whole
   // list, for a build that does not read `heroImages`.
-  const single = slides.length === 1 && slides[0].type === 'image' ? slides[0].url : drawn({})
   hs.heroImage = {
     styles: { width: '100%', height: '220px', objectFit: 'cover', borderRadius: '20px' },
     position: 'top',
     ...(hs.heroImage ?? {}),
-    url: single,
+    url: drawn({}),
+  }
+
+  // The welcome copy is now part of the hero image. An SDK that also renders it
+  // as a heading under the hero would show it twice, so its copy of the text is
+  // cleared — but only while a hero is actually on screen to carry it.
+  const overlay = heroOverlayOf(next)
+  if (hs.enabled?.value !== false && (overlay.title || overlay.subtitle)) {
+    const intro = next.widget_v2_config.intro_screen
+    if (intro.welcomeTitle) intro.welcomeTitle = { ...intro.welcomeTitle, text: '' }
+    if (intro.welcomeSubtitle) intro.welcomeSubtitle = { ...intro.welcomeSubtitle, text: '' }
   }
   return next as T
 }
@@ -113,8 +269,9 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
   const carousel = picked ? { autoplay: false } : hero.carousel
   // Keyed on the hero itself (plus brand and direction, which it is drawn with),
   // so an unrelated edit elsewhere in the config does not throw the render away.
+  const overlay = heroOverlayOf(c)
   const revision = createHash('sha1')
-    .update(JSON.stringify({ slides, carousel, brand: c.widget_color, locale: c.locale }))
+    .update(JSON.stringify({ slides, carousel, overlay, brand: c.widget_color, locale: c.locale }))
     .digest('base64url')
   const key = `${widget}|${revision}|${dir === 'rtl' || dir === 'ltr' ? dir : ''}|${picked ? only : 'all'}`
   let hit = svgCache.get(key)
@@ -134,7 +291,8 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
       return
     }
     const rtl = dir === 'rtl' || (dir !== 'ltr' && /^(ar|he|fa|ur)/i.test(one(c.locale) ?? 'en'))
-    const body = renderHeroSvg({ slides: drawable, brand: one(c.widget_color), rtl, carousel })
+    const badgeFallback = one(c.widget_v2_config?.header?.content?.title) ?? one(c.name) ?? ''
+    const body = renderHeroSvg({ slides: drawable, brand: one(c.widget_color), rtl, carousel, badgeFallback, overlay })
     hit = { etag: `W/"${createHash('sha1').update(body).digest('base64url')}"`, body }
     // Small bound: a handful of widgets x languages, and any entry is cheap to rebuild.
     if (svgCache.size > 64) svgCache.delete(svgCache.keys().next().value as string)
@@ -159,7 +317,7 @@ publicRouter.get(
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
     const origin = `${req.protocol}://${req.get('host')}`
-    res.json(materializeHero(absolutizeUploads(config, origin), origin, req.params.widgetId))
+    res.json(materializeChrome(materializeHero(absolutizeUploads(config, origin), origin, req.params.widgetId)))
   }),
 )
 
@@ -178,7 +336,31 @@ widgetLangRouter.get(
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
     const origin = `${req.protocol}://${req.get('host')}`
-    res.json(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng))
+    res.json(materializeChrome(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng)))
+  }),
+)
+
+/**
+ * View-forced config for the test page's controls: beBaseUrl points at
+ * /pv/:lng/:theme, so the config arrives already translated AND re-themed.
+ * Either segment can be `x` to keep that side of the saved design.
+ */
+export const widgetViewRouter = Router({ mergeParams: true })
+widgetViewRouter.get(
+  '/widget/:widgetId/config',
+  asyncHandler(async (req, res) => {
+    const p = req.params as { lng?: string; theme?: string }
+    const lng: WidgetLangName | undefined = p.lng === 'ar' || p.lng === 'en' ? p.lng : undefined
+    const theme = isWidgetTheme(p.theme) ? p.theme : undefined
+    const { source, cached, config } = await resolveConfig(req.params.widgetId)
+    res.setHeader('X-Config-Source', source)
+    res.setHeader('X-Config-Cached', String(cached))
+    res.setHeader('Cache-Control', 'public, max-age=30')
+    const origin = `${req.protocol}://${req.get('host')}`
+    let c = config
+    if (lng) c = applyWidgetLanguage(c, lng)
+    if (theme) c = applyWidgetTheme(c, theme)
+    res.json(materializeChrome(materializeHero(absolutizeUploads(c, origin), origin, req.params.widgetId, lng)))
   }),
 )
 
@@ -245,14 +427,16 @@ publicRouter.post(
 )
 
 /**
- * A standalone test harness that runs the real widget for one registered widget ID.
- * It exists so a design can be tried in a browser exactly as a customer would see it —
- * the dashboard's own CSP forbids loading the third-party SDK inline.
+ * A standalone test page that runs the real widget for one registered widget ID —
+ * the design tried in a browser exactly as a customer would see it (the dashboard's
+ * own CSP forbids loading the third-party SDK inline).
  *
- * The page asks the tester for their name and role once, runs the SDK on the page
- * itself (desktop) and inside iPhone / Android frames (`?frame=1` renders the
- * minimal inner document), and keeps the tester's notes — with screenshots — in
- * the studio, where they are triaged on the widget's Notes tab.
+ * Three things happen here, in order: a guided tour of how a Pair widget is made
+ * (a route across a map, one stop per stage, closable and reopenable from the
+ * logo), a one-time name gate so notes carry the tester's name, then the widget
+ * itself — on a device, or running on this page like it would on a customer's
+ * site. Language and theme are served already rewritten from /pv/:lng/:theme, the
+ * same switch the builder pushes, so the real SDK renders them with no local tricks.
  */
 publicRouter.get(
   '/widget/:widgetId/embed',
@@ -263,63 +447,56 @@ publicRouter.get(
     const type = LAUNCHER_TYPES.has(one(req.query.type) ?? '') ? (one(req.query.type) as string) : 'standard'
     const launcherTitle = (one(req.query.launcherTitle) ?? 'Chat with us!').slice(0, 120)
     const frameMode = req.query.frame === '1'
+    // Page mode runs the widget on this document, so the SDK snippet is rendered
+    // into the page rather than injected later — exactly as on a customer's site.
+    const pageMode = one(req.query.surface) === 'page'
     // Safe-area inset for phone-frame previews: pushes the widget below a camera cutout.
     const inset = Math.min(80, Math.max(0, Number(one(req.query.inset)) || 0))
     const sdkBase = env.WIDGET_SDK_BASE_URL
     const sdkOrigin = new URL(sdkBase).origin
-    // The widget fetches its design from {beBaseUrl}/v1/widget/:id/config — pointing it here
-    // makes the test render the studio design (Redis) or the live one, per the widget's source.
     const selfOrigin = `${req.protocol}://${req.get('host')}`
-    // Widget-language override: /lang/:lng/v1 serves the config already translated.
+    // View overrides: the config is served already translated and/or re-themed.
     const wlang = one(req.query.wlang) === 'ar' ? 'ar' : one(req.query.wlang) === 'en' ? 'en' : ''
-    const beBase = wlang ? `${selfOrigin}/lang/${wlang}` : selfOrigin
+    const wtheme = one(req.query.wtheme) === 'dark' ? 'dark' : one(req.query.wtheme) === 'light' ? 'light' : ''
+    const beBase = wlang || wtheme ? `${selfOrigin}/pv/${wlang || 'x'}/${wtheme || 'x'}` : selfOrigin
 
     res.setHeader(
       'Content-Security-Policy',
       [
         "default-src 'self'",
         `script-src 'self' 'unsafe-inline' ${sdkOrigin}`,
-        // The SDK injects its own stylesheet (sdk.css) and Google Fonts links.
         `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${sdkOrigin}`,
         `font-src https://fonts.gstatic.com data: ${sdkOrigin}`,
         'img-src * data: blob:',
         'media-src * data: blob:',
         `connect-src 'self' ${sdkOrigin} https://system.trypair.ai wss://${new URL(sdkBase).host}`,
-        // 'self' so the page can host its own phone-frame iframes.
         `frame-src 'self' ${sdkOrigin}`,
       ].join('; '),
     )
     res.setHeader('Cache-Control', 'no-store')
 
-    /**
-     * Launcher attention effects. The SDK renders the launcher bubble directly in the
-     * host page's DOM (#pair-ai-bubble-holder), so the page can animate it. Effects are
-     * mixable: each one animates a different property/layer (sheen overlay, box-shadow,
-     * filter, transform), so any combination runs together.
-     */
-    const fxCss = `
-  @keyframes fx-sheen { from { transform: translateX(-160%) rotate(14deg) } to { transform: translateX(320%) rotate(14deg) } }
-  @keyframes fx-pulse { 0% { box-shadow: 0 0 0 0 rgba(77,152,226,.5) } 70% { box-shadow: 0 0 0 16px rgba(77,152,226,0) } 100% { box-shadow: 0 0 0 0 rgba(77,152,226,0) } }
-  @keyframes fx-glow { 0%,100% { filter: drop-shadow(0 0 3px rgba(77,152,226,.35)) } 50% { filter: drop-shadow(0 0 16px rgba(77,152,226,.85)) } }
-  @keyframes fx-bounce { 0%,100% { transform: translateY(0) } 12% { transform: translateY(-8px) } 24% { transform: translateY(0) } 32% { transform: translateY(-4px) } 40% { transform: translateY(0) } }
-  @keyframes fx-wiggle { 0%,100% { transform: rotate(0) } 10% { transform: rotate(-9deg) } 20% { transform: rotate(8deg) } 30% { transform: rotate(-5deg) } 40% { transform: rotate(3deg) } 50% { transform: rotate(0) } }
-  #pair-ai-bubble-holder.fx-pulse { border-radius: 999px }
-  #pair-ai-bubble-holder.fx-shimmer { overflow: hidden; border-radius: 999px }
-  #pair-ai-bubble-holder.fx-shimmer::after { content: ''; position: absolute; top: -25%; bottom: -25%; left: 0; width: 42%;
-    background: linear-gradient(105deg, transparent 28%, rgba(255,255,255,.65) 50%, transparent 72%);
-    animation: fx-sheen 2.3s ease-in-out infinite; pointer-events: none }
-  /* Branded footer: the widget's own "Powered by Pair AI" text sits inside its iframe,
-     so a frosted overlay in the holder (our DOM) replaces it with the real wordmark. */
+    /** Replaces the widget's own powered-by line with the real wordmark. */
+    const poweredCss = `
   .pair-powered { position: absolute; bottom: 0; left: 0; right: 0; height: 24px; z-index: 3; pointer-events: none;
     direction: ltr; display: flex; align-items: center; justify-content: center; gap: 5px;
     backdrop-filter: blur(14px) saturate(1.1); -webkit-backdrop-filter: blur(14px) saturate(1.1);
     border-radius: 0 0 15px 15px; font: 600 9px Montserrat, system-ui, sans-serif; color: #97a0a8 }
   .pair-powered img { height: 9px; display: block; opacity: .9 }
-  /* No visible scrollbars: the widget's scrollbar lives inside its iframe (always on its right
-     edge), so the iframe is rendered one scrollbar-width wider and the holder clips that edge. */
+  /* The widget's own scrollbar sits on its right edge; the holder clips it off. */
   #pair-ai-widget-holder { overflow: hidden !important }
   #pair-ai-widget-iframe { width: calc(100% + 17px) !important }`
 
+    const poweredJs = `
+  setInterval(function () {
+    var h = document.getElementById('pair-ai-widget-holder')
+    if (!h || h.querySelector('.pair-powered')) return
+    var d = document.createElement('div')
+    d.className = 'pair-powered'
+    d.innerHTML = '<span>Powered by</span><img src="/pair-wordmark.svg" alt="Pair AI" />'
+    h.appendChild(d)
+  }, 1200)`
+
+    /** The stock Pair embed snippet — what a customer pastes into their own site. */
     const sdkSnippet = `
 <script>
   window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, beBaseUrl: ${js(beBase)} }
@@ -329,33 +506,29 @@ publicRouter.get(
     g.src = BASE_URL + '/sdk.js'
     g.async = true
     s.parentNode.insertBefore(g, s)
-    g.onload = function () {
-      window.PairAiWidgetSDK.run({ widgetId: ${js(widget.widgetId)}, baseUrl: BASE_URL })
-    }
+    g.onload = function () { window.PairAiWidgetSDK.run({ widgetId: ${js(widget.widgetId)}, baseUrl: BASE_URL }) }
   })(document, 'script')
 </script>`
 
-    // The inner document rendered inside the iPhone / Android frames: just the SDK in a clean viewport.
+    // The inner document rendered inside the device frames: just the SDK in a clean viewport.
     if (frameMode) {
       res.type('html').send(`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${esc(widget.channelName)} — mobile</title>
+<title>${esc(widget.channelName)} — device</title>
 <style>
   * { box-sizing: border-box }
   body { margin: 0; min-height: 100dvh; font-family: system-ui, sans-serif;
-    background: linear-gradient(165deg, #f4f9fe 0%, #e9f2fb 60%, #f2f8fe 100%) }
-  p { position: fixed; inset-inline: 0; top: 42%; margin: 0; text-align: center;
-    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #a6b3bf }
+    background: ${wtheme === 'dark' ? 'linear-gradient(165deg, #101317 0%, #15191f 60%, #101317 100%)' : 'linear-gradient(165deg, #f4f9fe 0%, #e9f2fb 60%, #f2f8fe 100%)'} }
   ${inset ? `/* Keep the widget clear of the phone frame's camera cutout. */
   #pair-ai-widget-holder, #pair-ai-preview-holder { top: ${inset}px !important; height: calc(100dvh - ${inset}px) !important; max-height: calc(100dvh - ${inset}px) !important }` : ''}
-  ${fxCss}
+  ${poweredCss}
 </style>
 </head>
 <body>
-<p>Mobile viewport</p>
+<script>${poweredJs}</script>
 ${sdkSnippet}
 </body>
 </html>`)
@@ -366,204 +539,132 @@ ${sdkSnippet}
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${esc(widget.channelName)} — widget test page</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>${esc(widget.channelName)} — Pair widget</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root { color-scheme: light; --accent: #4d98e2; --deep: #1f6fb8; --ink: #0f1216; --muted: #52555b;
-    --line: #bdd1e0; --page: #f4f9fe; --code: #f0f6fa; --alert: #b4372f; --a50: #f2f8fe; --a100: #e2eefb; --a200: #c9e0f7 }
+    --line: #bdd1e0; --page: #f4f9fe; --code: #f0f6fa; --alert: #b4372f; --a50: #f2f8fe; --a100: #e2eefb; --a200: #c9e0f7;
+    --card: rgba(255,255,255,.92); --surface: #fff; --shadow: 0 1px 2px rgba(15,18,22,.04), 0 18px 44px -28px rgba(31,111,184,.32) }
+  html[data-wt="dark"] { color-scheme: dark; --ink: #f2f5f8; --muted: #9aa5b1; --line: #262d36; --page: #0e1114;
+    --code: #171c22; --card: rgba(22,26,32,.92); --surface: #14181d; --a50: #172029; --a100: #1b2735; --a200: #25405c }
   * { box-sizing: border-box }
-  html { scroll-behavior: smooth }
-  body { margin: 0; min-height: 100dvh; font-family: Montserrat, system-ui, sans-serif; color: #181b1f; background: var(--page); overflow-x: hidden }
+  body { margin: 0; height: 100dvh; overflow: hidden;
+    font-family: Montserrat, system-ui, sans-serif; color: var(--ink); background: var(--page) }
+  /* The SDK appends its launcher and panel straight to <body> in page mode; the
+     app lives in its own flex shell so those nodes never become layout siblings. */
+  #shell { height: 100dvh; display: flex; flex-direction: column; overflow: hidden }
   html[lang="ar"] body { font-family: 'IBM Plex Sans Arabic', Montserrat, system-ui, sans-serif }
+  svg { display: block }
 
-  /* --- Animations, mirrored from the studio's login screen --- */
-  @keyframes rise { from { opacity: 0; transform: translate3d(0, 14px, 0) } to { opacity: 1; transform: none } }
-  @keyframes pop { from { opacity: 0; transform: scale(.97) translate3d(0, 8px, 0) } to { opacity: 1; transform: none } }
+  @keyframes rise { from { opacity: 0; transform: translate3d(0, 12px, 0) } to { opacity: 1; transform: none } }
+  @keyframes pop { from { opacity: 0; transform: scale(.96) translate3d(0, 10px, 0) } to { opacity: 1; transform: none } }
   @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
-  @keyframes sweep { from { opacity: 0; transform: scaleX(0) } to { opacity: 1; transform: scaleX(1) } }
-  @keyframes drift { 0%, 100% { transform: translate3d(0,0,0) scale(1) } 33% { transform: translate3d(3%,-4%,0) scale(1.06) } 66% { transform: translate3d(-3%,3%,0) scale(.97) } }
-  @keyframes float { 0%, 100% { transform: translate3d(0,0,0) } 50% { transform: translate3d(0,-10px,0) } }
   @keyframes shake { 10%,90% { transform: translateX(-1px) } 30%,70% { transform: translateX(2px) } 50% { transform: translateX(-2px) } }
-  @keyframes toast-in { from { opacity: 0; transform: translate3d(0,16px,0) scale(.96) } to { opacity: 1; transform: none } }
-  @keyframes screen-in { from { opacity: 0; transform: translate3d(0,10px,0) scale(.985) } to { opacity: 1; transform: none } }
-  @keyframes brand-cycle { 0%,100% { background: #4d98e2 } 33% { background: #e50914 } 66% { background: #0eb47a } }
-  @keyframes caret { 0%,45% { opacity: 1 } 50%,100% { opacity: 0 } }
+  @keyframes drift { 0%, 100% { transform: translate3d(0,0,0) scale(1) } 33% { transform: translate3d(3%,-4%,0) scale(1.06) } 66% { transform: translate3d(-3%,3%,0) scale(.97) } }
+  @keyframes dash { to { stroke-dashoffset: -28 } }
+  @keyframes ping { 0% { transform: scale(1); opacity: .55 } 70%, 100% { transform: scale(2.1); opacity: 0 } }
+  @keyframes bubble-in { from { opacity: 0; transform: translateY(6px) scale(.94) } to { opacity: 1; transform: none } }
   @keyframes tick { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-  .rise { animation: rise .44s cubic-bezier(.22,1,.36,1) both }
-  .stagger > * { animation: rise .44s cubic-bezier(.22,1,.36,1) both; animation-delay: calc(var(--d,0) * 60ms) }
-  @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important } }
+  @keyframes toast-drop { from { opacity: 0; transform: translate3d(0,-14px,0) scale(.97) } to { opacity: 1; transform: none } }
+  .rise { animation: rise .42s cubic-bezier(.22,1,.36,1) both }
+  @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important } }
 
-  .glow { position: fixed; border-radius: 999px; filter: blur(2px); pointer-events: none; z-index: 0; animation: drift 22s ease-in-out infinite }
-  .g1 { top: -22%; right: -18%; width: 56vw; height: 56vw; background: radial-gradient(circle, rgba(164,220,255,.45) 0%, rgba(164,220,255,.18) 45%, transparent 78%) }
-  .g2 { bottom: -26%; left: -14%; width: 52vw; height: 52vw; background: radial-gradient(circle, rgba(177,226,255,.34) 0%, rgba(177,226,255,.15) 40%, transparent 76%); animation-delay: -8s }
+  .glow { position: fixed; border-radius: 999px; filter: blur(2px); pointer-events: none; z-index: 0; animation: drift 24s ease-in-out infinite }
+  .g1 { top: -24%; inset-inline-end: -18%; width: 54vw; height: 54vw; background: radial-gradient(circle, rgba(164,220,255,.45) 0%, rgba(164,220,255,.16) 46%, transparent 78%) }
+  .g2 { bottom: -28%; inset-inline-start: -14%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(177,226,255,.34) 0%, rgba(177,226,255,.13) 42%, transparent 76%); animation-delay: -9s }
+  html[data-wt="dark"] .glow { opacity: .22 }
 
-  .eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin: 0 }
-  code { font-family: Menlo, ui-monospace, monospace; font-size: .85em; background: var(--code); padding: 2px 6px; border-radius: 4px }
-  .card { background: rgba(255,255,255,.9); border: 1px solid var(--line); border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(15,18,22,.04), 0 18px 44px -28px rgba(31,111,184,.32) }
-  .rule { height: 2px; width: 44px; border: 0; margin: 12px 0 0; background: var(--accent); border-radius: 999px; transform-origin: left; animation: sweep .6s .2s cubic-bezier(.22,1,.36,1) both }
-
-  button, input, select, textarea { font: inherit }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; cursor: pointer;
-    border-radius: 8px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 700; padding: 8px 14px;
-    transition: background .2s, transform .15s, border-color .2s, color .2s }
+  button, input, select, textarea { font: inherit; color: inherit }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; cursor: pointer;
+    border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 18px;
+    transition: background .2s, transform .15s, box-shadow .2s; box-shadow: 0 10px 22px -12px rgba(31,111,184,.75) }
   .btn:hover { background: var(--deep) }
   .btn:active { transform: scale(.98) }
-  .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--line) }
-  .btn-ghost:hover { background: #fff; color: var(--deep); border-color: var(--accent) }
-  .btn-sm { font-size: 11.5px; padding: 6px 11px; border-radius: 7px }
-  .field { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 8px 11px;
-    font-size: 13px; color: var(--ink); transition: border-color .2s, box-shadow .2s }
+  .btn-ghost { background: var(--surface); color: var(--muted); border: 1px solid var(--line); box-shadow: none }
+  .btn-ghost:hover { background: var(--surface); color: var(--deep); border-color: var(--accent) }
+  .btn-sm { font-size: 11.5px; padding: 7px 12px; border-radius: 8px }
+  .field { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 8px 12px;
+    font-size: 13px; transition: border-color .2s, box-shadow .2s }
   .field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,152,226,.18) }
-  label { display: block; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 0 0 5px }
-
-  /* --- Toasts: same voice as the studio — a white card with an icon, top center, out of the widget's way --- */
-  #toasts { position: fixed; inset-inline: 0; top: 58px; z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px }
-  @keyframes toast-drop { from { opacity: 0; transform: translate3d(0,-14px,0) scale(.97) } to { opacity: 1; transform: none } }
-  .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 400px);
-    background: rgba(255,255,255,.96); border: 1px solid var(--line); border-radius: 11px;
-    padding: 9px 14px; padding-inline-start: 10px; font-size: 12.5px; font-weight: 600; color: var(--ink);
-    box-shadow: 0 1px 2px rgba(15,18,22,.05), 0 16px 40px -18px rgba(31,111,184,.4);
-    animation: toast-drop .32s cubic-bezier(.22,1,.36,1) both }
-  .toast .ic { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px;
-    background: var(--a100); color: var(--deep); font-size: 12px; font-weight: 800 }
-  .toast.err .ic { background: #fdf1f0; color: var(--alert) }
-  .toast b { color: var(--deep); font-weight: 800 }
-  .toast.err b { color: var(--alert) }
-  .toast.out { transition: opacity .25s, transform .25s; opacity: 0; transform: translateY(-8px) }
-
-  /* --- Entry gate --- */
-  #gate { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-    padding: 20px; background: rgba(15,18,22,.38); backdrop-filter: blur(4px); animation: fade .3s both }
-  #gate.hidden, #app.hidden { display: none }
-  .gate-card { width: 100%; max-width: 380px; padding: 26px; animation: pop .32s cubic-bezier(.22,1,.36,1) both }
-  .gate-card.shake { animation: shake .42s cubic-bezier(.36,.07,.19,.97) both }
-  .gate-mark { height: 32px; display: block }
-  .gate-card h1 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); margin: 13px 0 4px }
-  .gate-card > p { font-size: 12.5px; line-height: 1.6; color: var(--muted); margin: 0 0 16px }
-  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); gap: 7px }
-  .roles label { margin: 0; cursor: pointer }
-  .roles input { position: absolute; opacity: 0; pointer-events: none }
-  .roles span { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px;
-    background: #fff; padding: 8px 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); transition: all .2s }
-  .roles label:hover span { border-color: var(--accent); color: var(--deep) }
-  .roles input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 16px -8px rgba(31,111,184,.6) }
-  .roles input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+  label { display: block; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow) }
 
   /* --- Header --- */
-  header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
-    padding: 9px clamp(16px, 4vw, 40px); background: rgba(255,255,255,.82); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line) }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 12px; color: var(--muted) }
-  .brand img { height: 18px; display: block }
-  .tester { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted) }
-  .tester .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--code); border: 1px solid var(--line);
-    border-radius: 999px; padding: 4px 11px; font-weight: 600; color: var(--ink); font-size: 11.5px }
-  .tester .chip i { font-style: normal; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent) }
-  .tester > button { border: 0; background: none; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted); padding: 4px }
-  .tester > button:hover { color: var(--deep) }
-  .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 2px; gap: 2px }
-  .lang button { border: 0; border-radius: 6px; background: none; cursor: pointer; font-size: 10.5px; font-weight: 700; color: var(--muted); padding: 4px 9px; transition: all .2s }
-  .lang button.on { background: var(--accent); color: #fff }
-  .lang button:not(.on):hover { color: var(--deep); background: var(--a50) }
+  header { position: relative; z-index: 5; display: flex; align-items: center; gap: 8px;
+    padding: 10px clamp(12px, 3vw, 26px); background: var(--card); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line) }
+  .brand { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 4px; cursor: pointer; border-radius: 9px; min-width: 0 }
+  .brand:hover { background: var(--a50) }
+  .brand img { height: 16px; display: block; flex: none }
+  .brand .name { font-weight: 700; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  html[data-wt="dark"] .brand img { filter: brightness(0) invert(1) }
+  .controls { margin-inline-start: auto; display: flex; align-items: center; gap: 7px; min-width: 0 }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 2px; gap: 2px }
+  .seg button { border: 0; border-radius: 7px; background: none; cursor: pointer; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 6px 10px; transition: all .18s; display: inline-flex; align-items: center; gap: 5px }
+  .seg button.on { background: var(--accent); color: #fff }
+  .seg button:not(.on):hover { color: var(--deep); background: var(--a50) }
+  /* Surface picker: a real menu, so the list is styled like the rest of the page
+     instead of the browser's native dropdown. */
+  .menu { position: relative }
+  .menu-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 700; padding: 8px 11px; cursor: pointer; transition: all .18s }
+  .menu-btn:hover { border-color: var(--accent) }
+  .menu-btn .lead { display: grid; place-items: center; color: var(--muted) }
+  .menu-btn .caret { width: 10px; height: 6px; margin-inline-start: 2px; flex: none;
+    background: currentColor; color: var(--muted);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+    transition: transform .2s }
+  .menu.open .menu-btn { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,152,226,.16) }
+  .menu.open .caret { transform: rotate(180deg) }
+  .menu-pop { position: fixed; z-index: 60; min-width: 190px; padding: 6px;
+    background: var(--card); backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+    display: none; animation: pop .18s cubic-bezier(.22,1,.36,1) both }
+  .menu.open .menu-pop { display: block }
+  .menu-pop button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 8px; background: none;
+    color: var(--ink); font-size: 12.5px; font-weight: 600; text-align: start; padding: 8px 10px; cursor: pointer; transition: background .15s }
+  .menu-pop button:hover { background: var(--a50) }
+  .menu-pop button .tick { margin-inline-start: auto; color: var(--accent); opacity: 0 }
+  .menu-pop button[aria-selected="true"] { color: var(--deep); font-weight: 700 }
+  .menu-pop button[aria-selected="true"] .tick { opacity: 1 }
+  .menu-pop .sep { height: 1px; margin: 5px 6px; background: var(--line) }
+  .menu-pop .grp { font-size: 9.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); padding: 6px 10px 3px }
+  .iconbtn { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--surface); color: var(--muted); cursor: pointer; transition: all .18s; position: relative; flex: none }
+  .iconbtn:hover { color: var(--deep); border-color: var(--accent) }
+  .iconbtn .dot { position: absolute; top: -4px; inset-inline-end: -4px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; border: 2px solid var(--card) }
+  .who { display: inline-flex; align-items: center; gap: 7px; background: var(--code); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px 5px 6px; font-weight: 700; font-size: 11.5px; cursor: pointer; transition: border-color .18s }
+  html[dir="rtl"] .who { padding: 5px 6px 5px 12px }
+  .who:hover { border-color: var(--accent) }
+  .who .av { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800 }
+  .who i { font-style: normal; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted) }
+  /* Narrow screens: the controls stay one row and scroll sideways rather than
+     wrapping into a second header or pushing the page wider than the viewport. */
+  .controls { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 1px }
+  .controls::-webkit-scrollbar { display: none }
+  .controls > * { flex: none }
+  @media (max-width: 860px) {
+    header { gap: 6px; padding-inline: 10px }
+    .brand .name { display: none }
+    .who i { display: none }
+    .who { padding: 5px 6px; gap: 5px }
+    .who #whoName { max-width: 8ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+    .seg button { padding: 6px 9px }
+    select.field { max-width: 148px }
+  }
 
-  main { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: clamp(22px, 4.5vh, 44px) clamp(16px, 4vw, 40px) 140px }
-
-  /* --- Hero: marketing + showcase --- */
-  .hero { display: grid; gap: 30px; align-items: center; grid-template-columns: minmax(0, 1fr) }
-  @media (min-width: 940px) { .hero { grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr) } }
-  .hero h2 { font-size: clamp(23px, 4vw, 32px); font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 8px 0 0; line-height: 1.15 }
-  .hero .lede { font-size: 13.5px; line-height: 1.65; color: var(--muted); max-width: 42em; margin: 12px 0 0 }
-  .hero ul { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px }
-  .hero li { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; line-height: 1.55; color: var(--muted) }
-  .hero li b { color: var(--ink) }
-  .hero li::before { content: '✓'; flex: none; display: grid; place-items: center; width: 17px; height: 17px; margin-top: 1px;
-    border-radius: 999px; background: var(--a100); color: var(--deep); font-size: 10px; font-weight: 800 }
-
-  /* Showcase: cycling miniatures of the studio, like the login screen */
-  .show { animation: rise .5s .15s cubic-bezier(.22,1,.36,1) both }
-  .show .win { overflow: hidden }
-  .show .bar { display: flex; align-items: center; gap: 5px; border-bottom: 1px solid var(--line); background: rgba(247,253,255,.8); padding: 7px 11px }
-  .show .bar i { width: 8px; height: 8px; border-radius: 999px; background: var(--line); font-style: normal }
-  .show .bar em { margin-inline-start: 7px; font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #8a97a3 }
-  .show .bar b { margin-inline-start: auto; border-radius: 4px; background: var(--a50); color: var(--accent); font-size: 8.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 2px 6px }
-  .show .stage { position: relative; height: 218px }
-  .show .screen { position: absolute; inset: 0; padding: 14px; display: none }
-  .show .screen.on { display: block; animation: screen-in .45s cubic-bezier(.22,1,.36,1) both }
-  .show .dots { display: flex; align-items: center; gap: 6px; margin-top: 12px }
-  .show .dots button { position: relative; height: 6px; width: 6px; padding: 0; border: 0; border-radius: 999px; background: var(--line); cursor: pointer; overflow: hidden; transition: all .3s }
-  .show .dots button.on { width: 30px; background: var(--a200) }
-  .show .dots button.on::after { content: ''; position: absolute; inset: 0; border-radius: 999px; background: var(--accent); transform-origin: left; animation: tick 4.6s linear both }
-  .show .dots span { font-size: 10px; font-weight: 700; color: var(--muted) }
-  /* mini mock pieces */
-  .mk-grid { display: grid; grid-template-columns: 1fr 96px; gap: 14px; height: 100% }
-  .mk-label { font-size: 8px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px }
-  .mk-field { display: flex; align-items: center; height: 22px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px;
-    font-family: Menlo, monospace; font-size: 8.5px; color: var(--muted); background: #fff }
-  .mk-field .caret { animation: caret 1.1s steps(1) infinite }
-  .mk-swatch { width: 18px; height: 18px; border-radius: 5px; animation: brand-cycle 9s ease-in-out infinite }
-  .mk-toggle { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); background: rgba(247,253,255,.6);
-    border-radius: 6px; padding: 5px 7px; font-size: 8.5px; font-weight: 700; color: var(--ink); margin-top: 8px }
-  .mk-toggle i { width: 22px; height: 11px; border-radius: 999px; animation: brand-cycle 9s ease-in-out infinite; position: relative; font-style: normal }
-  .mk-toggle i::after { content: ''; position: absolute; top: 1.5px; right: 1.5px; width: 8px; height: 8px; border-radius: 999px; background: #fff }
-  .mk-phone { border: 3px solid var(--ink); border-radius: 14px; background: #fff; overflow: hidden; display: flex; flex-direction: column }
-  .mk-phone .hd { height: 26px; animation: brand-cycle 9s ease-in-out infinite; display: flex; align-items: center; padding: 0 7px }
-  .mk-phone .hd i { width: 9px; height: 9px; border-radius: 999px; background: rgba(255,255,255,.85); font-style: normal }
-  .mk-phone .ln { height: 6px; border-radius: 3px; background: var(--code); margin: 6px 7px 0 }
-  .mk-phone .blk { flex: 1; margin: 6px 7px; border-radius: 6px; background: linear-gradient(135deg, var(--a100), var(--a50)) }
-  .mk-phone .in { height: 14px; border-radius: 999px; background: var(--code); margin: 0 7px 7px }
-  .mk-devices { display: flex; gap: 10px; align-items: center; justify-content: center; height: 100% }
-  .mk-devices .dv { border: 3px solid var(--ink); background: #fff; animation: float 6s ease-in-out infinite }
-  .mk-devices .dv.p1 { width: 76px; height: 150px; border-radius: 16px }
-  .mk-devices .dv.p2 { width: 66px; height: 132px; border-radius: 12px; animation-delay: -3s }
-  .mk-devices .dv.web { width: 120px; height: 88px; border-radius: 8px; animation-delay: -1.5s }
-  .mk-devices .dv > div { height: 20%; animation: brand-cycle 9s ease-in-out infinite; border-radius: 4px 4px 0 0; margin: 4px 4px 0 }
-  .mk-devices .dv > span { display: block; height: 5px; border-radius: 3px; background: var(--code); margin: 5px 6px 0 }
-  .mk-code { height: 100%; border-radius: 8px; background: #10151b; padding: 12px; display: flex; flex-direction: column; gap: 7px }
-  .mk-code span { height: 7px; border-radius: 3px; background: #2c3947; display: block }
-  .mk-code span.a { width: 62%; background: #3a86c8 }
-  .mk-code span.b { width: 84% }
-  .mk-code span.c { width: 48%; background: #2e7d5b }
-  .mk-code span.d { width: 72% }
-  .mk-code em { margin-top: auto; align-self: flex-end; border-radius: 5px; background: var(--accent); color: #fff;
-    font-style: normal; font-size: 8.5px; font-weight: 700; padding: 4px 9px }
-
-  /* --- Builder --- */
-  .builder { display: grid; gap: 12px; padding: 14px 16px; margin-top: 26px;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end }
-  .builder .apply { display: flex; flex-wrap: wrap; gap: 6px }
-
-  /* --- Devices + notes --- */
-  .cols { display: grid; gap: 20px; margin-top: 20px; grid-template-columns: minmax(0, 1fr) }
-  @media (min-width: 1020px) { .cols { grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr) } }
-  .panel-title { display: flex; align-items: baseline; gap: 10px; font-size: 14px; font-weight: 800; color: var(--ink); margin: 0 0 4px }
-  .panel-title small { font-size: 11px; font-weight: 600; color: var(--muted) }
-
-  .devices { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 24px 34px; padding: 26px 18px 20px;
-    border-radius: 12px;
-    background:
-      radial-gradient(closest-side, rgba(77,152,226,.10), transparent 90%) center / 120% 120% no-repeat,
-      radial-gradient(rgba(31,111,184,.14) 1px, transparent 1.5px) 0 0 / 22px 22px,
-      linear-gradient(165deg, #fbfdff 0%, #eef5fc 100%) }
-  /* Every frame shares one height; width follows the device's real aspect ratio, so the
-     lineup sits on a common ground line like a proper device family shot. */
-  .device { margin: 0; display: flex; flex-direction: column; align-items: center; text-align: center }
-  .device .phone { animation: float 7s ease-in-out infinite }
-  .device:nth-child(2) .phone { animation-delay: -2.4s }
-  .device:nth-child(3) .phone { animation-delay: -4.7s }
-  .device:nth-child(4) .phone { animation-delay: -1.3s }
-  .device .ground { width: 62%; height: 12px; border-radius: 50%; margin-top: 14px;
-    background: radial-gradient(closest-side, rgba(15,18,22,.16), transparent 72%) }
-  .device figcaption { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px }
-  .frame-actions { display: flex; justify-content: center; gap: 6px; margin-top: 7px }
-  .frame-actions button { border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer;
-    border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 4px 11px; transition: all .2s }
-  .frame-actions button:hover { border-color: var(--accent); color: var(--deep) }
-  /* Sizes come from the DEVICES table in the script; each frame gets width + aspect-ratio inline. */
-  .phone { position: relative; background: var(--ink); box-shadow: 0 24px 60px rgba(15,18,22,.32) }
+  /* --- Stage --- */
+  main { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; padding: clamp(10px, 2.4vh, 20px) 14px }
+  #stage { display: flex; align-items: center; justify-content: center; min-height: 0; flex: 1; width: 100% }
+  .phone { position: relative; background: #0f1216; box-shadow: 0 26px 64px -18px rgba(15,18,22,.45); flex: none }
   .phone.iphone { border-radius: 44px; padding: 9px }
   .phone.se { border-radius: 26px; padding: 8px }
   .phone.android { border-radius: 30px; padding: 7px }
@@ -573,343 +674,667 @@ ${sdkSnippet}
   .phone.se .screen { border-radius: 18px }
   .phone.android .screen { border-radius: 24px }
   .phone.tablet .screen { border-radius: 17px }
-  .dev-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 14px 16px 0 }
-  .dev-picker > span { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-inline-end: 4px }
-  .dev-picker button { border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer;
-    border-radius: 999px; font-size: 11px; font-weight: 700; padding: 5px 12px; transition: all .2s }
-  .dev-picker button.on { background: var(--accent); border-color: var(--accent); color: #fff }
-  .dev-picker button:not(.on):hover { border-color: var(--accent); color: var(--deep) }
-  /* The iframe renders at a real phone viewport (390 CSS px) and is scaled down to the frame,
-     so the widget lays itself out exactly as it would on an actual device. */
-  .phone iframe { border: 0; width: 390px; height: 844px; transform-origin: top left }
-  [dir="rtl"] .phone iframe { transform-origin: top right }
-  .phone .island { position: absolute; top: 17px; left: 50%; transform: translateX(-50%); width: 78px; height: 21px; border-radius: 999px; background: var(--ink); z-index: 2 }
-  .phone .hole { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 999px; background: var(--ink); z-index: 2 }
+  .phone iframe { border: 0; transform-origin: top left }
+  html[dir="rtl"] .phone iframe { transform-origin: top right }
+  .phone .island { position: absolute; top: 17px; left: 50%; transform: translateX(-50%); width: 78px; height: 21px; border-radius: 999px; background: #0f1216; z-index: 2 }
+  .phone .hole { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 999px; background: #0f1216; z-index: 2 }
 
-  .notes { padding: 18px; align-self: start }
-  .notes textarea { min-height: 76px; resize: vertical }
-  .notes .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px }
-  .notes .row-l { display: flex; align-items: center; gap: 6px }
-  .attach-thumb { position: relative; display: none; margin-top: 10px; width: fit-content }
+  /* Desktop frame */
+  .browser { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--surface); box-shadow: 0 26px 64px -22px rgba(15,18,22,.4); flex: none }
+  .browser .chrome { display: flex; align-items: center; gap: 6px; padding: 9px 13px; border-bottom: 1px solid var(--line); background: var(--code) }
+  .browser .chrome i { width: 9px; height: 9px; border-radius: 999px; flex: none }
+  .browser .chrome i:nth-child(1) { background: #ff5f57 } .browser .chrome i:nth-child(2) { background: #febc2e } .browser .chrome i:nth-child(3) { background: #28c840 }
+  .browser .chrome em { margin-inline-start: 8px; flex: 1; font-style: normal; font-family: Menlo, monospace; font-size: 10.5px;
+    color: var(--muted); background: var(--page); border-radius: 7px; padding: 4px 11px; text-align: center }
+  .browser .screen { position: relative; flex: 1; overflow: hidden; background: #fff }
+  .browser iframe { border: 0; transform-origin: top left }
+  html[dir="rtl"] .browser iframe { transform-origin: top right }
+
+  /* "On this page": the SDK runs on the page itself, over a mock site */
+  .site { align-self: stretch; width: 100%; max-width: 1020px; margin: 0 auto; display: flex; flex-direction: column;
+    border-radius: 14px; border: 1px solid var(--line);
+    background: var(--surface); overflow: hidden; padding: clamp(16px, 3vw, 30px); animation: fade .4s both }
+  .site .bar { display: flex; align-items: center; gap: 12px }
+  .site .sq { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); flex: none }
+  .site .ln { height: 11px; border-radius: 999px; background: var(--code) }
+  .site .nav { margin-inline-start: auto; display: flex; gap: 8px }
+  .site .nav .ln { width: 58px }
+  .site .banner { margin-top: 22px; flex: 1.4; min-height: 80px; border-radius: 14px; background: linear-gradient(135deg, var(--a100), var(--a50)) }
+  .site .grid { margin-top: 16px; flex: 1; min-height: 56px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px }
+  .site .grid div { border-radius: 12px; background: var(--code) }
+  .site .hint { margin: 16px 0 0; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--muted) }
+  @media (max-width: 620px) { .site .grid { grid-template-columns: 1fr 1fr } .site .grid div:last-child { display: none } }
+
+  .stage-actions { display: flex; gap: 8px; flex: none }
+  .stage-actions button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface);
+    color: var(--muted); cursor: pointer; border-radius: 999px; font-size: 11.5px; font-weight: 700; padding: 8px 16px; transition: all .18s }
+  .stage-actions button:hover { border-color: var(--accent); color: var(--deep) }
+  .stage-actions .btn { border: 0; background: var(--accent); color: #fff; font-size: 12.5px; padding: 9px 20px }
+  .stage-actions .btn:hover { background: var(--deep); color: #fff }
+  .powered { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--muted); flex: none }
+  .powered img { height: 12px; display: block }
+  html[data-wt="dark"] .powered img { filter: brightness(0) invert(1) }
+
+  /* --- Overlays --- */
+  .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(9,13,18,.5); backdrop-filter: blur(6px); animation: fade .28s both; overflow: auto }
+  .overlay.hidden { display: none }
+
+  /* --- The tour: a route across a map, one stop per stage --- */
+  .tour { position: relative; width: 100%; max-width: 640px; padding: 0; overflow: hidden; animation: pop .4s cubic-bezier(.22,1,.36,1) both }
+  .tour .x { position: absolute; top: 12px; inset-inline-end: 12px; z-index: 3; display: grid; place-items: center; width: 32px; height: 32px;
+    border: 0; border-radius: 999px; background: rgba(255,255,255,.7); color: var(--muted); cursor: pointer; transition: all .2s; backdrop-filter: blur(6px) }
+  .tour .x:hover { background: #fff; color: var(--ink) }
+  .map { position: relative; height: clamp(170px, 26vh, 215px);
+    background:
+      radial-gradient(60% 80% at 20% 15%, rgba(77,152,226,.13), transparent 70%),
+      radial-gradient(50% 70% at 85% 80%, rgba(31,111,184,.12), transparent 70%),
+      linear-gradient(160deg, #f7fbff 0%, #eaf3fc 100%) }
+  html[data-wt="dark"] .map { background: linear-gradient(160deg, #141a21 0%, #101519 100%) }
+  .map .grid { position: absolute; inset: 0; opacity: .5;
+    background-image: linear-gradient(rgba(31,111,184,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(31,111,184,.10) 1px, transparent 1px);
+    background-size: 26px 26px; mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 92%) }
+  .map svg { position: absolute; inset: 0; width: 100%; height: 100% }
+  .route-bg { fill: none; stroke: rgba(31,111,184,.16); stroke-width: 3.5; stroke-linecap: round }
+  .route-fg { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.4,0,.2,1) }
+  .route-arrows { fill: none; stroke: rgba(255,255,255,.95); stroke-width: 2.4; stroke-linecap: round;
+    stroke-dasharray: 0 14; animation: dash 1.1s linear infinite }
+  .stop { cursor: pointer }
+  .stop .ring { fill: #fff; stroke: var(--line); stroke-width: 2; transition: all .35s }
+  html[data-wt="dark"] .stop .ring { fill: #1b2028 }
+  .stop .num { font: 800 11px Montserrat, sans-serif; fill: var(--muted); text-anchor: middle; dominant-baseline: central; transition: fill .3s }
+  .stop.done .ring { stroke: var(--accent) }
+  .stop.done .num { fill: var(--accent) }
+  .stop.on .ring { fill: var(--accent); stroke: var(--accent) }
+  .stop.on .num { fill: #fff }
+  .stop .halo { fill: var(--accent); opacity: 0; transform-box: fill-box; transform-origin: center }
+  .stop.on .halo { animation: ping 1.9s ease-out infinite }
+  .marker { transition: transform .85s cubic-bezier(.34,1.3,.5,1) }
+  .marker .body { fill: var(--accent); stroke: #fff; stroke-width: 2 }
+  .cap { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .02em; color: var(--deep); box-shadow: 0 8px 18px -12px rgba(15,18,22,.5);
+    opacity: 0; transition: opacity .35s, transform .35s }
+  .cap.show { opacity: 1; animation: bubble-in .4s cubic-bezier(.22,1,.36,1) both }
+  .tour .body-copy { padding: 20px clamp(20px, 4vw, 30px) 20px; text-align: center }
+  .tour .step-no { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 }
+  .tour h2 { margin: 7px 0 0; font-size: clamp(17px, 3.4vw, 21px); font-weight: 800; letter-spacing: -.015em; line-height: 1.2 }
+  .tour p { margin: 8px auto 0; font-size: 13px; line-height: 1.65; color: var(--muted); max-width: 40em; min-height: 3.3em }
+  .tour .nav-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 clamp(20px, 4vw, 30px) 20px }
+  .tour .prog { display: flex; align-items: center; gap: 6px }
+  .tour .prog button { position: relative; height: 6px; width: 6px; padding: 0; border: 0; border-radius: 999px; background: var(--line); cursor: pointer; overflow: hidden; transition: all .3s }
+  .tour .prog button.on { width: 28px; background: var(--a200) }
+  .tour .prog button.on::after { content: ''; position: absolute; inset: 0; border-radius: 999px; background: var(--accent); transform-origin: left; animation: tick 4.4s linear both }
+  .tour .skip { border: 0; background: none; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--muted); padding: 8px }
+  .tour .skip:hover { color: var(--deep) }
+  @media (max-width: 560px) { .tour p { min-height: 4.8em } }
+
+  /* --- Gate --- */
+  .gate-card { width: 100%; max-width: 380px; padding: 28px; animation: pop .32s cubic-bezier(.22,1,.36,1) both }
+  .gate-card.shake { animation: shake .42s cubic-bezier(.36,.07,.19,.97) both }
+  .gate-card > img { height: 28px; display: block }
+  .gate-card h1 { font-size: 19px; font-weight: 800; letter-spacing: -.015em; margin: 14px 0 5px }
+  .gate-card > p { font-size: 12.5px; line-height: 1.6; color: var(--muted); margin: 0 0 16px }
+  .gate-card .grid { display: grid; gap: 13px }
+  .gate-card input.field { width: 100% }
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 6px }
+  .roles label { margin: 0; cursor: pointer; text-transform: none; letter-spacing: 0 }
+  .roles input { position: absolute; opacity: 0; pointer-events: none }
+  .roles span { display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--surface); padding: 8px 4px; font-size: 11.5px; font-weight: 700; color: var(--muted); transition: all .18s }
+  .roles label:hover span { border-color: var(--accent); color: var(--deep) }
+  .roles input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff }
+  .roles input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+
+  /* --- Notes drawer --- */
+  #scrim { position: fixed; inset: 0; z-index: 39; background: rgba(9,13,18,.35); opacity: 0; pointer-events: none; transition: opacity .3s }
+  #scrim.on { opacity: 1; pointer-events: auto }
+  #drawer { position: fixed; top: 0; bottom: 0; inset-inline-end: 0; z-index: 41; width: min(94vw, 370px);
+    background: var(--card); backdrop-filter: blur(12px); border-inline-start: 1px solid var(--line);
+    transform: translateX(calc(103% * var(--sign, 1))); transition: transform .32s cubic-bezier(.22,1,.36,1);
+    display: flex; flex-direction: column; padding: 16px }
+  html[dir="rtl"] #drawer { --sign: -1 }
+  #drawer.open { transform: none }
+  #drawer h3 { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; font-size: 14px; font-weight: 800 }
+  #drawer textarea { width: 100%; min-height: 74px; resize: vertical }
+  #drawer .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px }
+  .attach-thumb { position: relative; display: none; margin-top: 9px; width: fit-content }
   .attach-thumb.on { display: block; animation: pop .25s both }
-  .attach-thumb img { display: block; max-height: 84px; max-width: 100%; border-radius: 8px; border: 1px solid var(--line) }
+  .attach-thumb img { display: block; max-height: 72px; border-radius: 9px; border: 1px solid var(--line) }
   .attach-thumb button { position: absolute; top: -7px; inset-inline-end: -7px; width: 20px; height: 20px; border: 0; border-radius: 999px;
-    background: var(--ink); color: #fff; font-size: 11px; line-height: 1; cursor: pointer }
-  #noteList { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 9px }
-  #noteList li { position: relative; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 11px 13px; padding-inline-end: 32px; animation: pop .28s both }
-  #noteList p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink); white-space: pre-wrap; word-break: break-word }
-  #noteList img { display: block; max-height: 110px; border-radius: 7px; border: 1px solid var(--line); margin-top: 8px; cursor: zoom-in }
-  #noteList small { display: block; margin-top: 6px; font-size: 10px; color: var(--muted) }
+    background: var(--ink); color: var(--page); font-size: 11px; line-height: 1; cursor: pointer }
+  #noteList { list-style: none; margin: 14px 0 0; padding: 0 2px 2px; display: grid; gap: 9px; overflow-y: auto; flex: 1; align-content: start }
+  #noteList li { position: relative; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); padding: 11px 13px; padding-inline-end: 32px; animation: pop .26s both }
+  #noteList p { margin: 0; font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word }
+  #noteList img { display: block; max-height: 88px; border-radius: 8px; border: 1px solid var(--line); margin-top: 8px; cursor: zoom-in }
+  #noteList small { display: block; margin-top: 6px; font-size: 9.5px; color: var(--muted) }
   #noteList .sent { color: var(--accent); font-weight: 700 }
-  #noteList .del { position: absolute; top: 7px; inset-inline-end: 7px; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; padding: 4px }
-  #noteList .del:hover { color: var(--alert) }
-  .empty-note { font-size: 11.5px; color: var(--muted); text-align: center; border: 1px dashed var(--line); border-radius: 10px; padding: 16px; margin-top: 16px }
+  #noteList .del { position: absolute; top: 7px; inset-inline-end: 7px; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 13px; line-height: 1; padding: 4px; border-radius: 6px }
+  #noteList .del:hover { color: var(--alert); background: var(--code) }
+  .empty-note { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted);
+    text-align: center; border: 1px dashed var(--line); border-radius: 12px; padding: 20px 16px; margin-top: 14px }
 
-  .foot { margin-top: 30px; border-inline-start: 3px solid var(--accent); padding-inline-start: 12px; font-size: 12px; color: var(--muted); line-height: 1.6 }
-  .powered { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 30px 0 0;
-    font-size: 11px; font-weight: 600; color: var(--muted) }
-  .powered img { height: 14px; display: block }
-
-  /* Toast lifetime bar */
-  .toast { position: relative; overflow: hidden }
-  @keyframes toast-life { from { transform: scaleX(1) } to { transform: scaleX(0) } }
-  .toast::after { content: ''; position: absolute; bottom: 0; inset-inline: 0; height: 2px; background: var(--a200);
-    transform-origin: left; animation: toast-life 3.2s linear both }
-  .toast.err::after { background: var(--alert); opacity: .4 }
-
-  /* Launcher effects picker */
-  .fx-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
-    border-top: 1px dashed var(--line); padding-top: 12px }
-  .fx-row > span { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
-  #fxChips { display: flex; flex-wrap: wrap; gap: 6px }
-  #fxChips button { border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer;
-    border-radius: 999px; font-size: 11px; font-weight: 700; padding: 5px 12px; transition: all .2s }
-  #fxChips button.on { background: var(--accent); border-color: var(--accent); color: #fff }
-  #fxChips button:not(.on):hover { border-color: var(--accent); color: var(--deep) }
-  ${fxCss}
+  /* --- Toasts --- */
+  #toasts { position: fixed; inset-inline: 0; top: 64px; z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px }
+  .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 400px);
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 15px; font-size: 12.5px; font-weight: 600;
+    box-shadow: var(--shadow); animation: toast-drop .32s cubic-bezier(.22,1,.36,1) both }
+  .toast .ic { flex: none; display: grid; place-items: center; width: 23px; height: 23px; border-radius: 999px; background: var(--a100); color: var(--deep) }
+  .toast.err .ic { background: #fdf1f0; color: var(--alert) }
+  .toast b { color: var(--deep); font-weight: 800 }
+  .toast.err b { color: var(--alert) }
+  .toast.out { transition: opacity .25s, transform .25s; opacity: 0; transform: translateY(-8px) }
 </style>
 </head>
 <body>
+<div id="shell">
 <div class="glow g1"></div>
 <div class="glow g2"></div>
 <div id="toasts" aria-live="polite"></div>
 
-<!-- Entry gate: who is testing? Kept in this browser so notes carry the tester's name and role. -->
-<div id="gate" class="hidden">
+<header class="rise">
+  <button class="brand" id="brandBtn" type="button" title="Pair">
+    <img src="/pair-wordmark.svg" alt="Pair" />
+    <span class="name">· ${esc(widget.channelName)}</span>
+  </button>
+  <div class="controls">
+    <div class="menu" id="devMenu">
+      <button class="menu-btn" id="devBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="lead" id="devIcon"></span><span id="devLabel"></span><span class="caret"></span>
+      </button>
+      <div class="menu-pop" id="devPop" role="listbox"></div>
+    </div>
+    <span class="seg" role="group" aria-label="Widget language">
+      <button id="wlEn" type="button">EN</button><button id="wlAr" type="button">عربي</button>
+    </span>
+    <span class="seg" role="group" aria-label="Widget theme">
+      <button id="wtLight" type="button" aria-label="Light"></button><button id="wtDark" type="button" aria-label="Dark"></button>
+    </span>
+    <button class="iconbtn" id="notesBtn" type="button" aria-label="Notes"></button>
+    <button class="who" id="whoBtn" type="button"><span class="av" id="whoAv"></span><span id="whoName"></span><i id="whoRole"></i></button>
+  </div>
+</header>
+
+<main>
+  <div id="stage"></div>
+  <div class="stage-actions">
+    <button class="btn" id="wOpen" type="button"><span class="i"></span><span id="runLabel"></span></button>
+    <button id="wClose" type="button"><span class="i"></span><span data-i18n="close">Close</span></button>
+  </div>
+  <p class="powered"><span data-i18n="powered">Powered by</span> <img src="/pair-wordmark.svg" alt="Pair AI" /></p>
+</main>
+</div>
+
+<!-- The tour: how this widget was made, one stop at a time -->
+<div id="tour" class="overlay hidden" role="dialog" aria-modal="true" aria-label="How Pair works">
+  <div class="card tour">
+    <button class="x" id="tourX" type="button" aria-label="Close"></button>
+    <div class="map" id="map">
+      <div class="grid"></div>
+      <svg viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+        <path id="route" class="route-bg" d="M 58 168 C 128 168 132 66 208 66 S 330 176 402 140 S 520 44 590 74" />
+        <path id="routeFg" class="route-fg" d="M 58 168 C 128 168 132 66 208 66 S 330 176 402 140 S 520 44 590 74" />
+        <path id="routeArrows" class="route-arrows" d="M 58 168 C 128 168 132 66 208 66 S 330 176 402 140 S 520 44 590 74" />
+      </svg>
+      <svg viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true" id="mapPins"></svg>
+      <div id="caps"></div>
+    </div>
+    <div class="body-copy">
+      <p class="step-no" id="tourNo">Stop 1 of 4</p>
+      <h2 id="tourTitle"></h2>
+      <p id="tourBody"></p>
+    </div>
+    <div class="nav-row">
+      <button class="skip" id="tourSkip" type="button" data-i18n="t.skip">Skip</button>
+      <span class="prog" id="tourProg"></span>
+      <button class="btn" id="tourNext" type="button"><span id="tourNextLabel"></span><span class="i"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Entry gate: who is testing? Kept in this browser so notes carry the tester's name. -->
+<div id="gate" class="overlay hidden" role="dialog" aria-modal="true">
   <form id="gateForm" class="card gate-card">
-    <img class="gate-mark" src="/pair-mark.svg" alt="Pair" />
-    <h1 data-i18n="gate.title">Before you start testing</h1>
-    <p data-i18n="gate.sub">Tell us who you are — your notes on this design will be saved with your name and role.</p>
-    <div class="stagger" style="display:grid;gap:13px">
-      <div style="--d:0"><label for="tName" data-i18n="gate.name">Your name</label><input id="tName" class="field" maxlength="60" autocomplete="name" data-i18n-ph="gate.namePh" placeholder="e.g. Taha" /></div>
-      <div style="--d:1"><label data-i18n="gate.role">Your role</label>
-        <div class="roles" id="tRoles" role="radiogroup" aria-label="Your role">
+    <img src="/pair-mark.svg" alt="Pair" />
+    <h1 data-i18n="gate.title">Who's testing?</h1>
+    <p data-i18n="gate.sub">Your notes on this design are saved with your name.</p>
+    <div class="grid">
+      <div><label for="tName" data-i18n="gate.name">Your name</label><input id="tName" class="field" maxlength="60" autocomplete="name" /></div>
+      <div><label data-i18n="gate.role">Your role</label>
+        <div class="roles" role="radiogroup" aria-label="Your role">
           <label><input type="radio" name="tRole" value="Designer" checked /><span data-i18n="role.designer">Designer</span></label>
           <label><input type="radio" name="tRole" value="Developer" /><span data-i18n="role.developer">Developer</span></label>
           <label><input type="radio" name="tRole" value="Product" /><span data-i18n="role.product">Product</span></label>
           <label><input type="radio" name="tRole" value="QA" /><span data-i18n="role.qa">QA</span></label>
-          <label><input type="radio" name="tRole" value="Other" /><span data-i18n="role.other">Other</span></label>
         </div>
       </div>
-      <button class="btn" type="submit" style="--d:2" data-i18n="gate.start">Start testing →</button>
+      <button class="btn" type="submit" data-i18n="gate.start">Start →</button>
     </div>
   </form>
 </div>
 
-<div id="app" class="hidden">
-  <header class="rise">
-    <span class="brand"><img src="/pair-wordmark.svg" alt="Pair" /><span data-i18n="hdr.tag">· widget test page</span></span>
-    <span class="tester">
-      <span class="lang" role="group" aria-label="Language">
-        <button id="langEn" type="button">EN</button><button id="langAr" type="button">عربي</button>
-      </span>
-      <span class="chip"><span id="whoName"></span><i id="whoRole"></i></span>
-      <button id="changeTester" type="button" data-i18n="hdr.change">change</button>
-    </span>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="rise">
-        <p class="eyebrow"><span data-i18n="hero.eyebrow">Live widget test</span> · ${esc(widget.channelName)}</p>
-        <h2 data-i18n-html="hero.title">One widget ID.<br />Designed in the studio, served everywhere.</h2>
-        <hr class="rule" />
-        <p class="lede" data-i18n-html="hero.lede"></p>
-        <ul class="stagger">
-          <li style="--d:1"><span data-i18n-html="hero.p1"></span></li>
-          <li style="--d:2"><span data-i18n-html="hero.p2"></span></li>
-          <li style="--d:3"><span data-i18n-html="hero.p3"></span></li>
-        </ul>
-      </div>
-
-      <div class="show">
-        <div class="card win">
-          <div class="bar"><i></i><i></i><i></i><em>Widget Studio</em><b>Live</b></div>
-          <div class="stage">
-            <div class="screen on" data-screen="0">
-              <div class="mk-grid">
-                <div>
-                  <p class="mk-label">Brand color</p>
-                  <div style="display:flex;gap:6px;align-items:center"><span class="mk-swatch"></span><span class="mk-field" style="flex:1">#4D98E2<span class="caret">|</span></span></div>
-                  <p class="mk-label" style="margin-top:10px">Header title</p>
-                  <span class="mk-field">${esc(widget.channelName)}</span>
-                  <div class="mk-toggle">Show hero <i></i></div>
-                  <div class="mk-toggle">Voice messages <i></i></div>
-                </div>
-                <div class="mk-phone"><div class="hd"><i></i></div><span class="ln" style="width:60%"></span><div class="blk"></div><span class="in"></span></div>
-              </div>
-            </div>
-            <div class="screen" data-screen="1">
-              <div class="mk-devices">
-                <div class="dv p1"><div></div><span style="width:70%"></span><span style="width:50%"></span></div>
-                <div class="dv web"><div style="height:26%"></div><span style="width:80%"></span><span style="width:55%"></span></div>
-                <div class="dv p2"><div></div><span style="width:65%"></span><span style="width:45%"></span></div>
-              </div>
-            </div>
-            <div class="screen" data-screen="2">
-              <div class="mk-code"><span class="a"></span><span class="b"></span><span class="c"></span><span class="d"></span><span style="width:38%"></span><em>Copy snippet</em></div>
-            </div>
-          </div>
-        </div>
-        <div class="dots">
-          <button type="button" class="on" data-dot="0" aria-label="Design"></button>
-          <button type="button" data-dot="1" aria-label="Preview"></button>
-          <button type="button" data-dot="2" aria-label="Embed"></button>
-          <span id="dotLabel">Design</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="card builder stagger" aria-label="Launcher builder">
-      <div style="--d:0"><label for="bPos" data-i18n="b.pos">Launcher position</label>
-        <select id="bPos" class="field"><option value="right" data-i18n="b.right">Right</option><option value="left" data-i18n="b.left">Left</option></select>
-      </div>
-      <div style="--d:1"><label for="bType" data-i18n="b.type">Launcher type</label>
-        <select id="bType" class="field">
-          <option value="standard" data-i18n="b.standard">Standard</option>
-          <option value="expanded_bubble" data-i18n="b.expanded">Expanded bubble</option>
-          <option value="chat_icon" data-i18n="b.chatIcon">Chat icon</option>
-          <option value="icon_only" data-i18n="b.iconOnly">Icon only</option>
-        </select>
-      </div>
-      <div style="--d:2"><label for="bTitle" data-i18n="b.title">Launcher title</label><input id="bTitle" class="field" maxlength="120" /></div>
-      <div style="--d:3"><label for="bWlang" data-i18n="b.wlang">Widget language</label>
-        <select id="bWlang" class="field">
-          <option value="" data-i18n="b.default">Design default</option>
-          <option value="en">English</option>
-          <option value="ar">عربي</option>
-        </select>
-      </div>
-      <div class="apply" style="--d:4">
-        <button id="bApply" class="btn btn-sm" type="button" data-i18n="b.apply">Apply</button>
-        <button id="wOpen" class="btn btn-ghost btn-sm" type="button" data-i18n="b.open">Open</button>
-        <button id="wClose" class="btn btn-ghost btn-sm" type="button" data-i18n="b.close">Close</button>
-      </div>
-      <div class="fx-row" style="--d:5">
-        <span data-i18n="fx.title">Launcher effects</span>
-        <div id="fxChips"></div>
-      </div>
-    </section>
-
-    <div class="cols">
-      <section class="card" aria-label="Device previews">
-        <div class="dev-picker" id="devPicker"><span data-i18n="d.pick">Devices</span></div>
-        <div class="devices" id="devices"></div>
-      </section>
-
-      <section class="card notes rise" style="--d:2" aria-label="Test notes">
-        <p class="panel-title"><span data-i18n="n.title">Test notes</span> <small data-i18n="n.sub">what's not working for you?</small></p>
-        <textarea id="noteText" class="field" maxlength="1000" data-i18n-ph="n.ph" placeholder="e.g. The header color clashes with the hero image…"></textarea>
-        <div class="attach-thumb" id="attachThumb"><img id="attachImg" alt="Attached screenshot" /><button type="button" id="attachRemove" aria-label="Remove screenshot">×</button></div>
-        <div class="row">
-          <div class="row-l">
-            <button id="noteAttach" class="btn btn-ghost btn-sm" type="button" data-i18n="n.attach">📎 Screenshot</button>
-          </div>
-          <button id="noteAdd" class="btn btn-sm" type="button" data-i18n="n.save">Save note</button>
-        </div>
-        <input type="file" id="noteFile" accept="image/png,image/jpeg,image/webp" hidden />
-        <ul id="noteList"></ul>
-        <p class="empty-note" id="noteEmpty" data-i18n="n.empty">No notes yet — write the first thing that bothers you.</p>
-      </section>
-    </div>
-
-    <p class="foot rise" style="--d:3" data-i18n="foot">This page loads the real Pair SDK, so what you see here is exactly what a visitor sees on the customer's site.
-       Resize the window or open this page on a phone to test responsiveness end to end.</p>
-
-    <p class="powered rise" style="--d:4">
-      <span data-i18n="powered">Powered by</span>
-      <img src="/pair-wordmark.svg" alt="Pair AI" />
-    </p>
-  </main>
-</div>
+<div id="scrim"></div>
+<aside id="drawer" aria-label="Test notes">
+  <h3><span data-i18n="n.title">Test notes</span><button class="iconbtn" id="drawerX" type="button" aria-label="Close"></button></h3>
+  <textarea id="noteText" class="field" maxlength="1000" data-i18n-ph="n.ph" placeholder="What's not working for you?"></textarea>
+  <div class="attach-thumb" id="attachThumb"><img id="attachImg" alt="Attached screenshot" /><button type="button" id="attachRemove" aria-label="Remove screenshot">×</button></div>
+  <div class="row">
+    <button id="noteAttach" class="btn btn-ghost btn-sm" type="button"><span class="i"></span><span data-i18n="n.attach">Screenshot</span></button>
+    <button id="noteAdd" class="btn btn-sm" type="button" data-i18n="n.save">Save note</button>
+  </div>
+  <input type="file" id="noteFile" accept="image/png,image/jpeg,image/webp" hidden />
+  <ul id="noteList"></ul>
+  <p class="empty-note" id="noteEmpty"><span class="i"></span><span data-i18n="n.empty">No notes yet.</span></p>
+</aside>
 
 <script>
   var WIDGET_ID = ${js(widget.widgetId)}
+  var SDK_BASE = ${js(sdkBase)}
+  var BE_BASE = ${js(beBase)}
   var SETTINGS = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)} }
+  var WLANG = ${js(wlang)}
+  var WTHEME = ${js(wtheme)}
   var TESTER_KEY = 'pair.tester'
   var NOTES_KEY = 'pair.notes.' + WIDGET_ID
+  var TOUR_KEY = 'pair.tour.v2'
+  var SURFACE_KEY = 'pair.surface'
 
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} }
   function read(k) { try { return JSON.parse(localStorage.getItem(k)) } catch (e) { return null } }
   var $ = function (id) { return document.getElementById(id) }
+  function esc(s) { var d = document.createElement('span'); d.textContent = s; return d.innerHTML }
 
-  /* --- The whole page speaks English and Arabic --- */
-  var CH = ${js(widget.channelName)}
-  var WID = ${js(widget.widgetId)}
+  /* --- Icons: one stroked set, so nothing on this page is an emoji --- */
+  var ICONS = {
+    phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18.5h2"/>',
+    tablet: '<rect x="4" y="2" width="16" height="20" rx="2.5"/><path d="M11 18.5h2"/>',
+    desktop: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    page: '<path d="M3 8h18"/><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="17" cy="15" r="3"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>',
+    note: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    close: '<path d="M18 6 6 18M6 6l12 12"/>',
+    play: '<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L5 21"/>',
+    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    check: '<path d="m4 12.5 5 5L20 6.5"/>',
+    inbox: '<path d="M3 12h5l2 3h4l2-3h5"/><path d="M5.5 5h13l2.5 7v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Z"/>',
+  }
+  function ic(name, size) {
+    return '<svg width="' + (size || 16) + '" height="' + (size || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICONS[name] + '</svg>'
+  }
+
+  /* --- The page speaks English and Arabic, following the widget-language toggle --- */
   var I18N = {
     en: {
-      'hdr.tag': '· widget test page', 'hdr.change': 'change',
-      'gate.title': 'Before you start testing',
-      'gate.sub': 'Tell us who you are — your notes on this design will be saved with your name and role.',
-      'gate.name': 'Your name', 'gate.namePh': 'e.g. Taha', 'gate.role': 'Your role', 'gate.start': 'Start testing →',
-      'role.designer': 'Designer', 'role.developer': 'Developer', 'role.product': 'Product', 'role.qa': 'QA', 'role.other': 'Other',
-      'hero.eyebrow': 'Live widget test',
-      'hero.title': 'One widget ID.<br />Designed in the studio, served everywhere.',
-      'hero.lede': 'Pair turns <b>' + CH + '</b> into a branded AI assistant. This design was built in the Pair Widget Studio and is running here through the real SDK — widget <code>' + WID + '</code> — exactly as a visitor would see it.',
-      'hero.p1': '<b>Design without a deploy.</b> Colors, hero, prompts and quick links are edited in the studio and served live.',
-      'hero.p2': '<b>Every device, both directions.</b> Desktop, iPhone and Android — English and Arabic, LTR and RTL.',
-      'hero.p3': "<b>Your notes reach the team.</b> Anything you flag here lands on the widget's Notes board in the studio.",
-      'b.pos': 'Launcher position', 'b.right': 'Right', 'b.left': 'Left', 'b.type': 'Launcher type',
-      'b.standard': 'Standard', 'b.expanded': 'Expanded bubble', 'b.chatIcon': 'Chat icon', 'b.iconOnly': 'Icon only',
-      'b.title': 'Launcher title', 'b.apply': 'Apply', 'b.open': 'Open', 'b.close': 'Close',
-      'n.title': 'Test notes', 'n.sub': "what's not working for you?",
-      'n.ph': 'e.g. The header color clashes with the hero image…',
-      'n.attach': '📎 Screenshot', 'n.uploading': 'Uploading…', 'n.save': 'Save note',
-      'n.empty': 'No notes yet — write the first thing that bothers you.',
+      'open': 'Open widget', 'run': 'Run the widget', 'close': 'Close', 'powered': 'Powered by',
+      't.skip': 'Skip', 't.next': 'Next', 't.done': 'Try the widget',
+      't1.cap': 'Design', 't1.t': 'It starts in the studio',
+      't1.p': 'Brand colour, hero slides, quick links and prompts are picked in the Pair builder — no code, no deploy.',
+      't2.cap': 'Preview', 't2.t': 'Every change, seen at once',
+      't2.p': 'The builder renders the real widget as you type, in both languages and both themes, on any device.',
+      't3.cap': 'Share', 't3.t': 'One link for the whole team',
+      't3.p': 'This page is that link. Anyone can open it, switch language or theme, and leave a note on what they see.',
+      't4.cap': 'Ship', 't4.t': 'The same design goes live',
+      't4.p': 'The widget below loads through the real Pair SDK, reading the very design the studio serves to production.',
+      'gate.title': "Who's testing?", 'gate.sub': 'Your notes on this design are saved with your name.',
+      'gate.name': 'Your name', 'gate.role': 'Your role', 'gate.start': 'Start →',
+      'role.designer': 'Designer', 'role.developer': 'Developer', 'role.product': 'Product', 'role.qa': 'QA',
+      'n.title': 'Test notes', 'n.ph': "What's not working for you?", 'n.attach': 'Screenshot',
+      'n.uploading': 'Uploading…', 'n.save': 'Save note', 'n.empty': 'No notes yet.',
       'n.sent': 'sent to studio', 'n.local': 'saved locally',
-      'd.pick': 'Devices',
-      'b.wlang': 'Widget language', 'b.default': 'Design default',
-      'powered': 'Powered by',
-      'fx.title': 'Launcher effects', 'fx.shimmer': 'Shimmer', 'fx.pulse': 'Pulse', 'fx.glow': 'Glow', 'fx.bounce': 'Bounce', 'fx.wiggle': 'Wiggle',
-      'foot': 'This page loads the real Pair SDK, so what you see here is exactly what a visitor sees on the customer\\'s site. Resize the window or open this page on a phone to test responsiveness end to end.',
-      'dots': ['Design', 'Preview', 'Embed'],
+      'd.iphone': 'iPhone 15', 'd.se': 'iPhone SE', 'd.android': 'Android', 'd.tablet': 'iPad',
+      'd.desktop': 'Desktop', 'd.page': 'On this page',
+      'site.hint': 'A mock customer site — the launcher is live in the corner.',
       't.welcome': 'Welcome, <b>{n}</b> — happy testing!',
-      't.nameReq': '<b>Your name</b> is required to start testing.',
+      't.nameReq': '<b>Your name</b> is required.',
       't.noteReq': 'Write the note first.',
       't.noteSent': 'Note sent to the <b>studio</b>. Thank you!',
       't.noteFail': 'Saved locally, but it did not reach the studio. <b>Check your connection.</b>',
-      't.imgBig': 'Screenshot is over <b>3 MB</b> — please crop or compress it.',
-      't.imgOk': 'Screenshot attached.', 't.imgFail': 'Could not upload the screenshot. <b>Try again.</b>',
+      't.imgBig': 'Screenshot is over <b>3 MB</b>.', 't.imgOk': 'Screenshot attached.', 't.imgFail': 'Could not upload. <b>Try again.</b>',
     },
     ar: {
-      'hdr.tag': '· صفحة تجربة الودجت', 'hdr.change': 'تغيير',
-      'gate.title': 'قبل أن تبدأ التجربة',
-      'gate.sub': 'عرّفنا بنفسك — ملاحظاتك على هذا التصميم ستُحفظ باسمك ودورك.',
-      'gate.name': 'اسمك', 'gate.namePh': 'مثال: طه', 'gate.role': 'دورك', 'gate.start': 'ابدأ التجربة ←',
-      'role.designer': 'مصمم', 'role.developer': 'مطوّر', 'role.product': 'منتج', 'role.qa': 'جودة', 'role.other': 'آخر',
-      'hero.eyebrow': 'تجربة حيّة للودجت',
-      'hero.title': 'معرّف ودجت واحد.<br />يُصمَّم في الاستوديو ويُقدَّم في كل مكان.',
-      'hero.lede': 'Pair تحوّل <b>' + CH + '</b> إلى مساعد ذكي بهوية علامتك. هذا التصميم بُني في استوديو Pair ويعمل هنا عبر الـ SDK الحقيقي — الودجت <code>' + WID + '</code> — تمامًا كما يراه الزائر.',
-      'hero.p1': '<b>صمّم دون نشر جديد.</b> الألوان والصورة الرئيسية والأسئلة والروابط السريعة تُحرَّر في الاستوديو وتُقدَّم مباشرة.',
-      'hero.p2': '<b>كل الأجهزة وبالاتجاهين.</b> سطح المكتب وآيفون وأندرويد — عربي وإنجليزي، يمين ويسار.',
-      'hero.p3': '<b>ملاحظاتك تصل للفريق.</b> كل ما تسجّله هنا يظهر في لوحة ملاحظات الودجت داخل الاستوديو.',
-      'b.pos': 'موضع المُشغّل', 'b.right': 'يمين', 'b.left': 'يسار', 'b.type': 'نوع المُشغّل',
-      'b.standard': 'قياسي', 'b.expanded': 'فقاعة موسّعة', 'b.chatIcon': 'أيقونة محادثة', 'b.iconOnly': 'أيقونة فقط',
-      'b.title': 'عنوان المُشغّل', 'b.apply': 'تطبيق', 'b.open': 'فتح', 'b.close': 'إغلاق',
-      'n.title': 'ملاحظات التجربة', 'n.sub': 'ما الذي لا يعجبك؟',
-      'n.ph': 'مثال: لون الترويسة لا يتناسب مع الصورة الرئيسية…',
-      'n.attach': '📎 لقطة شاشة', 'n.uploading': 'جارٍ الرفع…', 'n.save': 'حفظ الملاحظة',
-      'n.empty': 'لا توجد ملاحظات بعد — اكتب أول ما يزعجك.',
+      'open': 'افتح الودجت', 'run': 'شغّل الودجت', 'close': 'إغلاق', 'powered': 'مدعوم بواسطة',
+      't.skip': 'تخطّي', 't.next': 'التالي', 't.done': 'جرّب الودجت',
+      't1.cap': 'التصميم', 't1.t': 'تبدأ الحكاية في الاستوديو',
+      't1.p': 'لون العلامة وشرائح الهيرو والروابط السريعة والأسئلة كلها تُختار في بيلدر Pair — بلا كود وبلا نشر.',
+      't2.cap': 'المعاينة', 't2.t': 'كل تعديل تراه في لحظته',
+      't2.p': 'البيلدر يرسم الودجت الحقيقي وأنت تكتب، باللغتين والثيمين وعلى أي جهاز.',
+      't3.cap': 'المشاركة', 't3.t': 'رابط واحد للفريق كله',
+      't3.p': 'هذه الصفحة هي ذلك الرابط. أي شخص يفتحها، يبدّل اللغة أو الثيم، ويترك ملاحظة على ما يراه.',
+      't4.cap': 'الإطلاق', 't4.t': 'نفس التصميم يصل للزائر',
+      't4.p': 'الودجت بالأسفل يعمل عبر SDK الحقيقي من Pair، ويقرأ نفس التصميم الذي يقدّمه الاستوديو للإنتاج.',
+      'gate.title': 'من يجرّب؟', 'gate.sub': 'ملاحظاتك على هذا التصميم تُحفظ باسمك.',
+      'gate.name': 'اسمك', 'gate.role': 'دورك', 'gate.start': 'ابدأ ←',
+      'role.designer': 'مصمم', 'role.developer': 'مطوّر', 'role.product': 'منتج', 'role.qa': 'جودة',
+      'n.title': 'ملاحظات التجربة', 'n.ph': 'ما الذي لا يعجبك؟', 'n.attach': 'لقطة شاشة',
+      'n.uploading': 'جارٍ الرفع…', 'n.save': 'حفظ', 'n.empty': 'لا توجد ملاحظات بعد.',
       'n.sent': 'أُرسلت للاستوديو', 'n.local': 'محفوظة محليًا',
-      'd.pick': 'الأجهزة',
-      'b.wlang': 'لغة الودجت', 'b.default': 'افتراضي التصميم',
-      'powered': 'مدعوم بواسطة',
-      'fx.title': 'مؤثرات المُشغّل', 'fx.shimmer': 'لمعان', 'fx.pulse': 'نبض', 'fx.glow': 'توهج', 'fx.bounce': 'قفزة', 'fx.wiggle': 'اهتزاز',
-      'foot': 'تعمل هذه الصفحة بالـ SDK الحقيقي من Pair، فما تراه هنا هو ما يراه الزائر على موقع العميل تمامًا. غيّر حجم النافذة أو افتح الصفحة من هاتفك لاختبار التجاوب بالكامل.',
-      'dots': ['التصميم', 'المعاينة', 'التضمين'],
+      'd.iphone': 'آيفون 15', 'd.se': 'آيفون SE', 'd.android': 'أندرويد', 'd.tablet': 'آيباد',
+      'd.desktop': 'سطح المكتب', 'd.page': 'داخل الصفحة',
+      'site.hint': 'موقع عميل تجريبي — المُشغّل يعمل في الركن.',
       't.welcome': 'أهلًا <b>{n}</b> — تجربة سعيدة!',
-      't.nameReq': '<b>اسمك</b> مطلوب لبدء التجربة.',
+      't.nameReq': '<b>اسمك</b> مطلوب.',
       't.noteReq': 'اكتب الملاحظة أولًا.',
       't.noteSent': 'وصلت الملاحظة إلى <b>الاستوديو</b>. شكرًا لك!',
       't.noteFail': 'حُفظت محليًا لكنها لم تصل إلى الاستوديو. <b>تحقق من الاتصال.</b>',
-      't.imgBig': 'حجم اللقطة أكبر من <b>3 ميجابايت</b> — صغّرها أو اقتصّها.',
-      't.imgOk': 'تم إرفاق اللقطة.', 't.imgFail': 'تعذّر رفع اللقطة. <b>حاول مرة أخرى.</b>',
+      't.imgBig': 'اللقطة أكبر من <b>3 ميجابايت</b>.', 't.imgOk': 'تم إرفاق اللقطة.', 't.imgFail': 'تعذّر الرفع. <b>حاول مرة أخرى.</b>',
     },
   }
-  var LANG_KEY = 'pair.lang'
-  var lang = read(LANG_KEY) || ((navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en')
+  var lang = WLANG || read('pair.lang') || ((navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'ar' : 'en')
   function tr(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k }
+
+  /* --- Static icon slots --- */
+  $('wtLight').innerHTML = ic('sun', 14)
+  $('wtDark').innerHTML = ic('moon', 14)
+  $('notesBtn').innerHTML = ic('note', 16)
+  $('drawerX').innerHTML = ic('close', 15)
+  $('tourX').innerHTML = ic('close', 16)
+  $('wOpen').querySelector('.i').innerHTML = ic('play', 13)
+  $('wClose').querySelector('.i').innerHTML = ic('stop', 13)
+  $('noteAttach').querySelector('.i').innerHTML = ic('image', 14)
+  $('noteEmpty').querySelector('.i').innerHTML = ic('inbox', 22)
+  $('tourNext').querySelector('.i').innerHTML = ic('arrow', 14)
+
   function applyLang() {
     document.documentElement.lang = lang
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
     document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = tr(el.getAttribute('data-i18n')) })
-    document.querySelectorAll('[data-i18n-html]').forEach(function (el) { el.innerHTML = tr(el.getAttribute('data-i18n-html')) })
     document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.placeholder = tr(el.getAttribute('data-i18n-ph')) })
-    $('langEn').classList.toggle('on', lang === 'en')
-    $('langAr').classList.toggle('on', lang === 'ar')
-    document.querySelectorAll('.frame-actions').forEach(function (fa) {
-      var bs = fa.querySelectorAll('button')
-      if (bs[0]) bs[0].textContent = tr('b.open')
-      if (bs[1]) bs[1].textContent = tr('b.close')
-    })
-    if (typeof renderNotes === 'function') try { renderNotes() } catch (e) {}
-    if (typeof renderFxChips === 'function') try { renderFxChips() } catch (e) {}
-    if (typeof syncDotLabel === 'function') try { syncDotLabel() } catch (e) {}
-    if (typeof fitFrames === 'function') try { fitFrames() } catch (e) {}
+    renderSurfaceOptions()
+    try { syncRunLabel() } catch (e) {}
+    try { renderNotes() } catch (e) {}
+    try { paintTour() } catch (e) {}
   }
-  function setLang(l) { lang = l; store(LANG_KEY, l); applyLang() }
-  $('langEn').addEventListener('click', function () { setLang('en') })
-  $('langAr').addEventListener('click', function () { setLang('ar') })
 
   /* --- Toasts --- */
   function toast(msg, kind) {
     var el = document.createElement('div')
     el.className = 'toast' + (kind === 'err' ? ' err' : '')
-    el.innerHTML = '<span class="ic">' + (kind === 'err' ? '!' : '✓') + '</span><span>' + msg + '</span>'
+    el.innerHTML = '<span class="ic">' + ic(kind === 'err' ? 'close' : 'check', 13) + '</span><span>' + msg + '</span>'
     $('toasts').appendChild(el)
-    setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.remove() }, 280) }, 3200)
+    setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.remove() }, 280) }, 3400)
   }
 
-  /* --- Gate --- */
-  function pickedRole() {
-    var el = document.querySelector('input[name="tRole"]:checked')
-    return el ? el.value : 'Other'
+  /* --- Language / theme: rebuild the URL so the config is re-served --- */
+  function reload(patch) {
+    var q = new URLSearchParams({ position: SETTINGS.position, type: SETTINGS.type, launcherTitle: SETTINGS.launcherTitle })
+    var wl = 'wlang' in patch ? patch.wlang : WLANG
+    var wt = 'wtheme' in patch ? patch.wtheme : WTHEME
+    if (wl) q.set('wlang', wl)
+    if (wt) q.set('wtheme', wt)
+    location.search = q.toString()
   }
-  function showApp(tester) {
-    $('whoName').textContent = tester.name
-    $('whoRole').textContent = tester.role
-    $('gate').classList.add('hidden')
-    $('app').classList.remove('hidden')
+  $('wlEn').classList.toggle('on', (WLANG || lang) === 'en')
+  $('wlAr').classList.toggle('on', (WLANG || lang) === 'ar')
+  $('wlEn').addEventListener('click', function () { store('pair.lang', 'en'); reload({ wlang: 'en' }) })
+  $('wlAr').addEventListener('click', function () { store('pair.lang', 'ar'); reload({ wlang: 'ar' }) })
+  $('wtLight').classList.toggle('on', WTHEME === 'light')
+  $('wtDark').classList.toggle('on', WTHEME === 'dark')
+  // Clicking the active theme again returns to the design's own theme.
+  $('wtLight').addEventListener('click', function () { reload({ wtheme: WTHEME === 'light' ? '' : 'light' }) })
+  $('wtDark').addEventListener('click', function () { reload({ wtheme: WTHEME === 'dark' ? '' : 'dark' }) })
+  if (WTHEME) document.documentElement.setAttribute('data-wt', WTHEME)
+
+  /* --- Surfaces: five device frames, plus the widget running on this page --- */
+  var SURFACES = [
+    { id: 'page', icon: 'page' },
+    { id: 'iphone', icon: 'phone', vw: 390, vh: 844, cls: 'iphone', cut: 'island', inset: 46, pad: 18 },
+    { id: 'se', icon: 'phone', vw: 375, vh: 667, cls: 'se', cut: null, inset: 0, pad: 16 },
+    { id: 'android', icon: 'phone', vw: 412, vh: 915, cls: 'android', cut: 'hole', inset: 38, pad: 14 },
+    { id: 'tablet', icon: 'tablet', vw: 820, vh: 1180, cls: 'tablet', cut: null, inset: 0, pad: 22 },
+    { id: 'desktop', icon: 'desktop', vw: 1180, vh: 740, cls: 'desktop', cut: null, inset: 0, pad: 0, chrome: 38 },
+  ]
+  function surfaceOf(id) {
+    for (var i = 0; i < SURFACES.length; i++) if (SURFACES[i].id === id) return SURFACES[i]
+    return SURFACES[1]
+  }
+  // The surface lives in the URL: page mode is rendered by the server (the SDK
+  // snippet is in the document, as on a real site), so switching into or out of
+  // it reloads. A phone frame is the wrong default on a phone.
+  var PAGE_MODE = ${js(pageMode ? '1' : '')} === '1'
+  var urlSurface = new URLSearchParams(location.search).get('surface')
+  var surfaceId = urlSurface || read(SURFACE_KEY) || (window.innerWidth < 760 ? 'page' : 'iphone')
+  var surface = surfaceOf(surfaceId)
+  surfaceId = surface.id
+  if (surfaceId === 'page' && !PAGE_MODE) { setSurface('page'); }
+
+  function setSurface(id) {
+    store(SURFACE_KEY, id)
+    var wasPage = PAGE_MODE
+    if (id === 'page' || wasPage) {
+      var q = new URLSearchParams(location.search)
+      if (id === 'page') q.set('surface', 'page'); else q.delete('surface')
+      location.search = q.toString()
+      return
+    }
+    surfaceId = id
+    surface = surfaceOf(id)
+    renderSurfaceOptions()
+    renderStage()
+  }
+
+  function renderSurfaceOptions() {
+    $('devIcon').innerHTML = ic(surface.icon, 14)
+    $('devLabel').textContent = tr('d.' + surfaceId)
+    var pop = $('devPop')
+    pop.innerHTML = ''
+    SURFACES.forEach(function (s, i) {
+      if (i === 1) { var sep = document.createElement('div'); sep.className = 'sep'; pop.appendChild(sep) }
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.setAttribute('role', 'option')
+      b.setAttribute('aria-selected', s.id === surfaceId ? 'true' : 'false')
+      b.innerHTML = '<span class="lead">' + ic(s.icon, 15) + '</span><span>' + esc(tr('d.' + s.id)) + '</span>' +
+        '<span class="tick">' + ic('check', 13) + '</span>'
+      b.addEventListener('click', function () { closeMenu(); setSurface(s.id) })
+      pop.appendChild(b)
+    })
+  }
+  function closeMenu() { $('devMenu').classList.remove('open'); $('devBtn').setAttribute('aria-expanded', 'false') }
+  $('devBtn').addEventListener('click', function (e) {
+    e.stopPropagation()
+    var open = $('devMenu').classList.toggle('open')
+    $('devBtn').setAttribute('aria-expanded', open ? 'true' : 'false')
+    if (open) placeMenu()
+  })
+  /** Pins the popup under its button in viewport coordinates, clamped to the screen. */
+  function placeMenu() {
+    var r = $('devBtn').getBoundingClientRect()
+    var pop = $('devPop')
+    pop.style.top = Math.round(r.bottom + 6) + 'px'
+    pop.style.insetInlineStart = ''
+    pop.style.left = ''
+    pop.style.right = ''
+    var w = pop.offsetWidth || 190
+    var left = document.documentElement.dir === 'rtl' ? r.right - w : r.left
+    pop.style.left = Math.round(Math.max(8, Math.min(left, window.innerWidth - w - 8))) + 'px'
+  }
+  window.addEventListener('resize', function () { if ($('devMenu').classList.contains('open')) placeMenu() })
+  document.addEventListener('click', closeMenu)
+
+  function frameSrc(s) {
+    var q = new URLSearchParams({ position: SETTINGS.position, type: SETTINGS.type, launcherTitle: SETTINGS.launcherTitle, frame: '1' })
+    if (s.inset) q.set('inset', String(s.inset))
+    if (WLANG) q.set('wlang', WLANG)
+    if (WTHEME) q.set('wtheme', WTHEME)
+    return location.pathname + '?' + q.toString()
+  }
+
+  var frameEl = null
+
+  function renderStage() {
+    var host = $('stage')
+    host.innerHTML = ''
+    frameEl = null
+
+    if (surfaceId === 'page') {
+      var site = document.createElement('div')
+      site.className = 'site'
+      site.innerHTML =
+        '<div class="bar"><span class="sq"></span><span class="ln" style="width:120px"></span>' +
+        '<span class="nav"><span class="ln"></span><span class="ln"></span><span class="ln"></span></span></div>' +
+        '<div class="banner"></div><div class="grid"><div></div><div></div><div></div></div>' +
+        '<p class="hint">' + esc(tr('site.hint')) + '</p>'
+      host.appendChild(site)
+      return
+    }
+
+    var s = surface
+    var shell = document.createElement('div')
+    shell.className = s.cls === 'desktop' ? 'browser' : 'phone ' + s.cls
+    if (s.cls === 'desktop') {
+      var chrome = document.createElement('div')
+      chrome.className = 'chrome'
+      chrome.innerHTML = '<i></i><i></i><i></i><em>customer-site.com</em>'
+      shell.appendChild(chrome)
+    }
+    if (s.cut) { var cut = document.createElement('span'); cut.className = s.cut; shell.appendChild(cut) }
+    var screen = document.createElement('div')
+    screen.className = 'screen'
+    frameEl = document.createElement('iframe')
+    frameEl.title = tr('d.' + s.id)
+    frameEl.src = frameSrc(s)
+    screen.appendChild(frameEl)
+    shell.appendChild(screen)
+    host.appendChild(shell)
+    fitStage()
+    setTimeout(fitStage, 260)
+  }
+
+  /** The frame renders at the device's real viewport and is scaled to the shell. */
+  function fitStage() {
+    if (!frameEl) return
+    var s = surface
+    var shell = $('stage').firstElementChild
+    if (!shell) return
+    var availH = Math.max(260, $('stage').clientHeight)
+    var availW = Math.min($('stage').clientWidth, s.cls === 'desktop' ? 1120 : 560)
+    var chrome = s.chrome || 0
+    var pad = s.pad || 0
+    var h = availH
+    var w = Math.round((h - chrome - pad) * s.vw / s.vh) + pad
+    if (w > availW) { w = availW; h = Math.round((w - pad) * s.vh / s.vw) + chrome + pad }
+    shell.style.width = w + 'px'
+    shell.style.height = h + 'px'
+    var screen = shell.querySelector('.screen')
+    var scale = screen.clientWidth / s.vw
+    frameEl.style.width = s.vw + 'px'
+    frameEl.style.height = Math.round(screen.clientHeight / scale) + 'px'
+    frameEl.style.transform = 'scale(' + scale + ')'
+  }
+  var fitTimer = null
+  window.addEventListener('resize', function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitStage, 80) })
+
+  function sdk() {
+    if (surfaceId === 'page') return window.PairAiWidgetSDK || null
+    try { return frameEl && frameEl.contentWindow && frameEl.contentWindow.PairAiWidgetSDK || null } catch (e) { return null }
+  }
+  function syncRunLabel() { $('runLabel').textContent = tr(surfaceId === 'page' ? 'run' : 'open') }
+  $('wOpen').addEventListener('click', function () { var s = sdk(); if (s) s.show() })
+  $('wClose').addEventListener('click', function () { var s = sdk(); if (s) s.hide() })
+
+  /* --- The tour: a marker walks the route, a stop lights up at each stage --- */
+  var STOPS = [
+    { k: 't1', at: 0.00 }, { k: 't2', at: 0.33 }, { k: 't3', at: 0.66 }, { k: 't4', at: 1.00 },
+  ]
+  var step = 0, tourTimer = null, routeLen = 0
+
+  function buildMap() {
+    var route = $('route')
+    routeLen = route.getTotalLength()
+    $('routeFg').style.strokeDasharray = routeLen
+    $('routeArrows').style.strokeDasharray = '0 14'
+    var pins = $('mapPins')
+    var caps = $('caps')
+    pins.innerHTML = ''
+    caps.innerHTML = ''
+    var NS = 'http://www.w3.org/2000/svg'
+    STOPS.forEach(function (s, i) {
+      var p = route.getPointAtLength(routeLen * s.at)
+      s.x = p.x; s.y = p.y
+      var g = document.createElementNS(NS, 'g')
+      g.setAttribute('class', 'stop')
+      g.setAttribute('tabindex', '0')
+      g.setAttribute('role', 'button')
+      g.innerHTML =
+        '<circle class="halo" cx="' + p.x + '" cy="' + p.y + '" r="13"/>' +
+        '<circle class="ring" cx="' + p.x + '" cy="' + p.y + '" r="13"/>' +
+        '<text class="num" x="' + p.x + '" y="' + p.y + '">' + (i + 1) + '</text>'
+      g.addEventListener('click', function () { go(i); arm() })
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(i); arm() } })
+      pins.appendChild(g)
+      var cap = document.createElement('span')
+      cap.className = 'cap'
+      cap.style.left = (s.at * 100) + '%'
+      cap.style.top = ((p.y / 220) * 100) - 11 + '%'
+      caps.appendChild(cap)
+      s.capEl = cap
+    })
+    var marker = document.createElementNS(NS, 'g')
+    marker.setAttribute('class', 'marker')
+    marker.innerHTML = '<circle class="body" cx="0" cy="0" r="6.5"/>'
+    pins.appendChild(marker)
+    STOPS.marker = marker
+  }
+
+  function paintTour() {
+    if (!routeLen) return
+    var s = STOPS[step]
+    $('tourNo').textContent = (lang === 'ar' ? 'محطة ' + (step + 1) + ' من ' + STOPS.length : 'Stop ' + (step + 1) + ' of ' + STOPS.length)
+    $('tourTitle').textContent = tr(s.k + '.t')
+    $('tourBody').textContent = tr(s.k + '.p')
+    $('tourNextLabel').textContent = step === STOPS.length - 1 ? tr('t.done') : tr('t.next')
+    $('routeFg').style.strokeDashoffset = routeLen * (1 - s.at)
+    STOPS.marker.setAttribute('transform', 'translate(' + s.x + ',' + s.y + ')')
+    document.querySelectorAll('#mapPins .stop').forEach(function (g, i) {
+      g.classList.toggle('on', i === step)
+      g.classList.toggle('done', i < step)
+    })
+    STOPS.forEach(function (st, i) {
+      st.capEl.textContent = tr(st.k + '.cap')
+      st.capEl.classList.toggle('show', i <= step)
+    })
+    var prog = $('tourProg')
+    prog.innerHTML = ''
+    STOPS.forEach(function (_, i) {
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.setAttribute('aria-label', String(i + 1))
+      if (i === step) b.className = 'on'
+      b.addEventListener('click', function () { go(i); arm() })
+      prog.appendChild(b)
+    })
+  }
+  function go(i) { step = i; paintTour() }
+  function arm() { clearInterval(tourTimer); tourTimer = setInterval(function () { go((step + 1) % STOPS.length) }, 4400) }
+  function openTour() {
+    $('tour').classList.remove('hidden')
+    if (!routeLen) buildMap()
+    go(0); arm()
+  }
+  function closeTour() {
+    $('tour').classList.add('hidden')
+    clearInterval(tourTimer)
+    store(TOUR_KEY, 1)
+    if (!(read(TESTER_KEY) || {}).name) showGate(null)
+  }
+  $('tourX').addEventListener('click', closeTour)
+  $('tourSkip').addEventListener('click', closeTour)
+  $('tourNext').addEventListener('click', function () {
+    if (step === STOPS.length - 1) { closeTour(); return }
+    go(step + 1); arm()
+  })
+  $('brandBtn').addEventListener('click', openTour)
+
+  /* --- Gate --- */
+  function syncWho(t) {
+    $('whoName').textContent = t.name
+    $('whoRole').textContent = t.role || ''
+    $('whoAv').textContent = (t.name || '?').trim().charAt(0).toUpperCase()
   }
   function showGate(prefill) {
     if (prefill) {
@@ -924,245 +1349,32 @@ ${sdkSnippet}
     e.preventDefault()
     var name = $('tName').value.trim()
     if (!name) {
-      var card = e.target
-      card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake')
-      toast(tr('t.nameReq'), 'err')
-      $('tName').focus()
-      return
+      e.target.classList.remove('shake'); void e.target.offsetWidth; e.target.classList.add('shake')
+      toast(tr('t.nameReq'), 'err'); $('tName').focus(); return
     }
-    var tester = { name: name.slice(0, 60), role: pickedRole() }
+    var role = (document.querySelector('input[name="tRole"]:checked') || {}).value || 'Other'
+    var tester = { name: name.slice(0, 60), role: role }
     store(TESTER_KEY, tester)
-    showApp(tester)
+    syncWho(tester)
+    $('gate').classList.add('hidden')
     toast(tr('t.welcome').replace('{n}', esc(tester.name)))
   })
-  $('changeTester').addEventListener('click', function () { showGate(read(TESTER_KEY)) })
+  $('whoBtn').addEventListener('click', function () { showGate(read(TESTER_KEY)) })
 
-  function esc(s) { var d = document.createElement('span'); d.textContent = s; return d.innerHTML }
-
-  var saved = read(TESTER_KEY)
-  if (saved && saved.name) showApp(saved)
-  else { $('app').classList.remove('hidden'); showGate(null) }
-
-  /* --- Showcase cycling --- */
-  var syncDotLabel = null
-  ;(function () {
-    var screens = document.querySelectorAll('.show .screen')
-    var dots = document.querySelectorAll('.show .dots button')
-    var current = 0, timer = null
-    syncDotLabel = function () { $('dotLabel').textContent = tr('dots')[current] }
-    function go(i) {
-      current = i
-      screens.forEach(function (s, k) { s.classList.toggle('on', k === i) })
-      dots.forEach(function (d, k) {
-        d.classList.remove('on'); void d.offsetWidth
-        if (k === i) d.classList.add('on')
-      })
-      syncDotLabel()
-    }
-    function arm() { clearInterval(timer); timer = setInterval(function () { go((current + 1) % screens.length) }, 4600) }
-    dots.forEach(function (d, k) { d.addEventListener('click', function () { go(k); arm() }) })
-    var box = document.querySelector('.show')
-    box.addEventListener('mouseenter', function () { clearInterval(timer) })
-    box.addEventListener('mouseleave', arm)
-    arm()
-  })()
-
-  /* --- Launcher builder: rebuilds the URL so page + frames reload with the new settings --- */
-  var WLANG = ${js(wlang)}
-  $('bPos').value = SETTINGS.position
-  $('bType').value = SETTINGS.type
-  $('bTitle').value = SETTINGS.launcherTitle
-  $('bWlang').value = WLANG
-  $('bApply').addEventListener('click', function () {
-    var q = new URLSearchParams({ position: $('bPos').value, type: $('bType').value, launcherTitle: $('bTitle').value.slice(0, 120) })
-    if ($('bWlang').value) q.set('wlang', $('bWlang').value)
-    location.search = q.toString()
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return
+    if (!$('tour').classList.contains('hidden')) closeTour()
+    else if ($('drawer').classList.contains('open')) closeDrawer()
   })
-  // Picking a widget language applies immediately — the page and every frame reload in it.
-  $('bWlang').addEventListener('change', function () { $('bApply').click() })
 
-  /* --- Device frames: pick any mix; each runs the SDK at that device's real viewport, scaled to fit --- */
-  var DEVICES = [
-    { id: 'iphone', label: 'iPhone 15', vw: 390, vh: 844, cls: 'iphone', cut: 'island', inset: 46, w: 266 },
-    { id: 'se', label: 'iPhone SE', vw: 375, vh: 667, cls: 'se', cut: null, inset: 0, w: 236 },
-    { id: 'android', label: 'Android', vw: 412, vh: 915, cls: 'android', cut: 'hole', inset: 38, w: 266 },
-    { id: 'tablet', label: 'iPad', vw: 820, vh: 1180, cls: 'tablet', cut: null, inset: 0, w: 340 },
-  ]
-  var DEV_KEY = 'pair.devices'
-  var enabledDevices = read(DEV_KEY) || ['iphone', 'android']
+  /* --- Notes drawer --- */
+  function openDrawer() { $('drawer').classList.add('open'); $('scrim').classList.add('on') }
+  function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('on') }
+  $('notesBtn').addEventListener('click', function () { $('drawer').classList.contains('open') ? closeDrawer() : openDrawer() })
+  $('drawerX').addEventListener('click', closeDrawer)
+  $('scrim').addEventListener('click', closeDrawer)
 
-  function fitFrames() {
-    // One shared height for the whole lineup; each width follows the device's real aspect ratio.
-    // Width and height are both set explicitly so the frame can never stretch out of ratio.
-    var H = Math.min(420, Math.max(280, Math.round(window.innerHeight * 0.4)))
-    var maxW = Math.round(window.innerWidth * 0.86)
-    document.querySelectorAll('.devices .phone').forEach(function (ph) {
-      var vw = parseInt(ph.getAttribute('data-vw') || '390', 10)
-      var vh = parseInt(ph.getAttribute('data-vh') || '844', 10)
-      var h = H
-      var w = Math.round(h * vw / vh)
-      if (w > maxW) { w = maxW; h = Math.round(w * vh / vw) }
-      ph.style.width = w + 'px'
-      ph.style.height = h + 'px'
-    })
-    document.querySelectorAll('.phone .screen').forEach(function (sc) {
-      var f = sc.querySelector('iframe')
-      if (!f || !sc.clientWidth) return
-      var vw = parseInt(f.getAttribute('data-vw') || '390', 10)
-      var s = sc.clientWidth / vw
-      f.style.width = vw + 'px'
-      f.style.height = Math.round(sc.clientHeight / s) + 'px'
-      f.style.transform = 'scale(' + s + ')'
-    })
-  }
-  window.addEventListener('resize', fitFrames)
-
-  function sdkOf(win) { return win && win.PairAiWidgetSDK ? win.PairAiWidgetSDK : null }
-  $('wOpen').addEventListener('click', function () { var s = sdkOf(window); if (s) s.show() })
-  $('wClose').addEventListener('click', function () { var s = sdkOf(window); if (s) s.hide() })
-
-  function frameSrc(d) {
-    var q = new URLSearchParams({ position: SETTINGS.position, type: SETTINGS.type, launcherTitle: SETTINGS.launcherTitle, frame: '1' })
-    if (d && d.inset) q.set('inset', String(d.inset))
-    return location.pathname + '?' + q.toString()
-  }
-
-  function renderDevices() {
-    var host = $('devices')
-    host.innerHTML = ''
-    var shown = DEVICES.filter(function (d) { return enabledDevices.indexOf(d.id) !== -1 })
-    shown.forEach(function (d, i) {
-      var fig = document.createElement('figure')
-      fig.className = 'device rise'
-      fig.style.setProperty('--d', String(i + 1))
-      var phone = document.createElement('div')
-      phone.className = 'phone ' + d.cls
-      phone.setAttribute('data-vw', String(d.vw))
-      phone.setAttribute('data-vh', String(d.vh))
-      phone.style.aspectRatio = d.vw + ' / ' + d.vh
-      if (d.cut) { var cut = document.createElement('span'); cut.className = d.cut; phone.appendChild(cut) }
-      var screen = document.createElement('div')
-      screen.className = 'screen'
-      var frame = document.createElement('iframe')
-      frame.setAttribute('data-vw', String(d.vw))
-      frame.title = d.label
-      frame.loading = 'lazy'
-      frame.src = frameSrc(d)
-      screen.appendChild(frame)
-      phone.appendChild(screen)
-      fig.appendChild(phone)
-      var ground = document.createElement('span'); ground.className = 'ground'; fig.appendChild(ground)
-      var cap = document.createElement('figcaption'); cap.textContent = d.label; fig.appendChild(cap)
-      var actions = document.createElement('div'); actions.className = 'frame-actions'
-      var open = document.createElement('button'); open.type = 'button'; open.textContent = tr('b.open')
-      var close = document.createElement('button'); close.type = 'button'; close.textContent = tr('b.close')
-      open.addEventListener('click', function () { try { var s = sdkOf(frame.contentWindow); if (s) s.show() } catch (e) {} })
-      close.addEventListener('click', function () { try { var s = sdkOf(frame.contentWindow); if (s) s.hide() } catch (e) {} })
-      actions.appendChild(open); actions.appendChild(close); fig.appendChild(actions)
-      host.appendChild(fig)
-    })
-    fitFrames()
-    setTimeout(fitFrames, 300)
-  }
-
-  function renderPicker() {
-    var picker = $('devPicker')
-    picker.querySelectorAll('button').forEach(function (b) { b.remove() })
-    DEVICES.forEach(function (d) {
-      var b = document.createElement('button')
-      b.type = 'button'
-      b.textContent = d.label
-      b.className = enabledDevices.indexOf(d.id) !== -1 ? 'on' : ''
-      b.setAttribute('aria-pressed', enabledDevices.indexOf(d.id) !== -1 ? 'true' : 'false')
-      b.addEventListener('click', function () {
-        var i = enabledDevices.indexOf(d.id)
-        if (i === -1) enabledDevices.push(d.id)
-        else if (enabledDevices.length > 1) enabledDevices.splice(i, 1)
-        store(DEV_KEY, enabledDevices)
-        renderPicker()
-        renderDevices()
-      })
-      picker.appendChild(b)
-    })
-  }
-  renderPicker()
-  renderDevices()
-
-  /* --- Launcher effects: mixable, applied live to this page and every phone frame --- */
-  var FX = [
-    { id: 'shimmer', k: 'fx.shimmer' },
-    { id: 'pulse', k: 'fx.pulse' },
-    { id: 'glow', k: 'fx.glow' },
-    { id: 'bounce', k: 'fx.bounce' },
-    { id: 'wiggle', k: 'fx.wiggle' },
-  ]
-  var FX_KEY = 'pair.fx'
-  var fxOn = read(FX_KEY) || []
-  function fxActive(id) { return fxOn.indexOf(id) !== -1 }
-
-  function applyFx(doc) {
-    var h = doc.getElementById('pair-ai-bubble-holder')
-    if (!h) return
-    h.classList.toggle('fx-shimmer', fxActive('shimmer'))
-    h.classList.toggle('fx-pulse', fxActive('pulse'))
-    // Each mixable effect animates a different property, so they can run together:
-    // pulse = box-shadow on the holder; glow = filter; bounce/wiggle = transform on the bubble.
-    h.style.animation = fxActive('pulse') ? 'fx-pulse 2.2s ease-out infinite' : ''
-    var b = h.querySelector('button') || h.firstElementChild
-    if (!b) return
-    var parts = []
-    if (fxActive('glow')) parts.push('fx-glow 2.6s ease-in-out infinite')
-    if (fxActive('bounce')) parts.push('fx-bounce 2.8s ease-in-out infinite')
-    if (fxActive('wiggle')) parts.push('fx-wiggle 3.4s ease-in-out infinite')
-    b.style.animation = parts.join(', ')
-  }
-  function brandFooter(doc) {
-    var h = doc.getElementById('pair-ai-widget-holder')
-    if (!h || h.querySelector('.pair-powered')) return
-    var d = doc.createElement('div')
-    d.className = 'pair-powered'
-    d.innerHTML = '<span>Powered by</span><img src="/pair-wordmark.svg" alt="Pair AI" />'
-    h.appendChild(d)
-  }
-  function applyFxAll() {
-    applyFx(document)
-    brandFooter(document)
-    document.querySelectorAll('iframe[data-vw]').forEach(function (f) {
-      try {
-        if (f.contentWindow && f.contentWindow.document) {
-          applyFx(f.contentWindow.document)
-          brandFooter(f.contentWindow.document)
-        }
-      } catch (e) {}
-    })
-  }
-  function renderFxChips() {
-    var host = $('fxChips')
-    host.innerHTML = ''
-    FX.forEach(function (fx) {
-      var b = document.createElement('button')
-      b.type = 'button'
-      b.textContent = tr(fx.k)
-      b.className = fxActive(fx.id) ? 'on' : ''
-      b.setAttribute('aria-pressed', fxActive(fx.id) ? 'true' : 'false')
-      b.addEventListener('click', function () {
-        var i = fxOn.indexOf(fx.id)
-        if (i === -1) fxOn.push(fx.id)
-        else fxOn.splice(i, 1)
-        store(FX_KEY, fxOn)
-        renderFxChips()
-        applyFxAll()
-      })
-      host.appendChild(b)
-    })
-  }
-  renderFxChips()
-  // The SDK adds the launcher asynchronously (page and frames alike), so keep re-applying.
-  setInterval(applyFxAll, 1500)
-
-  /* --- Notes: screenshot attach, kept locally and sent to the studio's Notes board --- */
   var pendingImage = null
-
   $('noteAttach').addEventListener('click', function () { $('noteFile').click() })
   $('attachRemove').addEventListener('click', function () { pendingImage = null; $('attachThumb').classList.remove('on') })
   $('noteFile').addEventListener('change', function () {
@@ -1171,17 +1383,13 @@ ${sdkSnippet}
     if (!f) return
     if (f.size > 3 * 1024 * 1024) { toast(tr('t.imgBig'), 'err'); return }
     var btn = $('noteAttach')
-    btn.disabled = true; btn.textContent = tr('n.uploading')
+    var label = btn.querySelector('span:last-child')
+    btn.disabled = true; label.textContent = tr('n.uploading')
     fetch(location.pathname.replace(/\\/embed$/, '/feedback/upload'), { method: 'POST', headers: { 'content-type': f.type }, body: f })
       .then(function (r) { if (!r.ok) throw new Error('upload failed'); return r.json() })
-      .then(function (r) {
-        pendingImage = r.url
-        $('attachImg').src = r.url
-        $('attachThumb').classList.add('on')
-        toast(tr('t.imgOk'))
-      })
+      .then(function (r) { pendingImage = r.url; $('attachImg').src = r.url; $('attachThumb').classList.add('on'); toast(tr('t.imgOk')) })
       .catch(function () { toast(tr('t.imgFail'), 'err') })
-      .finally(function () { btn.disabled = false; btn.textContent = tr('n.attach') })
+      .finally(function () { btn.disabled = false; label.textContent = tr('n.attach') })
   })
 
   function notes() { return read(NOTES_KEY) || [] }
@@ -1194,7 +1402,13 @@ ${sdkSnippet}
     var list = notes()
     var ul = $('noteList')
     ul.innerHTML = ''
-    $('noteEmpty').style.display = list.length ? 'none' : 'block'
+    $('noteEmpty').style.display = list.length ? 'none' : 'flex'
+    var badge = $('notesBtn').querySelector('.dot')
+    if (list.length) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'dot'; $('notesBtn').appendChild(badge) }
+      badge.textContent = list.length > 9 ? '9+' : String(list.length)
+    } else if (badge) badge.remove()
+
     list.forEach(function (n, i) {
       var li = document.createElement('li')
       var p = document.createElement('p'); p.textContent = n.text
@@ -1213,10 +1427,8 @@ ${sdkSnippet}
       small.appendChild(status)
       li.appendChild(small)
       var del = document.createElement('button')
-      del.className = 'del'; del.type = 'button'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete note')
-      del.addEventListener('click', function () {
-        var next = notes(); next.splice(i, 1); store(NOTES_KEY, next); renderNotes()
-      })
+      del.className = 'del'; del.type = 'button'; del.innerHTML = ic('close', 12); del.setAttribute('aria-label', 'Delete note')
+      del.addEventListener('click', function () { var next = notes(); next.splice(i, 1); store(NOTES_KEY, next); renderNotes() })
       li.appendChild(del)
       ul.appendChild(li)
     })
@@ -1243,10 +1455,19 @@ ${sdkSnippet}
       toast(tr('t.noteSent'))
     }).catch(function () { toast(tr('t.noteFail'), 'err') })
   })
-  renderNotes()
+
+  /* --- Boot: tour once → gate once → the widget --- */
+  var tester = read(TESTER_KEY)
+  syncWho(tester && tester.name ? tester : { name: '—', role: '' })
   applyLang()
+  renderStage()
+  renderNotes()
+  if (!read(TOUR_KEY)) openTour()
+  else if (!(tester && tester.name)) showGate(null)
 </script>
-${sdkSnippet}
+<style>${poweredCss}</style>
+<script>${poweredJs}</script>
+${pageMode ? sdkSnippet : ''}
 </body>
 </html>`)
   }),

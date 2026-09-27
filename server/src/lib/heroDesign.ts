@@ -36,7 +36,7 @@ export const HERO_FONT = "Jost, Futura, 'Century Gothic', 'Segoe UI', Tahoma, sa
 
 /* --------------------------------- pattern -------------------------------- */
 
-export const HERO_PATTERNS = ['none', 'sadu', 'lattice'] as const
+export const HERO_PATTERNS = ['none', 'sadu', 'lattice', 'chevron-mesh'] as const
 export type HeroPatternAsset = (typeof HERO_PATTERNS)[number]
 
 /**
@@ -47,6 +47,9 @@ export type HeroPatternAsset = (typeof HERO_PATTERNS)[number]
 export const HERO_PATTERN_TILES: Record<Exclude<HeroPatternAsset, 'none'>, { w: number; h: number; file: string }> = {
   sadu: { w: 517, h: 244, file: 'sadu-mask' },
   lattice: { w: 131, h: 91, file: 'lattice-mask' },
+  // Built here from the same chevron outline the decorations use: three per
+  // tile, staggered, so it reads as a weave rather than rows.
+  'chevron-mesh': { w: 132, h: 114, file: 'chevron-mesh-mask' },
 }
 
 /* -------------------------------- decoration ------------------------------- */
@@ -302,6 +305,21 @@ export const HERO_PRESETS: Record<string, { label: string; design: HeroDesign }>
       motion: { entrance: 'rise', decor: 'slide', drift: 'none' },
     }),
   },
+  'cinescape-mesh': {
+    label: 'Cinescape Mesh',
+    design: normalizeHeroDesign({
+      layout: 'text-left',
+      background: { type: 'gradient', from: '#121214', to: '#2A0A0E', angle: 145 },
+      // The new chevron weave, carried by the background at a low opacity so the
+      // copy stays the loudest thing on the slide.
+      pattern: { asset: 'chevron-mesh', color: '#E30613', opacity: 0.22, scale: 1.1, target: 'background' },
+      decor: { shape: 'triple-chevron', x: 236, y: 44, w: 132, h: 132, color: '#FFFFFF' },
+      badge: { show: true, text: 'Cinescape AI', color: '#FFFFFF' },
+      title: { show: true, text: 'Book in a few taps', color: '#FFFFFF', size: 24 },
+      subtitle: { show: true, text: 'Seats, snacks and showtimes in one chat.', color: '#D1D1D6', size: 13 },
+      motion: { entrance: 'rise', entranceMs: 600, decor: 'slide', decorMs: 700, drift: 'left', driftMs: 26000 },
+    }),
+  },
   'sadu-night': {
     label: 'Sadu Night',
     design: normalizeHeroDesign({
@@ -390,6 +408,12 @@ export interface HeroRenderCtx {
   rtl?: boolean
   /** Brand colour, used where a design opts into it rather than a literal. */
   brand?: string
+  /**
+   * Badge text for a design that carries none of its own — the channel's name.
+   * A preset ships an empty badge so it can be dropped onto any channel and
+   * still read as that channel's.
+   */
+  badgeFallback?: string
   /** Drops all animation — honours prefers-reduced-motion at the call site. */
   still?: boolean
 }
@@ -508,7 +532,7 @@ function copyBlock(design: HeroDesign, ctx: HeroRenderCtx, brand: string): strin
     // The mark is drawn, not fetched, so it survives the <img> sandbox.
     const logoSize = badge.size * 2.55
     const gap = 8
-    const label = badge.text.trim().toUpperCase()
+    const label = (badge.text.trim() || ctx.badgeFallback?.trim() || '').toUpperCase()
     const textW = label.length * badge.size * 0.66
     const groupW = (logo ? logoSize + gap : 0) + textW
     const startX = centered ? HERO_ART_W / 2 - groupW / 2 : rtl ? HERO_ART_W - inset - groupW : inset

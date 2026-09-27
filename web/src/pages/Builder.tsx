@@ -1,9 +1,11 @@
 import {
-  ArrowDown, ArrowLeft, ArrowUp, Check, Download, Image as ImageIcon, Languages, LayoutGrid, MessagesSquare,
-  Moon, Palette, PanelTop, Plus, RotateCcw, Rocket, Save, Sparkles, Sun, TextCursorInput, Trash2,
+  ArrowDown, ArrowLeft, ArrowUp, BellRing, Check, Download, Image as ImageIcon, Languages, LayoutGrid,
+  LoaderCircle, MessagesSquare,
+  Moon, Palette, PanelTop, Plus, RotateCcw, Rocket, Save, Share2, Sparkles, Sun, TextCursorInput, Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { IconField } from '@/components/IconField'
 import { MediaInput } from '@/components/MediaInput'
 import { Select } from '@/components/Select'
 import { SEND_ICONS, SendIcon, asSendIcon } from '@/components/sendIcons'
@@ -13,17 +15,24 @@ import { api, type Widget, type WidgetConfig } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { PairWordmark } from '@/components/brand'
 import {
-  PREVIEW_FRAME_PATH, applyLanguage, applyTheme, currentLang, currentTheme, deepGet, deepSet,
+  BILINGUAL_PATHS, PREVIEW_FRAME_PATH, applyLanguage, applyTheme, bilingualText, currentLang, currentTheme, deepGet, deepSet, setBilingualText,
   isPreviewOutMsg, type PreviewEventMsg, type PreviewInMsg, type ThemeName, type WidgetLang,
 } from '@/lib/builder'
 import {
   HERO_BRAND_TOKEN, HERO_DECORS, HERO_DECOR_MOTIONS, HERO_DRIFTS, HERO_ENTRANCES, HERO_LAYOUTS,
   HERO_PATTERNS, HERO_PRESETS, HERO_PRESET_IDS, normalizeHeroSlide,
 } from '@/lib/heroDesign'
+import {
+  BORDER_STYLES, BUTTON_SHAPES, FONT_WEIGHTS, INPUT_LAYOUTS, LAUNCHER_ATTENTION, LAUNCHER_ENTRANCES,
+  CHIP_LAYOUTS, ICON_POSITIONS, LAUNCHER_ICONS, LOADING_TYPES, SEND_POSITIONS, TEXT_ALIGNS,
+  TOAST_POSITIONS,
+} from '@/lib/inputDesign'
 import { useI18n, type MsgKey } from '@/lib/i18n'
 import { useToast } from '@/lib/toast'
 
-type Section = 'theme' | 'language' | 'header' | 'hero' | 'quicklinks' | 'prompts' | 'input' | 'messages' | 'launcher'
+type Section =
+  | 'theme' | 'language' | 'header' | 'hero' | 'quicklinks' | 'prompts' | 'input' | 'messages'
+  | 'loading' | 'toast' | 'launcher'
 
 const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'theme', icon: <Palette className="size-4" /> },
@@ -34,6 +43,8 @@ const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'prompts', icon: <Sparkles className="size-4" /> },
   { id: 'input', icon: <TextCursorInput className="size-4" /> },
   { id: 'messages', icon: <MessagesSquare className="size-4" /> },
+  { id: 'loading', icon: <LoaderCircle className="size-4" /> },
+  { id: 'toast', icon: <BellRing className="size-4" /> },
   { id: 'launcher', icon: <Rocket className="size-4" /> },
 ]
 
@@ -85,10 +96,10 @@ export function Builder() {
   useEffect(() => {
     if (!frameReady) return
     frame.current?.contentWindow?.postMessage(
-      { type: 'pws:config', config: draft, dark } satisfies PreviewInMsg,
+      { type: 'pws:config', config: draft, dark, focus: section } satisfies PreviewInMsg,
       window.location.origin,
     )
-  }, [draft, dark, frameReady])
+  }, [draft, dark, section, frameReady])
 
   /** Push a runtime event to the frame — preview only, the draft is untouched. */
   const pushEvent = (msg: PreviewEventMsg) => {
@@ -159,6 +170,22 @@ export function Builder() {
           </div>
           <p className="mono truncate text-[10.5px] leading-tight text-faint">{widget.widgetId}</p>
         </div>
+        <button
+          className="btn-ghost btn-sm shrink-0"
+          onClick={async () => {
+            const url = `${window.location.origin}/api/public/widget/${encodeURIComponent(widgetId)}/embed`
+            try {
+              await navigator.clipboard.writeText(url)
+              toast.ok(t('builder.share.copied'))
+            } catch {
+              window.open(url, '_blank', 'noreferrer')
+            }
+          }}
+          title={t('builder.share')}
+        >
+          <Share2 className="size-4" />
+          <span className="hidden md:inline">{t('builder.share')}</span>
+        </button>
         {editor && (
           <div className="flex shrink-0 gap-1.5">
             <button className="btn-ghost btn-sm" onClick={reset} disabled={!dirty || !!busy} title={t('builder.reset')} aria-label={t('builder.reset')}>
@@ -207,11 +234,13 @@ export function Builder() {
             {section === 'theme' && <ThemePage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'language' && <LanguagePage draft={draft} setDraft={setDraft} disabled={!editor} />}
             {section === 'header' && <HeaderPage get={get} set={set} disabled={!editor} />}
-            {section === 'hero' && <HeroPage get={get} set={set} disabled={!editor} />}
+            {section === 'hero' && <HeroPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'quicklinks' && <QuickLinksPage get={get} set={set} disabled={!editor} />}
             {section === 'prompts' && <PromptsPage get={get} set={set} disabled={!editor} />}
             {section === 'input' && <InputPage get={get} set={set} disabled={!editor} />}
             {section === 'messages' && <MessagesPage get={get} set={set} disabled={!editor} />}
+            {section === 'loading' && <LoadingPage get={get} set={set} disabled={!editor} />}
+            {section === 'toast' && <ToastPage get={get} set={set} disabled={!editor} />}
             {section === 'launcher' && <LauncherPage get={get} set={set} disabled={!editor} />}
           </div>
 
@@ -296,6 +325,53 @@ function Field({ label, path, get, set, disabled, placeholder }: { label: string
   )
 }
 
+/**
+ * One field per language. Both are stored (`<path>.i18n.en` / `.ar`), and the
+ * one matching the widget's current language is also what the widget shows, so
+ * switching language on the Language page swaps in copy the channel wrote
+ * instead of the built-in dictionary's guess.
+ */
+function BilingualField({
+  label, path, draft, setDraft, disabled,
+}: {
+  label: string
+  path: string
+  draft: WidgetConfig
+  setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void
+  disabled?: boolean
+}) {
+  const { t } = useI18n()
+  const live = currentLang(draft)
+  const write = (lang: WidgetLang, v: string) => setDraft((d) => (d ? setBilingualText(d, path, lang, v) : d))
+  return (
+    <div className="sm:col-span-2">
+      <label className="label">{label}</label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {(['en', 'ar'] as const).map((lang) => (
+          <div key={lang} className="relative">
+            <input
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+              className="input pe-12"
+              value={bilingualText(draft, path, lang)}
+              onChange={(e) => write(lang, e.target.value)}
+              disabled={disabled}
+              aria-label={`${label} — ${t(`locale.${lang}`)}`}
+            />
+            {/* The badge marks which of the two the widget is currently showing. */}
+            <span
+              dir="ltr"
+              className={`pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase ${live === lang ? 'bg-accent text-white' : 'bg-surface text-faint'}`}
+            >
+              {lang}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="fine mt-1.5">{t('builder.bilingual.hint')}</p>
+    </div>
+  )
+}
+
 function ColorField({ label, path, get, set, disabled }: { label: string; path: string } & PageProps) {
   const value = get(path) ?? ''
   return (
@@ -367,6 +443,42 @@ function NumField({ label, path, min, max, step, fallback, unit, get, set, disab
         />
       </div>
     </div>
+  )
+}
+
+/**
+ * A font family, chosen from the offered stacks rather than typed. `custom`
+ * keeps the free-text stack available for a channel that loads its own webfont.
+ * An empty value means "inherit the widget's font".
+ */
+function FontField({ label, path, get, set, disabled, allowInherit }: { label: string; path: string; allowInherit?: boolean } & PageProps) {
+  const { t } = useI18n()
+  const value = get(path) ?? ''
+  const known = FONT_PRESETS.some((f) => f.value === value)
+  const mode = value === '' && allowInherit ? 'inherit' : known ? value : 'custom'
+  return (
+    <>
+      <div>
+        <label className="label">{label}</label>
+        <Select
+          label={label}
+          value={mode}
+          onChange={(v) => {
+            if (v === 'inherit') set(path, '')
+            else if (v !== 'custom') set(path, v)
+          }}
+          disabled={disabled}
+          options={[
+            ...(allowInherit ? [{ value: 'inherit', label: t('builder.font.inherit') }] : []),
+            ...FONT_PRESETS.map((f) => ({ value: f.value, label: f.label })),
+            { value: 'custom', label: t('builder.theme.fontCustom') },
+          ]}
+        />
+      </div>
+      {mode === 'custom' && (
+        <Field label={t('form.fontFamily')} path={path} get={get} set={set} disabled={disabled} placeholder="'Jost', sans-serif" />
+      )}
+    </>
   )
 }
 
@@ -444,17 +556,7 @@ function ThemePage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfi
           <Field label={t('form.name')} path="name" get={get} set={set} disabled={disabled} />
           <ColorField label={t('form.color')} path="widget_color" get={get} set={set} disabled={disabled} />
           <ColorField label={t('form.widgetBg')} path="widget_v2_config.intro_screen.widgetBackground.background" get={get} set={set} disabled={disabled} />
-          <div>
-            <label className="label">{t('builder.theme.fontPreset')}</label>
-            <Select
-              label={t('builder.theme.fontPreset')}
-              value={FONT_PRESETS.some((f) => f.value === get('styles.fontFamily')) ? get('styles.fontFamily') : 'custom'}
-              onChange={(v) => v !== 'custom' && set('styles.fontFamily', v)}
-              disabled={disabled}
-              options={[...FONT_PRESETS, { value: 'custom', label: t('builder.theme.fontCustom') }]}
-            />
-          </div>
-          <Field label={t('form.fontFamily')} path="styles.fontFamily" get={get} set={set} disabled={disabled} placeholder="'Jost', Futura, sans-serif" />
+          <FontField label={t('builder.theme.fontPreset')} path="styles.fontFamily" get={get} set={set} disabled={disabled} />
         </div>
       </section>
     </div>
@@ -550,7 +652,7 @@ const HERO_CAROUSEL = `${HERO}.carousel`
 /** A hero slide as stored in the config: an uploaded image, or an editable design. */
 type StoredSlide = { type?: 'image' | 'design'; url?: string; design?: unknown; style?: string }
 
-function HeroPage({ get, set, disabled }: PageProps) {
+function HeroPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
   const { t } = useI18n()
   const raw = get(HERO_IMAGES)
   const stored: StoredSlide[] = Array.isArray(raw) && raw.length ? raw : [{ type: 'image', url: get(HERO_SINGLE) ?? '' }]
@@ -579,8 +681,8 @@ function HeroPage({ get, set, disabled }: PageProps) {
       <section>
         <SectionHead>{t('form.intro')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('form.welcomeTitle')} path="widget_v2_config.intro_screen.welcomeTitle.text" get={get} set={set} disabled={disabled} />
-          <Field label={t('form.welcomeSubtitle')} path="widget_v2_config.intro_screen.welcomeSubtitle.text" get={get} set={set} disabled={disabled} />
+          <BilingualField label={t('form.welcomeTitle')} path={BILINGUAL_PATHS[0]} draft={draft} setDraft={setDraft} disabled={disabled} />
+          <BilingualField label={t('form.welcomeSubtitle')} path={BILINGUAL_PATHS[1]} draft={draft} setDraft={setDraft} disabled={disabled} />
           <ToggleField label={t('form.heroShow')} path={`${HERO}.enabled.value`} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('form.introShow')} path="widget_v2_config.intro_screen.showIntroScreen.value" get={get} set={set} disabled={disabled} />
         </div>
@@ -881,119 +983,500 @@ function QuickLinksPage({ get, set, disabled }: PageProps) {
   )
 }
 
-interface PromptChip { text?: string }
+interface PromptChip { text?: string; icon?: string; iconUrl?: string }
+
+const PROMPTS = 'widget_v2_config.trending_prompts.design'
 
 function PromptsPage({ get, set, disabled }: PageProps) {
   const { t } = useI18n()
   const PATH = 'widget_v2_config.trending_prompts.promptChips'
   const chips: PromptChip[] = Array.isArray(get(PATH)) ? get(PATH) : []
   const update = (next: PromptChip[]) => set(PATH, next)
+  const patch = (i: number, p: Partial<PromptChip>) => update(chips.map((c, j) => (j === i ? { ...c, ...p } : c)))
+  const move = (i: number, dir: -1 | 1) => {
+    const next = [...chips]
+    const [c] = next.splice(i, 1)
+    next.splice(i + dir, 0, c)
+    update(next)
+  }
+  const p = (k: string) => `${PROMPTS}.${k}`
+  const iconsOn = get(p('showIcon')) === true
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <ToggleField label={t('form.trending')} path="widget_v2_config.trending_prompts.showTrendingPrompts.value" get={get} set={set} disabled={disabled} />
-        <Field label={t('form.promptsTitle')} path="widget_v2_config.trending_prompts.displaySettings.sectionTitle" get={get} set={set} disabled={disabled} />
-      </div>
-
-      <SectionHead
-        aside={
-          !disabled && (
-            <button className="btn-quiet btn-sm -my-1 normal-case" onClick={() => update([...chips, { text: '' }])}>
-              <Plus className="size-3.5" />
-              {t('builder.chips.add')}
-            </button>
-          )
-        }
-      >
-        {t('builder.chips.list', { count: chips.length })}
-      </SectionHead>
-
-      {chips.length === 0 && <p className="callout">{t('builder.chips.empty')}</p>}
-      <ul className="space-y-2">
-        {chips.map((p, i) => (
-          <li key={i} className="row-in flex items-center gap-2" style={{ '--d': i } as React.CSSProperties}>
-            <input
-              className="input"
-              value={p.text ?? ''}
-              placeholder={t('builder.chips.placeholder')}
-              onChange={(e) => update(chips.map((c, j) => (j === i ? { ...c, text: e.target.value } : c)))}
-              disabled={disabled}
-            />
-            <button className="btn-danger btn-sm shrink-0" onClick={() => update(chips.filter((_, j) => j !== i))} disabled={disabled} title={t('common.delete')} aria-label={t('common.delete')}>
-              <Trash2 className="size-3.5" />
-            </button>
-          </li>
-        ))}
-      </ul>
-
+    <div className="space-y-2.5">
       <section>
-        <SectionHead>{t('builder.chips.style')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ColorField label={t('builder.chips.border')} path="widget_v2_config.trending_prompts.chipStyle.borderColor" get={get} set={set} disabled={disabled} />
-          <Field label={t('form.radius')} path="widget_v2_config.trending_prompts.chipStyle.borderRadius" get={get} set={set} disabled={disabled} placeholder="1.25rem" />
+          <ToggleField label={t('form.trending')} path="widget_v2_config.trending_prompts.showTrendingPrompts.value" get={get} set={set} disabled={disabled} />
+          <Field label={t('form.promptsTitle')} path="widget_v2_config.trending_prompts.displaySettings.sectionTitle" get={get} set={set} disabled={disabled} />
         </div>
       </section>
+
+      <section>
+        <SectionHead
+          aside={
+            !disabled && (
+              <button className="btn-quiet btn-sm -my-1 normal-case" onClick={() => update([...chips, { text: '' }])}>
+                <Plus className="size-3.5" />
+                {t('builder.chips.add')}
+              </button>
+            )
+          }
+        >
+          {t('builder.chips.list', { count: chips.length })}
+        </SectionHead>
+        {chips.length === 0 && <p className="callout">{t('builder.chips.empty')}</p>}
+        <ul className="space-y-2">
+          {chips.map((c, i) => (
+            <li key={i} className="row-in rounded-xl border border-line bg-surface/40 p-2.5" style={{ '--d': i } as React.CSSProperties}>
+              <div className="flex items-center gap-2">
+                <input
+                  className="input"
+                  value={c.text ?? ''}
+                  placeholder={t('builder.chips.placeholder')}
+                  onChange={(e) => patch(i, { text: e.target.value })}
+                  disabled={disabled}
+                />
+                <button className="btn-ghost btn-sm shrink-0" onClick={() => move(i, -1)} disabled={disabled || i === 0} title={t('builder.moveUp')} aria-label={t('builder.moveUp')}><ArrowUp className="size-3.5" /></button>
+                <button className="btn-ghost btn-sm shrink-0" onClick={() => move(i, 1)} disabled={disabled || i === chips.length - 1} title={t('builder.moveDown')} aria-label={t('builder.moveDown')}><ArrowDown className="size-3.5" /></button>
+                <button className="btn-danger btn-sm shrink-0" onClick={() => update(chips.filter((_, j) => j !== i))} disabled={disabled} title={t('common.delete')} aria-label={t('common.delete')}>
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              {iconsOn && (
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <IconField
+                    label={t('builder.chips.chipIcon', { n: i + 1 })} set="card" allowNone
+                    value={c.icon} url={c.iconUrl}
+                    onChange={(v) => patch(i, { icon: v })} onUrlChange={(v) => patch(i, { iconUrl: v })}
+                    disabled={disabled}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+        {iconsOn && chips.length > 0 && <p className="fine mt-2">{t('builder.chips.chipIconHint')}</p>}
+      </section>
+
+      <Disclosure summary={t('builder.chips.section')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.chips.showTitle')} path={p('showTitle')} get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.chips.layout')} path={p('layout')} options={[...CHIP_LAYOUTS]} keyPrefix="builder.chips.layout" fallback="wrap" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.chips.titleColor')} path={p('titleColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.chips.titleSize')} path={p('titleSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.chips.titleWeight')} path={p('titleWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="700" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.chips.titleFont')} path={p('titleFont')} get={get} set={set} disabled={disabled} allowInherit />
+          <NumField label={t('builder.chips.gap')} path={p('gap')} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.chips.surface')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.chips.bg')} path={p('background')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={p('radius')} min={0} max={999} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.borderStyle')} path={p('borderStyle')} options={[...BORDER_STYLES]} keyPrefix="builder.input.borderStyle" fallback="solid" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.borderWidth')} path={p('borderWidth')} min={0} max={8} step={0.5} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={p('borderColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padX')} path={p('paddingX')} min={0} max={40} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padY')} path={p('paddingY')} min={0} max={40} step={1} fallback={7} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.chips.hoverBg')} path={p('hoverBackground')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.chips.hoverBorder')} path={p('hoverBorderColor')} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={p('shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.chips.text')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.input.textColor')} path={p('textColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.textSize')} path={p('textSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.textWeight')} path={p('textWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.input.font')} path={p('textFont')} get={get} set={set} disabled={disabled} allowInherit />
+          <ChoiceField label={t('builder.chips.align')} path={p('align')} options={[...TEXT_ALIGNS]} keyPrefix="builder.align" fallback="start" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.chips.icon')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.chips.showIcon')} path={p('showIcon')} get={get} set={set} disabled={disabled} />
+          {iconsOn && (
+            <>
+              <ChoiceField label={t('builder.chips.iconPos')} path={p('iconPosition')} options={[...ICON_POSITIONS]} keyPrefix="builder.chips.iconPos" fallback="start" get={get} set={set} disabled={disabled} />
+              <IconField
+                label={t('builder.chips.defaultIcon')} set="card"
+                value={get(p('icon'))} url={get(p('iconUrl'))}
+                onChange={(v) => set(p('icon'), v)} onUrlChange={(v) => set(p('iconUrl'), v)}
+                disabled={disabled}
+              />
+              <NumField label={t('builder.input.iconSize')} path={p('iconSize')} min={6} max={40} step={0.5} fallback={13} unit="px" get={get} set={set} disabled={disabled} />
+              <BrandColorField label={t('builder.chips.iconColor')} path={p('iconColor')} get={get} set={set} disabled={disabled} />
+            </>
+          )}
+        </div>
+        {iconsOn && <p className="fine mt-2">{t('builder.chips.iconHint')}</p>}
+      </Disclosure>
     </div>
+  )
+}
+
+/* ------------------------------ input & launcher ---------------------------- */
+
+const INPUT = 'widget_v2_config.chat_input.design'
+const LAUNCHER = 'launcher_design'
+
+/** Shadow controls, shared by every surface that casts one. */
+function ShadowFields({ base, get, set, disabled }: { base: string } & PageProps) {
+  const { t } = useI18n()
+  const p = (k: string) => `${base}.${k}`
+  return (
+    <>
+      <NumField label={t('builder.sh.spread')} path={p('size')} min={0} max={80} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.y')} path={p('y')} min={-40} max={40} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.blur')} path={p('blur')} min={0} max={80} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+      <BrandColorField label={t('builder.sh.color')} path={p('color')} get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.opacity')} path={p('opacity')} min={0} max={1} step={0.01} fallback={0.08} get={get} set={set} disabled={disabled} />
+    </>
   )
 }
 
 function InputPage({ get, set, disabled }: PageProps) {
   const { t } = useI18n()
+  const p = (k: string) => `${INPUT}.${k}`
+  const sendIcon = asSendIcon(get(p('send.icon')))
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-2.5">
       <section>
         <SectionHead>{t('form.input')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('form.inputLayout')} path={p('layout')} options={[...INPUT_LAYOUTS]} keyPrefix="builder.input.layout" fallback="floating_pill" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.direction')} path={p('direction')} options={['auto', 'ltr', 'rtl']} keyPrefix="builder.input.dir" fallback="auto" get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+
+      <Disclosure summary={t('builder.input.field')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.input.fieldBg')} path={p('field.background')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={p('field.radius')} min={0} max={999} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.minHeight')} path={p('field.minHeight')} min={28} max={120} step={1} fallback={46} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.gap')} path={p('field.gap')} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padX')} path={p('field.paddingX')} min={0} max={40} step={1} fallback={5} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padY')} path={p('field.paddingY')} min={0} max={40} step={1} fallback={5} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.borderStyle')} path={p('field.borderStyle')} options={[...BORDER_STYLES]} keyPrefix="builder.input.borderStyle" fallback="solid" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.borderWidth')} path={p('field.borderWidth')} min={0} max={12} step={0.5} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={p('field.borderColor')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.focus')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.input.focusBorder')} path={p('field.focusBorderColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.ringWidth')} path={p('field.focusRingWidth')} min={0} max={12} step={0.5} fallback={3} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.ringColor')} path={p('field.focusRingColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.ringOpacity')} path={p('field.focusRingOpacity')} min={0} max={1} step={0.02} fallback={0.18} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="fine mt-2">{t('builder.input.focusHint')}</p>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.shadow')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={p('field.shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.typing')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FontField label={t('builder.input.font')} path={p('text.fontFamily')} get={get} set={set} disabled={disabled} allowInherit />
+          <NumField label={t('builder.input.textSize')} path={p('text.size')} min={9} max={28} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.textWeight')} path={p('text.weight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.textColor')} path={p('text.color')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.lineHeight')} path={p('text.lineHeight')} min={1} max={2.4} step={0.05} fallback={1.5} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.placeholder')}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('form.placeholder')} path="widget_v2_config.chat_input.placeholderText.text" get={get} set={set} disabled={disabled} />
-          <SelectField label={t('form.inputLayout')} path="widget_v2_config.chat_input.inputLayout.type" options={['floating_pill', 'full_width_bar']} get={get} set={set} disabled={disabled} />
-          <div>
-            <label className="label">{t('builder.input.direction')}</label>
-            <Select
-              label={t('builder.input.direction')}
-              value={get('widget_v2_config.chat_input.direction') === 'ltr' || get('widget_v2_config.chat_input.direction') === 'rtl' ? get('widget_v2_config.chat_input.direction') : 'auto'}
-              onChange={(v) => set('widget_v2_config.chat_input.direction', v)}
-              disabled={disabled}
-              options={[
-                { value: 'auto', label: t('builder.input.direction.auto') },
-                { value: 'ltr', label: 'LTR' },
-                { value: 'rtl', label: 'RTL' },
-              ]}
-            />
-          </div>
+          <BrandColorField label={t('builder.input.phColor')} path={p('placeholder.color')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.phSize')} path={p('placeholder.size')} min={9} max={28} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.phWeight')} path={p('placeholder.weight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.input.phItalic')} path={p('placeholder.italic')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.send')}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label">{t('builder.input.sendIcon')}</label>
             <Select
               label={t('builder.input.sendIcon')}
-              value={asSendIcon(get('widget_v2_config.chat_input.sendButtonIcon.icon'))}
-              onChange={(v) => set('widget_v2_config.chat_input.sendButtonIcon.icon', v)}
+              value={sendIcon}
+              onChange={(v) => set(p('send.icon'), v)}
               disabled={disabled}
-              options={SEND_ICONS.map((name) => ({
-                value: name,
-                label: t(`builder.input.sendIcon.${name}`),
-                icon: <SendIcon name={name} className="size-3.5" />,
-              }))}
+              options={SEND_ICONS.map((name) => ({ value: name, label: t(`builder.input.sendIcon.${name}`), icon: <SendIcon name={name} className="size-3.5" /> }))}
             />
           </div>
-          <ColorField label={t('builder.input.sendBg')} path="widget_v2_config.chat_input.sendButtonIcon.styles.backgroundColor" get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.input.sendFg')} path="widget_v2_config.chat_input.sendButtonIcon.styles.iconColor" get={get} set={set} disabled={disabled} />
-          {asSendIcon(get('widget_v2_config.chat_input.sendButtonIcon.icon')) === 'custom' && (
+          <ChoiceField label={t('builder.input.shape')} path={p('send.shape')} options={[...BUTTON_SHAPES]} keyPrefix="builder.shape" fallback="circle" get={get} set={set} disabled={disabled} />
+          {sendIcon === 'custom' && (
             <div className="sm:col-span-2">
-              <MediaInput
-                label={t('builder.input.sendIcon.customImage')}
-                value={get('widget_v2_config.chat_input.sendButtonIcon.url') ?? ''}
-                onChange={(v) => set('widget_v2_config.chat_input.sendButtonIcon.url', v)}
-                disabled={disabled}
-              />
+              <MediaInput label={t('builder.input.sendIcon.customImage')} value={get(p('send.url')) ?? ''} onChange={(v) => set(p('send.url'), v)} disabled={disabled} />
             </div>
           )}
-          <ColorField label={t('builder.input.actionColor')} path="widget_v2_config.chat_input.inputActions.iconColor" get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.input.fieldBg')} path="widget_v2_config.chat_input.styles.backgroundColor" get={get} set={set} disabled={disabled} />
-          <Field label={t('builder.input.padding')} path="widget_v2_config.chat_input.styles.padding" get={get} set={set} disabled={disabled} placeholder="10px 16px" />
-          <ToggleField label={t('form.voice')} path="widget_v2_config.chat_input.inputActions.voiceMessages" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.input.attach')} path="widget_v2_config.chat_input.inputActions.attachmentMenu" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.btnSize')} path={p('send.size')} min={20} max={72} step={1} fallback={36} unit="px" get={get} set={set} disabled={disabled} />
+          {get(p('send.shape')) === 'rounded' && (
+            <NumField label={t('builder.input.radius')} path={p('send.radius')} min={0} max={999} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          )}
+          <NumField label={t('builder.input.iconSize')} path={p('send.iconSize')} min={6} max={40} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.sendBg')} path={p('send.background')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.sendFg')} path={p('send.iconColor')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.hoverBg')} path={p('send.hoverBackground')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.disabledOpacity')} path={p('send.disabledOpacity')} min={0} max={1} step={0.05} fallback={0.4} get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.sendPos')} path={p('send.position')} options={[...SEND_POSITIONS]} keyPrefix="builder.input.sendPos" fallback="inside" get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={p('send.shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.actions')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('form.voice')} path={p('actions.voice')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.input.attach')} path={p('actions.attach')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.input.emoji')} path={p('actions.emoji')} get={get} set={set} disabled={disabled} />
+          <div />
+          {get(p('actions.voice')) !== false && (
+            <IconField
+              label={t('builder.input.voiceIcon')} set="voice"
+              value={get(p('actions.voiceIcon'))} url={get(p('actions.voiceUrl'))}
+              onChange={(v) => set(p('actions.voiceIcon'), v)} onUrlChange={(v) => set(p('actions.voiceUrl'), v)}
+              disabled={disabled}
+            />
+          )}
+          {get(p('actions.attach')) !== false && (
+            <IconField
+              label={t('builder.input.attachIcon')} set="attach"
+              value={get(p('actions.attachIcon'))} url={get(p('actions.attachUrl'))}
+              onChange={(v) => set(p('actions.attachIcon'), v)} onUrlChange={(v) => set(p('actions.attachUrl'), v)}
+              disabled={disabled}
+            />
+          )}
+          {get(p('actions.emoji')) === true && (
+            <IconField
+              label={t('builder.input.emojiIcon')} set="emoji"
+              value={get(p('actions.emojiIcon'))} url={get(p('actions.emojiUrl'))}
+              onChange={(v) => set(p('actions.emojiIcon'), v)} onUrlChange={(v) => set(p('actions.emojiUrl'), v)}
+              disabled={disabled}
+            />
+          )}
+          <ChoiceField label={t('builder.input.shape')} path={p('actions.shape')} options={[...BUTTON_SHAPES]} keyPrefix="builder.shape" fallback="circle" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.btnSize')} path={p('actions.size')} min={20} max={72} step={1} fallback={36} unit="px" get={get} set={set} disabled={disabled} />
+          {get(p('actions.shape')) === 'rounded' && (
+            <NumField label={t('builder.input.radius')} path={p('actions.radius')} min={0} max={999} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          )}
+          <NumField label={t('builder.input.iconSize')} path={p('actions.iconSize')} min={6} max={40} step={0.5} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.actionBg')} path={p('actions.background')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.actionColor')} path={p('actions.iconColor')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.hoverBg')} path={p('actions.hoverBackground')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.gap')} path={p('actions.gap')} min={0} max={24} step={1} fallback={2} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.input.container')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.input.containerBg')} path={p('container.background')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padX')} path={p('container.paddingX')} min={0} max={48} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padTop')} path={p('container.paddingTop')} min={0} max={48} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padBottom')} path={p('container.paddingBottom')} min={0} max={48} step={1} fallback={24} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+    </div>
+  )
+}
+
+function LauncherPage({ get, set, disabled }: PageProps) {
+  const { t } = useI18n()
+  const p = (k: string) => `${LAUNCHER}.${k}`
+  const icon = get(p('icon')) ?? 'bubble'
+  const expanded = (get(p('type')) ?? 'standard') === 'expanded_bubble'
+
+  return (
+    <div className="space-y-2.5">
+      <section>
+        <SectionHead>{t('builder.section.launcher')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('form.launcherStyle')} path={p('type')} options={['standard', 'expanded_bubble', 'chat_icon', 'icon_only']} keyPrefix="builder.launcher.type" fallback="standard" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('form.launcherPosition')} path={p('position')} options={['right', 'left']} keyPrefix="builder.launcher.pos" fallback="right" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.offsetX')} path={p('offsetX')} min={0} max={120} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.offsetY')} path={p('offsetY')} min={0} max={120} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('form.poweredBy')} path="powered_by_pair_ai" get={get} set={set} disabled={disabled} />
         </div>
       </section>
+
+      <Disclosure summary={t('builder.launcher.shape')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumField label={t('builder.launcher.size')} path={p('size')} min={32} max={96} step={1} fallback={56} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={p('radius')} min={0} max={999} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.launcher.gradient')} path={p('useGradient')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.launcher.bg')} path={p('background')} get={get} set={set} disabled={disabled} />
+          {get(p('useGradient')) === true && (
+            <>
+              <BrandColorField label={t('builder.hero.bg.to')} path={p('gradientTo')} get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.hero.bg.angle')} path={p('gradientAngle')} min={0} max={360} step={5} fallback={135} unit="°" get={get} set={set} disabled={disabled} />
+            </>
+          )}
+          <NumField label={t('builder.input.borderWidth')} path={p('borderWidth')} min={0} max={12} step={0.5} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={p('borderColor')} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={p('shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.launcher.icon')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <IconField
+            label={t('builder.launcher.icon')} set="launcher" allowNone
+            value={get(p('icon'))} url={get(p('iconUrl'))}
+            onChange={(v) => set(p('icon'), v)} onUrlChange={(v) => set(p('iconUrl'), v)}
+            disabled={disabled}
+          />
+          {icon !== 'none' && (
+            <>
+              <NumField label={t('builder.input.iconSize')} path={p('iconSize')} min={8} max={64} step={1} fallback={22} unit="px" get={get} set={set} disabled={disabled} />
+              {icon !== 'custom' && <BrandColorField label={t('builder.launcher.iconColor')} path={p('iconColor')} get={get} set={set} disabled={disabled} />}
+            </>
+          )}
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.launcher.label')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.launcher.labelShow')} path={p('label.show')} get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.launcher.title')} path="launcher_title" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.launcher.labelColor')} path={p('label.color')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.textSize')} path={p('label.size')} min={9} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.textWeight')} path={p('label.weight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="500" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.input.font')} path={p('label.fontFamily')} get={get} set={set} disabled={disabled} allowInherit />
+        </div>
+        {!expanded && <p className="fine mt-2">{t('builder.launcher.labelHint')}</p>}
+      </Disclosure>
+
+      <Disclosure summary={t('builder.launcher.motion')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.launcher.entrance')} path={p('entrance')} options={[...LAUNCHER_ENTRANCES]} keyPrefix="builder.launcher.entrance" fallback="pop" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.launcher.attention')} path={p('attention')} options={[...LAUNCHER_ATTENTION]} keyPrefix="builder.launcher.attention" fallback="none" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.hoverScale')} path={p('hoverScale')} min={1} max={1.3} step={0.01} fallback={1.04} unit="×" get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="fine mt-2">{t('builder.launcher.motionHint')}</p>
+      </Disclosure>
+    </div>
+  )
+}
+
+/* ------------------------------ loading & toast ----------------------------- */
+
+const LOADING = 'widget_v2_config.intro_screen.loadingState.design'
+const TOAST = 'toast_design'
+
+/** The placeholder shown while the first reply is still loading. */
+function LoadingPage({ get, set, disabled }: PageProps) {
+  const { t } = useI18n()
+  const p = (k: string) => `${LOADING}.${k}`
+  const type = get(p('type')) ?? get('widget_v2_config.intro_screen.loadingState.type') ?? 'shimmer'
+  const skeleton = type === 'shimmer' || type === 'pulse'
+
+  return (
+    <div className="space-y-2.5">
+      <section>
+        <SectionHead>{t('builder.load.head')}</SectionHead>
+        <p className="callout mb-3">{t('builder.load.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.load.type')} path={p('type')} options={[...LOADING_TYPES]} keyPrefix="builder.load.type" fallback="shimmer" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.load.speed')} path={p('speedMs')} min={300} max={6000} step={50} fallback={1600} unit="ms" get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+
+      {skeleton && (
+        <Disclosure summary={t('builder.load.skeleton')}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BrandColorField label={t('builder.load.base')} path={p('baseColor')} get={get} set={set} disabled={disabled} />
+            <BrandColorField label={t('builder.load.highlight')} path={p('highlightColor')} get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.input.radius')} path={p('radius')} min={0} max={60} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.load.lines')} path={p('lines')} min={0} max={8} step={1} fallback={3} get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.load.lineHeight')} path={p('lineHeight')} min={2} max={40} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.load.cards')} path={p('cards')} min={0} max={6} step={1} fallback={3} get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.load.cardHeight')} path={p('cardHeight')} min={20} max={400} step={4} fallback={220} unit="px" get={get} set={set} disabled={disabled} />
+          </div>
+        </Disclosure>
+      )}
+
+      {!skeleton && (
+        <Disclosure summary={t('builder.load.spinner')}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BrandColorField label={t('builder.load.spinnerColor')} path={p('spinnerColor')} get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.load.spinnerSize')} path={p('spinnerSize')} min={8} max={72} step={1} fallback={22} unit="px" get={get} set={set} disabled={disabled} />
+            {type === 'spinner' && (
+              <NumField label={t('builder.load.spinnerThickness')} path={p('spinnerThickness')} min={1} max={10} step={0.5} fallback={2.5} unit="px" get={get} set={set} disabled={disabled} />
+            )}
+          </div>
+        </Disclosure>
+      )}
+
+      <Disclosure summary={t('builder.load.label')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.load.labelShow')} path={p('labelShow')} get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.load.labelText')} path={p('labelText')} get={get} set={set} disabled={disabled} placeholder="Thinking…" />
+          <BrandColorField label={t('builder.launcher.labelColor')} path={p('labelColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.textSize')} path={p('labelSize')} min={8} max={24} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+    </div>
+  )
+}
+
+/** The confirmation that slides in after an action. */
+function ToastPage({ get, set, disabled }: PageProps) {
+  const { t } = useI18n()
+  const p = (k: string) => `${TOAST}.${k}`
+  return (
+    <div className="space-y-2.5">
+      <section>
+        <SectionHead>{t('builder.toast.head')}</SectionHead>
+        <p className="callout mb-3">{t('builder.toast.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.toast.position')} path={p('position')} options={[...TOAST_POSITIONS]} keyPrefix="builder.toast.pos" fallback="bottom-center" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.toast.offset')} path={p('offset')} min={0} max={80} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.toast.duration')} path={p('durationMs')} min={800} max={15000} step={100} fallback={3000} unit="ms" get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.toast.text')} path="widget_v2_config.messages.feedback.toastMessage" get={get} set={set} disabled={disabled} placeholder="Thanks for your feedback." />
+        </div>
+      </section>
+
+      <Disclosure summary={t('builder.toast.look')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BrandColorField label={t('builder.toast.bg')} path={p('background')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.toast.fg')} path={p('textColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.radius')} path={p('radius')} min={0} max={999} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.borderWidth')} path={p('borderWidth')} min={0} max={8} step={0.5} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={p('borderColor')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padX')} path={p('paddingX')} min={0} max={40} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.padY')} path={p('paddingY')} min={0} max={40} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.textSize')} path={p('fontSize')} min={9} max={24} step={0.5} fallback={13} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.textWeight')} path={p('fontWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="500" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.toast.icon')} path={p('showIcon')} get={get} set={set} disabled={disabled} />
+          {get(p('showIcon')) !== false && (
+            <BrandColorField label={t('builder.toast.iconColor')} path={p('iconColor')} get={get} set={set} disabled={disabled} />
+          )}
+          <ToggleField label={t('builder.toast.fullWidth')} path={p('fullWidth')} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={p('shadow')} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
     </div>
   )
 }
@@ -1022,20 +1505,3 @@ function MessagesPage({ get, set, disabled }: PageProps) {
   )
 }
 
-function LauncherPage({ get, set, disabled }: PageProps) {
-  const { t } = useI18n()
-  return (
-    <div className="space-y-7">
-      <section>
-        <SectionHead>{t('builder.section.launcher')}</SectionHead>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField label={t('form.launcherStyle')} path="launcher_style" options={['standard', 'expanded_bubble', 'chat_icon', 'icon_only']} get={get} set={set} disabled={disabled} />
-          <SelectField label={t('form.launcherPosition')} path="launcher_position" options={['right', 'left']} get={get} set={set} disabled={disabled} />
-          <Field label={t('builder.launcher.title')} path="launcher_title" get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.launcher.bg')} path="launcher_styles.backgroundColor" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('form.poweredBy')} path="powered_by_pair_ai" get={get} set={set} disabled={disabled} />
-        </div>
-      </section>
-    </div>
-  )
-}

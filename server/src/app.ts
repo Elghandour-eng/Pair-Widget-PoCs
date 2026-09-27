@@ -12,7 +12,7 @@ import { redis } from './lib/redis.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { pairProxyRouter } from './routes/pairProxy.js'
-import { publicRouter, widgetLangRouter } from './routes/public.js'
+import { publicRouter, widgetLangRouter, widgetViewRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
 import { uploadsRouter, uploadsStatic } from './routes/uploads.js'
@@ -70,6 +70,10 @@ export function createApp() {
   // arrives already translated, everything else proxies to Pair as usual.
   app.use('/lang/:lng/v1', widgetCors, widgetLangRouter)
   app.use('/lang/:lng/v1', widgetCors, pairProxyRouter)
+  // View-forced variant (language AND theme) for the test page's controls;
+  // either segment can be `x` to keep that side of the saved design.
+  app.use('/pv/:lng/:theme/v1', widgetCors, widgetViewRouter)
+  app.use('/pv/:lng/:theme/v1', widgetCors, pairProxyRouter)
   app.use('/api/auth', dashboardCors, authRouter)
   app.use('/api/users', dashboardCors, usersRouter)
   app.use('/api/widgets', dashboardCors, widgetsRouter)

@@ -23,13 +23,19 @@ export const HeroDesignSlide = memo(function HeroDesignSlide({
   brand,
   rtl,
   uid,
+  badgeFallback,
 }: {
   design: HeroDesign
   brand: string
   rtl: boolean
   uid: string
+  /** The channel's name, for a design whose badge carries no text of its own. */
+  badgeFallback?: string
 }) {
-  const svg = useMemo(() => buildHeroSvg(design, { uid, patternHref, rtl, brand }), [design, uid, rtl, brand])
+  const svg = useMemo(
+    () => buildHeroSvg(design, { uid, patternHref, rtl, brand, badgeFallback }),
+    [design, uid, rtl, brand, badgeFallback],
+  )
   return (
     <div
       className="absolute inset-0 [&>svg]:block [&>svg]:size-full"

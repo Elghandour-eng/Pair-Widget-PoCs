@@ -18,7 +18,13 @@ import type { WidgetConfig } from '@/lib/api'
 
 export const PREVIEW_FRAME_PATH = '/preview-frame'
 
-export type PreviewConfigMsg = { type: 'pws:config'; config: WidgetConfig | null; dark: boolean }
+/**
+ * `focus` is the builder section being edited. The frame uses it to show the
+ * part of the widget being worked on — the launcher, for instance, is only
+ * visible while the widget is closed, so editing it would otherwise change
+ * nothing on screen.
+ */
+export type PreviewConfigMsg = { type: 'pws:config'; config: WidgetConfig | null; dark: boolean; focus?: string }
 /**
  * A pushed event: the frame applies it on top of whatever config it holds,
  * the way a host page would drive an embedded widget at runtime
@@ -157,6 +163,9 @@ const COPY_PAIRS: Array<[en: string, ar: string]> = [
   ["We're here to help", 'نحن هنا لمساعدتك'],
   ['Reach guest care or check a complaint.', 'تواصل مع خدمة العملاء أو تابع شكواك.'],
   ['How can we help?', 'كيف نقدر نساعدك؟'],
+  // Cinescape Mesh preset copy
+  ['Book in a few taps', 'احجز بكم ضغطة'],
+  ['Seats, snacks and showtimes in one chat.', 'المقاعد والسناكس والمواعيد في محادثة واحدة.'],
   ['Trending prompts', 'أسئلة شائعة'],
   ['Chat with us!', 'تحدث معنا!'],
 ]
@@ -186,12 +195,61 @@ const TEXT_PATHS = [
   'launcher_title',
 ]
 
+/**
+ * Fields that carry a stored translation beside the copy itself: the widget
+ * keeps reading `<path>.text`, while `<path>.i18n.en` / `.i18n.ar` remember
+ * what the channel typed in each language so switching the widget language
+ * never loses hand-written copy the dictionary below has never seen.
+ */
+export const BILINGUAL_PATHS = [
+  'widget_v2_config.intro_screen.welcomeTitle',
+  'widget_v2_config.intro_screen.welcomeSubtitle',
+] as const
+
+/** The dictionary's translation of a string, or undefined when it does not know it. */
+export function translate(text: unknown, to: WidgetLang): string | undefined {
+  if (typeof text !== 'string' || !text.trim()) return undefined
+  return (to === 'ar' ? EN_TO_AR : AR_TO_EN).get(norm(text))
+}
+
+/**
+ * What a bilingual field shows for one language: the stored translation first,
+ * then the live text when that language is the active one, and finally the
+ * dictionary — so an untouched preset still shows both languages filled in.
+ */
+export function bilingualText(config: WidgetConfig | null, path: string, lang: WidgetLang): string {
+  const stored = deepGet(config, `${path}.i18n.${lang}`)
+  if (typeof stored === 'string') return stored
+  const text = deepGet(config, `${path}.text`)
+  if (typeof text !== 'string') return ''
+  return currentLang(config) === lang ? text : (translate(text, lang) ?? '')
+}
+
+/**
+ * Writes one language of a bilingual field. The widget-facing `.text` only
+ * moves when the edited language is the one the widget is currently in.
+ */
+export function setBilingualText(config: WidgetConfig, path: string, lang: WidgetLang, value: string): WidgetConfig {
+  let next = deepSet(config, `${path}.i18n.${lang}`, value)
+  if (currentLang(config) === lang) next = deepSet(next, `${path}.text`, value)
+  return next
+}
+
 export function applyLanguage(config: WidgetConfig, lang: WidgetLang): WidgetConfig {
   const dict = lang === 'ar' ? EN_TO_AR : AR_TO_EN
   const swap = (s: unknown): unknown => (typeof s === 'string' && dict.has(norm(s)) ? dict.get(norm(s))! : s)
 
   let next = deepSet(config, 'locale', lang)
+  // A stored translation beats the dictionary: it is what the channel typed.
+  const translated = new Set<string>()
+  for (const path of BILINGUAL_PATHS) {
+    const stored = bilingualText(config, path, lang)
+    if (!stored) continue
+    next = deepSet(next, `${path}.text`, stored)
+    translated.add(`${path}.text`)
+  }
   for (const path of TEXT_PATHS) {
+    if (translated.has(path)) continue
     const v = deepGet(next, path)
     const swapped = swap(v)
     if (swapped !== v) next = deepSet(next, path, swapped)

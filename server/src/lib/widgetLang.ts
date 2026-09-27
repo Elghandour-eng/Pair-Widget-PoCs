@@ -58,6 +58,9 @@ const COPY_PAIRS: Array<[en: string, ar: string]> = [
   ["We're here to help", 'نحن هنا لمساعدتك'],
   ['Reach guest care or check a complaint.', 'تواصل مع خدمة العملاء أو تابع شكواك.'],
   ['How can we help?', 'كيف نقدر نساعدك؟'],
+  // Cinescape Mesh preset copy
+  ['Book in a few taps', 'احجز بكم ضغطة'],
+  ['Seats, snacks and showtimes in one chat.', 'المقاعد والسناكس والمواعيد في محادثة واحدة.'],
   ['Trending prompts', 'أسئلة شائعة'],
   ['Chat with us!', 'تحدث معنا!'],
 ]
@@ -85,12 +88,30 @@ const TEXT_PATHS = [
   'launcher_title',
 ]
 
+/**
+ * Fields the dashboard stores in both languages under `<path>.i18n.<lang>`.
+ * Mirrors BILINGUAL_PATHS in web/src/lib/builder.ts.
+ */
+const BILINGUAL_PATHS = [
+  'widget_v2_config.intro_screen.welcomeTitle',
+  'widget_v2_config.intro_screen.welcomeSubtitle',
+]
+
 export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): WidgetConfig {
   const dict = lang === 'ar' ? EN_TO_AR : AR_TO_EN
   const swap = (s: unknown): unknown => (typeof s === 'string' && dict.has(norm(s)) ? dict.get(norm(s))! : s)
 
   let next = deepSet(config, 'locale', lang)
+  // Copy the channel typed itself wins over the dictionary's guess.
+  const translated = new Set<string>()
+  for (const path of BILINGUAL_PATHS) {
+    const stored = deepGet(config, `${path}.i18n.${lang}`)
+    if (typeof stored !== 'string' || !stored) continue
+    next = deepSet(next, `${path}.text`, stored)
+    translated.add(`${path}.text`)
+  }
   for (const path of TEXT_PATHS) {
+    if (translated.has(path)) continue
     const v = deepGet(next, path)
     const swapped = swap(v)
     if (swapped !== v) next = deepSet(next, path, swapped)
