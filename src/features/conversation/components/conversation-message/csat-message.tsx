@@ -3,7 +3,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTitle, DialogTr
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { hexToRgba, isDarkBackground } from '@/lib/utils'
-import { localizeDefault, uiText } from '@/lib/ui-strings'
+import { localizeDefault, uiText, type UiStringKey } from '@/lib/ui-strings'
 import { useSubmitCsat } from '@/features/conversation/hooks/use-submit-csat'
 import type { InteractiveMetadata, Message } from '@/features/conversation/types/message'
 import { cn } from '@/lib/utils'
@@ -123,6 +123,15 @@ export function CsatMessage({ message, isUnread, primaryColor, websiteName }: Cs
         weight: opt.weight ?? idx + 1,
       }))
 
+  // The stock English rating labels ("Very dissatisfied with the service" …)
+  // follow the widget locale; channel-authored custom labels pass through.
+  const optKey = (w: number) => ('csatOpt' + Math.min(Math.max(Math.round(w), 1), 5)) as UiStringKey
+  const locOptions = options.map((o) => ({
+    ...o,
+    title: localizeDefault(loc, o.title, optKey(o.weight)),
+    description: o.description ? localizeDefault(loc, o.description, optKey(o.weight)) : o.description,
+  }))
+
   const { conversationId } = useWidgetNavigation()
   const { mutate: submitCsat, isPending } = useSubmitCsat()
 
@@ -147,7 +156,7 @@ export function CsatMessage({ message, isUnread, primaryColor, websiteName }: Cs
     )
   }
 
-  const sortedOptions = [...options].sort((a, b) => a.weight - b.weight)
+  const sortedOptions = [...locOptions].sort((a, b) => a.weight - b.weight)
 
   return (
     <MessageLayout message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName}>
@@ -288,7 +297,7 @@ export function CsatMessage({ message, isUnread, primaryColor, websiteName }: Cs
               ) : (
                 <div className="px-6 pt-6 pb-6">
                   <div className="flex flex-wrap gap-2">
-                    {options.map((opt) => {
+                    {locOptions.map((opt) => {
                       const isSelected = selectedId === opt.id
                       return (
                         <button

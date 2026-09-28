@@ -21,6 +21,11 @@ const STRINGS = {
     generating: 'Generating…',
     submitting: 'Submitting…',
     loadingOlder: 'Loading older messages…',
+    csatOpt1: 'Very dissatisfied with the service',
+    csatOpt2: 'Dissatisfied with the service',
+    csatOpt3: 'Neutral about the service',
+    csatOpt4: 'Satisfied with the service',
+    csatOpt5: 'Very satisfied with the service',
   },
   ar: {
     sending: 'جاري الإرسال…',
@@ -38,6 +43,11 @@ const STRINGS = {
     generating: 'جاري الكتابة…',
     submitting: 'جاري الإرسال…',
     loadingOlder: 'جاري تحميل الرسائل الأقدم…',
+    csatOpt1: 'غير راضٍ تماماً عن الخدمة',
+    csatOpt2: 'غير راضٍ عن الخدمة',
+    csatOpt3: 'محايد تجاه الخدمة',
+    csatOpt4: 'راضٍ عن الخدمة',
+    csatOpt5: 'راضٍ تماماً عن الخدمة',
   },
 } as const
 
@@ -50,6 +60,11 @@ const ALIASES: Partial<Record<UiStringKey, string[]>> = {
   csatBody: ['how was your experience', 'how was your experience?'],
   csatHeader: ['customer satisfaction survey', 'csat survey'],
   loadingOlder: ['loading older messages...', 'loading older messages'],
+  csatOpt1: ['very dissatisfied', 'very unsatisfied', 'very unsatisfied with the service'],
+  csatOpt2: ['dissatisfied', 'unsatisfied', 'unsatisfied with the service'],
+  csatOpt3: ['neutral', 'neutral about service'],
+  csatOpt4: ['satisfied'],
+  csatOpt5: ['very satisfied'],
 }
 
 /** The backend's own English default, localized when the widget is not in English. */
