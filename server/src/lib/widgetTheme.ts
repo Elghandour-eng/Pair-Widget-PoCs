@@ -65,10 +65,84 @@ const THEME_PATHS: Array<[path: string, token: keyof ThemeTokens]> = [
   ['widget_v2_config.messages.customerMessages.TextStyles.color', 'text'],
 ]
 
+/**
+ * The studio's design blocks are compiled into the served CSS *after* theming
+ * (public.ts materializeChrome), so a theme that only wrote the legacy style
+ * paths was overwritten by the design's own colours — a dark widget kept a
+ * white composer, white cards and light chips. These paths re-token the design
+ * itself. Each group only applies when that design block exists: writing into
+ * a missing one would conjure a default design the channel never had.
+ */
+const DESIGN_THEME_PATHS: Array<[guard: string, paths: Array<[path: string, token: keyof ThemeTokens | null]>]> = [
+  ['widget_v2_config.chat_input.design', [
+    ['widget_v2_config.chat_input.design.field.background', 'surface2'],
+    ['widget_v2_config.chat_input.design.field.borderColor', 'border'],
+    ['widget_v2_config.chat_input.design.text.color', 'text'],
+    ['widget_v2_config.chat_input.design.placeholder.color', 'faint'],
+    ['widget_v2_config.chat_input.design.actions.iconColor', 'muted'],
+    ['widget_v2_config.chat_input.design.actions.hoverBackground', 'surface'],
+    // null = transparent: the composer strip sits on the widget background.
+    ['widget_v2_config.chat_input.design.container.background', null],
+  ]],
+  ['widget_v2_config.quick_links.design', [
+    ['widget_v2_config.quick_links.design.background', 'surface'],
+    ['widget_v2_config.quick_links.design.borderColor', 'border'],
+    ['widget_v2_config.quick_links.design.titleColor', 'text'],
+    ['widget_v2_config.quick_links.design.subtitleColor', 'muted'],
+  ]],
+  ['widget_v2_config.trending_prompts.design', [
+    ['widget_v2_config.trending_prompts.design.background', null],
+    ['widget_v2_config.trending_prompts.design.borderColor', 'border2'],
+    ['widget_v2_config.trending_prompts.design.textColor', 'text'],
+    ['widget_v2_config.trending_prompts.design.titleColor', 'muted'],
+  ]],
+  ['widget_v2_config.pre_chat_form', [
+    ['widget_v2_config.pre_chat_form.design.message.color', 'text'],
+    ['widget_v2_config.pre_chat_form.design.labels.color', 'text'],
+    ['widget_v2_config.pre_chat_form.design.field.background', 'surface2'],
+    ['widget_v2_config.pre_chat_form.design.field.borderColor', 'border'],
+    ['widget_v2_config.pre_chat_form.design.field.textColor', 'text'],
+    ['widget_v2_config.pre_chat_form.design.field.placeholderColor', 'faint'],
+    ['widget_v2_config.pre_chat_form.design.card.background', 'surface'],
+    ['widget_v2_config.pre_chat_form.design.card.borderColor', 'border'],
+  ]],
+  ['widget_v2_config.messages.loadingOlder', [
+    ['widget_v2_config.messages.loadingOlder.background', 'surface'],
+    ['widget_v2_config.messages.loadingOlder.textColor', 'muted'],
+  ]],
+  ['widget_v2_config.csat', [
+    ['widget_v2_config.csat.design.card.background', 'surface'],
+    ['widget_v2_config.csat.design.card.borderColor', 'border'],
+    ['widget_v2_config.csat.design.header.color', 'muted'],
+    ['widget_v2_config.csat.design.body.color', 'text'],
+    ['widget_v2_config.csat.design.dialog.background', 'surface'],
+    ['widget_v2_config.csat.design.dialog.titleColor', 'text'],
+    ['widget_v2_config.csat.design.dialog.dividerColor', 'border'],
+    ['widget_v2_config.csat.design.chips.background', 'surface2'],
+    ['widget_v2_config.csat.design.chips.borderColor', 'border2'],
+    ['widget_v2_config.csat.design.chips.textColor', 'text'],
+  ]],
+  ['widget_v2_config.consent_screen', [
+    ['widget_v2_config.consent_screen.design.card.background', 'surface'],
+    ['widget_v2_config.consent_screen.design.title.color', 'text'],
+    ['widget_v2_config.consent_screen.design.subtitle.color', 'muted'],
+    ['widget_v2_config.consent_screen.design.points.textColor', 'text'],
+    ['widget_v2_config.consent_screen.design.points.iconColor', 'muted'],
+    ['widget_v2_config.consent_screen.design.footnote.color', 'faint'],
+  ]],
+]
+
+const deepGet = (o: unknown, path: string): unknown =>
+  path.split('.').reduce<any>((acc, k) => (acc && typeof acc === 'object' ? acc[k] : undefined), o)
+
 export function applyWidgetTheme(config: WidgetConfig, theme: WidgetTheme): WidgetConfig {
   const tokens = THEME_TOKENS[theme]
   let next = config
   for (const [path, token] of THEME_PATHS) next = deepSet(next, path, tokens[token])
+  for (const [guard, paths] of DESIGN_THEME_PATHS) {
+    if (deepGet(next, guard) === undefined) continue
+    for (const [path, token] of paths) next = deepSet(next, path, token ? tokens[token] : 'transparent')
+  }
   // Card borders live inside a CSS shorthand, so rebuild it with the theme's border color.
   next = deepSet(next, 'widget_v2_config.quick_links.cardStyle.border', `1px solid ${tokens.border}`)
   next = deepSet(next, 'widget_v2_config.trending_prompts.chipStyle.backgroundColor', 'transparent')

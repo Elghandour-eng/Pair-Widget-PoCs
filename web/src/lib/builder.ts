@@ -113,10 +113,80 @@ const THEME_PATHS: Array<[path: string, token: keyof ThemeTokens]> = [
   ['widget_v2_config.messages.customerMessages.TextStyles.color', 'text'],
 ]
 
+/**
+ * The studio's design blocks are compiled into the served CSS after theming,
+ * so a theme that only wrote the legacy style paths was overwritten by the
+ * design's own colours. These paths re-token the design itself — mirrored in
+ * server/src/lib/widgetTheme.ts, which does the same for the served config.
+ * Each group only applies when that block exists, so a theme never conjures a
+ * design the channel never had.
+ */
+const DESIGN_THEME_PATHS: Array<[guard: string, paths: Array<[path: string, token: keyof ThemeTokens | null]>]> = [
+  ['widget_v2_config.chat_input.design', [
+    ['widget_v2_config.chat_input.design.field.background', 'surface2'],
+    ['widget_v2_config.chat_input.design.field.borderColor', 'border'],
+    ['widget_v2_config.chat_input.design.text.color', 'text'],
+    ['widget_v2_config.chat_input.design.placeholder.color', 'faint'],
+    ['widget_v2_config.chat_input.design.actions.iconColor', 'muted'],
+    ['widget_v2_config.chat_input.design.actions.hoverBackground', 'surface'],
+    ['widget_v2_config.chat_input.design.container.background', null],
+  ]],
+  ['widget_v2_config.quick_links.design', [
+    ['widget_v2_config.quick_links.design.background', 'surface'],
+    ['widget_v2_config.quick_links.design.borderColor', 'border'],
+    ['widget_v2_config.quick_links.design.titleColor', 'text'],
+    ['widget_v2_config.quick_links.design.subtitleColor', 'muted'],
+  ]],
+  ['widget_v2_config.trending_prompts.design', [
+    ['widget_v2_config.trending_prompts.design.background', null],
+    ['widget_v2_config.trending_prompts.design.borderColor', 'border2'],
+    ['widget_v2_config.trending_prompts.design.textColor', 'text'],
+    ['widget_v2_config.trending_prompts.design.titleColor', 'muted'],
+  ]],
+  ['widget_v2_config.pre_chat_form', [
+    ['widget_v2_config.pre_chat_form.design.message.color', 'text'],
+    ['widget_v2_config.pre_chat_form.design.labels.color', 'text'],
+    ['widget_v2_config.pre_chat_form.design.field.background', 'surface2'],
+    ['widget_v2_config.pre_chat_form.design.field.borderColor', 'border'],
+    ['widget_v2_config.pre_chat_form.design.field.textColor', 'text'],
+    ['widget_v2_config.pre_chat_form.design.field.placeholderColor', 'faint'],
+    ['widget_v2_config.pre_chat_form.design.card.background', 'surface'],
+    ['widget_v2_config.pre_chat_form.design.card.borderColor', 'border'],
+  ]],
+  ['widget_v2_config.messages.loadingOlder', [
+    ['widget_v2_config.messages.loadingOlder.background', 'surface'],
+    ['widget_v2_config.messages.loadingOlder.textColor', 'muted'],
+  ]],
+  ['widget_v2_config.csat', [
+    ['widget_v2_config.csat.design.card.background', 'surface'],
+    ['widget_v2_config.csat.design.card.borderColor', 'border'],
+    ['widget_v2_config.csat.design.header.color', 'muted'],
+    ['widget_v2_config.csat.design.body.color', 'text'],
+    ['widget_v2_config.csat.design.dialog.background', 'surface'],
+    ['widget_v2_config.csat.design.dialog.titleColor', 'text'],
+    ['widget_v2_config.csat.design.dialog.dividerColor', 'border'],
+    ['widget_v2_config.csat.design.chips.background', 'surface2'],
+    ['widget_v2_config.csat.design.chips.borderColor', 'border2'],
+    ['widget_v2_config.csat.design.chips.textColor', 'text'],
+  ]],
+  ['widget_v2_config.consent_screen', [
+    ['widget_v2_config.consent_screen.design.card.background', 'surface'],
+    ['widget_v2_config.consent_screen.design.title.color', 'text'],
+    ['widget_v2_config.consent_screen.design.subtitle.color', 'muted'],
+    ['widget_v2_config.consent_screen.design.points.textColor', 'text'],
+    ['widget_v2_config.consent_screen.design.points.iconColor', 'muted'],
+    ['widget_v2_config.consent_screen.design.footnote.color', 'faint'],
+  ]],
+]
+
 export function applyTheme(config: WidgetConfig, theme: ThemeName): WidgetConfig {
   const tokens = THEME_TOKENS[theme]
   let next = config
   for (const [path, token] of THEME_PATHS) next = deepSet(next, path, tokens[token])
+  for (const [guard, paths] of DESIGN_THEME_PATHS) {
+    if (deepGet(next, guard) === undefined) continue
+    for (const [path, token] of paths) next = deepSet(next, path, token ? tokens[token] : 'transparent')
+  }
   // Card borders live inside a CSS shorthand, so rebuild it with the theme's border color.
   next = deepSet(next, 'widget_v2_config.quick_links.cardStyle.border', `1px solid ${tokens.border}`)
   next = deepSet(next, 'widget_v2_config.trending_prompts.chipStyle.backgroundColor', 'transparent')
@@ -168,6 +238,28 @@ const COPY_PAIRS: Array<[en: string, ar: string]> = [
   ['Seats, snacks and showtimes in one chat.', 'المقاعد والسناكس والمواعيد في محادثة واحدة.'],
   ['Trending prompts', 'أسئلة شائعة'],
   ['Chat with us!', 'تحدث معنا!'],
+  // Pre-chat form defaults
+  ['Share your queries or comments here.', 'اكتب استفسارك أو تعليقك هنا.'],
+  ['Email Id', 'البريد الإلكتروني'],
+  ['Full name', 'الاسم الكامل'],
+  ['Phone number', 'رقم الهاتف'],
+  ['Message', 'الرسالة'],
+  ['Type your message here...', 'اكتب رسالتك هنا...'],
+  ['Start Chat', 'ابدأ المحادثة'],
+  // Consent gate defaults
+  ['Welcome to your AI Assistant', 'أهلاً بك في مساعدك الذكي'],
+  ['A few things to keep in mind', 'أشياء بسيطة خليك واخد بالك منها'],
+  ['Agree & Continue', 'موافق ومتابعة'],
+  ['By continuing, you agree to our Terms of Use and Privacy Policy', 'بمتابعتك أنت توافق على شروط الاستخدام وسياسة الخصوصية'],
+  ['By continuing, you agree to our', 'بمتابعتك أنت توافق على'],
+  ['Terms of Use', 'شروط الاستخدام'],
+  ['Privacy Policy', 'سياسة الخصوصية'],
+  // CSAT rating defaults
+  ['Customer Satisfaction Survey', 'استبيان رضا العملاء'],
+  ['How was your experience?', 'كيف كانت تجربتك؟'],
+  ['Rate Experience', 'قيّم تجربتك'],
+  ['Change Rating', 'تغيير التقييم'],
+  ['Submit Feedback', 'إرسال التقييم'],
 ]
 
 /** Curly vs straight apostrophes must not break a lookup. */
@@ -193,6 +285,21 @@ const TEXT_PATHS = [
   'widget_v2_config.trending_prompts.displaySettings.sectionTitle',
   'widget_v2_config.chat_input.placeholderText.text',
   'launcher_title',
+  'widget_v2_config.pre_chat_form.message',
+  'widget_v2_config.pre_chat_form.design.messageLabel',
+  'widget_v2_config.pre_chat_form.design.messagePlaceholder',
+  'widget_v2_config.pre_chat_form.design.buttonText',
+  'widget_v2_config.consent_screen.title',
+  'widget_v2_config.consent_screen.subtitle',
+  'widget_v2_config.consent_screen.footnote',
+  'widget_v2_config.consent_screen.buttonText',
+  'widget_v2_config.consent_screen.links.terms.label',
+  'widget_v2_config.consent_screen.links.privacy.label',
+  'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.csat.header',
+  'widget_v2_config.csat.body',
+  'widget_v2_config.csat.buttonText',
+  'widget_v2_config.csat.submitText',
 ]
 
 /**
@@ -205,6 +312,45 @@ export const BILINGUAL_PATHS = [
   'widget_v2_config.intro_screen.welcomeTitle',
   'widget_v2_config.intro_screen.welcomeSubtitle',
 ] as const
+
+/**
+ * Plain string fields with a hand-typed translation stored beside them at
+ * `<path>_i18n.<lang>` — the widget keeps reading the plain path. Mirrored in
+ * server/src/lib/widgetLang.ts.
+ */
+export const PLAIN_BILINGUAL_PATHS = [
+  'widget_v2_config.pre_chat_form.message',
+  'widget_v2_config.pre_chat_form.design.buttonText',
+  'widget_v2_config.pre_chat_form.design.messageLabel',
+  'widget_v2_config.pre_chat_form.design.messagePlaceholder',
+  'widget_v2_config.consent_screen.title',
+  'widget_v2_config.consent_screen.subtitle',
+  'widget_v2_config.consent_screen.footnote',
+  'widget_v2_config.consent_screen.buttonText',
+  'widget_v2_config.consent_screen.links.terms.label',
+  'widget_v2_config.consent_screen.links.privacy.label',
+  'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.csat.header',
+  'widget_v2_config.csat.body',
+  'widget_v2_config.csat.buttonText',
+  'widget_v2_config.csat.submitText',
+] as const
+
+/** What a plain bilingual field shows for one language (see BILINGUAL_PATHS). */
+export function plainBilingualText(config: WidgetConfig | null, path: string, lang: WidgetLang): string {
+  const stored = deepGet(config, `${path}_i18n.${lang}`)
+  if (typeof stored === 'string') return stored
+  const live = deepGet(config, path)
+  if (typeof live !== 'string') return ''
+  return currentLang(config) === lang ? live : (translate(live, lang) ?? '')
+}
+
+/** Writes one language of a plain bilingual field; the live path follows the active language. */
+export function setPlainBilingualText(config: WidgetConfig, path: string, lang: WidgetLang, value: string): WidgetConfig {
+  let next = deepSet(config, `${path}_i18n.${lang}`, value)
+  if (currentLang(config) === lang) next = deepSet(next, path, value)
+  return next
+}
 
 /** The dictionary's translation of a string, or undefined when it does not know it. */
 export function translate(text: unknown, to: WidgetLang): string | undefined {
@@ -248,6 +394,12 @@ export function applyLanguage(config: WidgetConfig, lang: WidgetLang): WidgetCon
     next = deepSet(next, `${path}.text`, stored)
     translated.add(`${path}.text`)
   }
+  for (const path of PLAIN_BILINGUAL_PATHS) {
+    const stored = deepGet(next, `${path}_i18n.${lang}`)
+    if (typeof stored !== 'string' || !stored.trim()) continue
+    next = deepSet(next, path, stored)
+    translated.add(path)
+  }
   for (const path of TEXT_PATHS) {
     if (translated.has(path)) continue
     const v = deepGet(next, path)
@@ -271,6 +423,23 @@ export function applyLanguage(config: WidgetConfig, lang: WidgetLang): WidgetCon
           typeof design[k]?.text === 'string' ? { [k]: { ...design[k], text: swap(design[k].text) } } : {}
         return { ...(s as Any), design: { ...design, ...copy('title'), ...copy('subtitle') } }
       }))
+  }
+  const pcFields = deepGet(next, 'widget_v2_config.pre_chat_form.fields')
+  if (Array.isArray(pcFields)) {
+    next = deepSet(next, 'widget_v2_config.pre_chat_form.fields',
+      pcFields.map((f: Any) => ({
+        ...f,
+        label: (typeof f.i18n?.[lang]?.label === 'string' && f.i18n[lang].label.trim()) ? f.i18n[lang].label : swap(f.label),
+        placeholder: (typeof f.i18n?.[lang]?.placeholder === 'string' && f.i18n[lang].placeholder.trim()) ? f.i18n[lang].placeholder : swap(f.placeholder),
+      })))
+  }
+  const consentPoints = deepGet(next, 'widget_v2_config.consent_screen.points')
+  if (Array.isArray(consentPoints)) {
+    next = deepSet(next, 'widget_v2_config.consent_screen.points',
+      consentPoints.map((pt: Any) => ({
+        ...pt,
+        text: (typeof pt.i18n?.[lang]?.text === 'string' && pt.i18n[lang].text.trim()) ? pt.i18n[lang].text : swap(pt.text),
+      })))
   }
   const chips = deepGet(next, 'widget_v2_config.trending_prompts.promptChips')
   if (Array.isArray(chips)) {

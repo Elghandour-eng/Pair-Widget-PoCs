@@ -200,7 +200,8 @@ export interface PanelDesign {
 }
 
 export interface LauncherDesign {
-  type: 'standard' | 'expanded_bubble' | 'chat_icon' | 'icon_only'
+  /** 'none' means no launcher at all: the panel opens by itself and stays. */
+  type: 'standard' | 'expanded_bubble' | 'chat_icon' | 'icon_only' | 'none'
   position: 'left' | 'right'
   offsetX: number
   offsetY: number
@@ -786,7 +787,7 @@ export function normalizeLauncher(raw: unknown): LauncherDesign {
   const d = LAUNCHER_DEFAULTS
   const l = (r.label ?? {}) as Record<string, any>
   return {
-    type: pick(r.type, ['standard', 'expanded_bubble', 'chat_icon', 'icon_only'] as const, d.type),
+    type: pick(r.type, ['standard', 'expanded_bubble', 'chat_icon', 'icon_only', 'none'] as const, d.type),
     position: pick(r.position, ['left', 'right'] as const, d.position),
     offsetX: num(r.offsetX, d.offsetX, 0, 120),
     offsetY: num(r.offsetY, d.offsetY, 0, 120),
@@ -1052,4 +1053,447 @@ export function toastCss(d: ToastDesign, brand: string): CSSProperties {
 export function launcherHoverCss(d: LauncherDesign, selector: string): string {
   if (d.hoverScale <= 1) return ''
   return `${selector}{transition:transform .2s ease}${selector}:hover{transform:scale(${d.hoverScale})}`
+}
+
+/* ------------------------------ pre-chat form ------------------------------ */
+
+/**
+ * The pre-chat form: the contact-capture screen (email / name / phone) shown
+ * before a conversation starts. The widget drew it with fixed shadcn styling;
+ * this block styles every part of it — the intro message, the labels, the
+ * inputs, the message box and the submit button — plus an optional card
+ * around the whole form.
+ */
+export interface PreChatDesign {
+  /** The submit button's own label. */
+  buttonText: string
+  /** The message box under the fields; hidden forms register the contact only. */
+  showMessage: boolean
+  messageLabel: string
+  messagePlaceholder: string
+  message: { color: string; size: number; weight: FontWeight; align: TextAlign }
+  labels: { show: boolean; color: string; size: number; weight: FontWeight; requiredColor: string }
+  field: {
+    background: string
+    borderWidth: number
+    borderColor: string
+    borderStyle: BorderStyle
+    radius: number
+    height: number
+    textColor: string
+    textSize: number
+    placeholderColor: string
+    /** Vertical space between fields. */
+    gap: number
+    focusBorderColor: string
+    focusRingWidth: number
+    focusRingColor: string
+    focusRingOpacity: number
+  }
+  button: {
+    background: string
+    textColor: string
+    radius: number
+    height: number
+    textSize: number
+    weight: FontWeight
+    fullWidth: boolean
+    shadow: Shadow
+    hoverBackground: string
+  }
+  card: {
+    enabled: boolean
+    background: string
+    borderWidth: number
+    borderColor: string
+    radius: number
+    padding: number
+    shadow: Shadow
+  }
+  /** A brand image over the form (a banner strip at the top). */
+  banner: { show: boolean; url: string; height: number; fit: ImageFit; radius: number }
+  /** A repeating brand pattern behind the whole form. */
+  backdrop: { url: string; opacity: number; size: number }
+}
+
+export const PRECHAT_DEFAULTS: PreChatDesign = {
+  buttonText: 'Start Chat',
+  showMessage: true,
+  messageLabel: 'Message',
+  messagePlaceholder: 'Type your message here...',
+  message: { color: '#1A1A1A', size: 14, weight: '400', align: 'start' },
+  labels: { show: true, color: '#1E1E1E', size: 13, weight: '600', requiredColor: '#E11D48' },
+  field: {
+    background: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderStyle: 'solid',
+    radius: 10,
+    height: 40,
+    textColor: '#1A1A1A',
+    textSize: 14,
+    placeholderColor: '#98A2B3',
+    gap: 14,
+    focusBorderColor: BRAND_TOKEN,
+    focusRingWidth: 3,
+    focusRingColor: BRAND_TOKEN,
+    focusRingOpacity: 0.18,
+  },
+  button: {
+    background: BRAND_TOKEN,
+    textColor: '#FFFFFF',
+    radius: 10,
+    height: 44,
+    textSize: 14,
+    weight: '600',
+    fullWidth: true,
+    shadow: { size: 0, y: 0, blur: 0, color: '#000000', opacity: 0 },
+    hoverBackground: '',
+  },
+  card: {
+    enabled: false,
+    background: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#ECECED',
+    radius: 16,
+    padding: 16,
+    shadow: { size: 0, y: 6, blur: 24, color: '#000000', opacity: 0.06 },
+  },
+  banner: { show: false, url: '', height: 96, fit: 'cover', radius: 14 },
+  backdrop: { url: '', opacity: 0.06, size: 220 },
+}
+
+export function normalizePreChat(raw: unknown): PreChatDesign {
+  const r = (raw ?? {}) as Record<string, any>
+  const d = PRECHAT_DEFAULTS
+  const m = (r.message ?? {}) as Record<string, any>
+  const l = (r.labels ?? {}) as Record<string, any>
+  const f = (r.field ?? {}) as Record<string, any>
+  const b = (r.button ?? {}) as Record<string, any>
+  const c = (r.card ?? {}) as Record<string, any>
+  return {
+    buttonText: str(r.buttonText, d.buttonText, 60),
+    showMessage: bool(r.showMessage, d.showMessage),
+    messageLabel: str(r.messageLabel, d.messageLabel, 60),
+    messagePlaceholder: str(r.messagePlaceholder, d.messagePlaceholder, 120),
+    message: {
+      color: color(m.color, d.message.color),
+      size: num(m.size, d.message.size, 9, 28),
+      weight: pick(String(m.weight), FONT_WEIGHTS, d.message.weight),
+      align: pick(m.align, TEXT_ALIGNS, d.message.align),
+    },
+    labels: {
+      show: bool(l.show, d.labels.show),
+      color: color(l.color, d.labels.color),
+      size: num(l.size, d.labels.size, 8, 24),
+      weight: pick(String(l.weight), FONT_WEIGHTS, d.labels.weight),
+      requiredColor: color(l.requiredColor, d.labels.requiredColor),
+    },
+    field: {
+      background: color(f.background, d.field.background),
+      borderWidth: num(f.borderWidth, d.field.borderWidth, 0, 8),
+      borderColor: color(f.borderColor, d.field.borderColor),
+      borderStyle: pick(f.borderStyle, BORDER_STYLES, d.field.borderStyle),
+      radius: num(f.radius, d.field.radius, 0, 999),
+      height: num(f.height, d.field.height, 28, 72),
+      textColor: color(f.textColor, d.field.textColor),
+      textSize: num(f.textSize, d.field.textSize, 9, 24),
+      placeholderColor: color(f.placeholderColor, d.field.placeholderColor),
+      gap: num(f.gap, d.field.gap, 4, 40),
+      focusBorderColor: color(f.focusBorderColor, d.field.focusBorderColor),
+      focusRingWidth: num(f.focusRingWidth, d.field.focusRingWidth, 0, 12),
+      focusRingColor: color(f.focusRingColor, d.field.focusRingColor),
+      focusRingOpacity: num(f.focusRingOpacity, d.field.focusRingOpacity, 0, 1),
+    },
+    button: {
+      background: color(b.background, d.button.background),
+      textColor: color(b.textColor, d.button.textColor),
+      radius: num(b.radius, d.button.radius, 0, 999),
+      height: num(b.height, d.button.height, 30, 72),
+      textSize: num(b.textSize, d.button.textSize, 9, 24),
+      weight: pick(String(b.weight), FONT_WEIGHTS, d.button.weight),
+      fullWidth: bool(b.fullWidth, d.button.fullWidth),
+      shadow: shadow(b.shadow, d.button.shadow),
+      hoverBackground: b.hoverBackground ? color(b.hoverBackground, '') : '',
+    },
+    card: {
+      enabled: bool(c.enabled, d.card.enabled),
+      background: color(c.background, d.card.background),
+      borderWidth: num(c.borderWidth, d.card.borderWidth, 0, 8),
+      borderColor: color(c.borderColor, d.card.borderColor),
+      radius: num(c.radius, d.card.radius, 0, 60),
+      padding: num(c.padding, d.card.padding, 0, 48),
+      shadow: shadow(c.shadow, d.card.shadow),
+    },
+    banner: {
+      show: bool((r.banner as Record<string, any>)?.show, d.banner.show),
+      url: str((r.banner as Record<string, any>)?.url, d.banner.url, 500),
+      height: num((r.banner as Record<string, any>)?.height, d.banner.height, 32, 280),
+      fit: pick((r.banner as Record<string, any>)?.fit, IMAGE_FITS, d.banner.fit),
+      radius: num((r.banner as Record<string, any>)?.radius, d.banner.radius, 0, 60),
+    },
+    backdrop: {
+      url: str((r.backdrop as Record<string, any>)?.url, d.backdrop.url, 500),
+      opacity: num((r.backdrop as Record<string, any>)?.opacity, d.backdrop.opacity, 0, 1),
+      size: num((r.backdrop as Record<string, any>)?.size, d.backdrop.size, 40, 800),
+    },
+  }
+}
+
+/* ------------------------------ consent screen ----------------------------- */
+
+/**
+ * The welcome / consent gate: a sheet over the widget on first open — a short
+ * welcome, a few "things to keep in mind", a footnote and one agree button.
+ * Nothing else is usable until it is accepted, and the acceptance is kept per
+ * visitor.
+ */
+export interface ConsentDesign {
+  showIllustration: boolean
+  overlayColor: string
+  overlayOpacity: number
+  card: { background: string; radius: number; padding: number; shadow: Shadow }
+  title: { color: string; size: number; weight: FontWeight }
+  subtitle: { color: string; size: number; weight: FontWeight }
+  points: { textColor: string; textSize: number; iconColor: string; iconSize: number; gap: number }
+  footnote: { color: string; size: number }
+  button: {
+    background: string
+    textColor: string
+    radius: number
+    height: number
+    textSize: number
+    weight: FontWeight
+    fullWidth: boolean
+  }
+}
+
+export const CONSENT_DEFAULTS: ConsentDesign = {
+  showIllustration: true,
+  overlayColor: '#000000',
+  overlayOpacity: 0.45,
+  card: { background: '#FFFFFF', radius: 20, padding: 20, shadow: { size: 0, y: 10, blur: 40, color: '#000000', opacity: 0.2 } },
+  title: { color: '#1A1A1A', size: 17, weight: '700' },
+  subtitle: { color: '#6E6E73', size: 12, weight: '400' },
+  points: { textColor: '#3A3A3C', textSize: 12.5, iconColor: '#6E6E73', iconSize: 16, gap: 12 },
+  footnote: { color: '#8E8E93', size: 10.5 },
+  button: { background: BRAND_TOKEN, textColor: '#FFFFFF', radius: 12, height: 44, textSize: 13.5, weight: '600', fullWidth: true },
+}
+
+export function normalizeConsent(raw: unknown): ConsentDesign {
+  const r = (raw ?? {}) as Record<string, any>
+  const d = CONSENT_DEFAULTS
+  const c = (r.card ?? {}) as Record<string, any>
+  const t = (r.title ?? {}) as Record<string, any>
+  const s = (r.subtitle ?? {}) as Record<string, any>
+  const p = (r.points ?? {}) as Record<string, any>
+  const f = (r.footnote ?? {}) as Record<string, any>
+  const b = (r.button ?? {}) as Record<string, any>
+  return {
+    showIllustration: bool(r.showIllustration, d.showIllustration),
+    overlayColor: color(r.overlayColor, d.overlayColor),
+    overlayOpacity: num(r.overlayOpacity, d.overlayOpacity, 0, 1),
+    card: {
+      background: color(c.background, d.card.background),
+      radius: num(c.radius, d.card.radius, 0, 60),
+      padding: num(c.padding, d.card.padding, 0, 48),
+      shadow: shadow(c.shadow, d.card.shadow),
+    },
+    title: {
+      color: color(t.color, d.title.color),
+      size: num(t.size, d.title.size, 10, 32),
+      weight: pick(String(t.weight), FONT_WEIGHTS, d.title.weight),
+    },
+    subtitle: {
+      color: color(s.color, d.subtitle.color),
+      size: num(s.size, d.subtitle.size, 8, 24),
+      weight: pick(String(s.weight), FONT_WEIGHTS, d.subtitle.weight),
+    },
+    points: {
+      textColor: color(p.textColor, d.points.textColor),
+      textSize: num(p.textSize, d.points.textSize, 8, 20),
+      iconColor: color(p.iconColor, d.points.iconColor),
+      iconSize: num(p.iconSize, d.points.iconSize, 10, 32),
+      gap: num(p.gap, d.points.gap, 4, 32),
+    },
+    footnote: {
+      color: color(f.color, d.footnote.color),
+      size: num(f.size, d.footnote.size, 7, 18),
+    },
+    button: {
+      background: color(b.background, d.button.background),
+      textColor: color(b.textColor, d.button.textColor),
+      radius: num(b.radius, d.button.radius, 0, 999),
+      height: num(b.height, d.button.height, 30, 72),
+      textSize: num(b.textSize, d.button.textSize, 9, 24),
+      weight: pick(String(b.weight), FONT_WEIGHTS, d.button.weight),
+      fullWidth: bool(b.fullWidth, d.button.fullWidth),
+    },
+  }
+}
+
+/* ------------------------------- CSAT rating ------------------------------- */
+
+/**
+ * The rating survey Pair sends into the conversation when a session is
+ * resolved (`input_csat`). The widget drew it in fixed colours; this block
+ * styles the in-conversation card, its trigger button, the bottom sheet with
+ * its chips or star rows, and the submit button — the same knobs Pair's old
+ * rating screen offered.
+ */
+export interface CsatDesign {
+  /** 'auto' keeps whatever type the survey message asks for. */
+  forceType: 'auto' | 'star' | 'text_options'
+  card: {
+    background: string
+    borderColor: string
+    borderWidth: number
+    radius: number
+    padding: number
+    shadow: Shadow
+  }
+  header: { color: string; size: number; weight: FontWeight }
+  body: { color: string; size: number; weight: FontWeight }
+  trigger: {
+    fontFamily: string
+    textSize: number
+    textColor: string
+    background: string
+    radius: number
+    borderWidth: number
+    borderColor: string
+    height: number
+    fullWidth: boolean
+  }
+  chips: {
+    background: string
+    borderColor: string
+    textColor: string
+    radius: number
+    textSize: number
+    selectedBackground: string
+    selectedBorderColor: string
+    selectedTextColor: string
+  }
+  stars: { color: string; size: number }
+  dialog: { background: string; titleColor: string; dividerColor: string }
+  submit: {
+    fontFamily: string
+    textSize: number
+    textColor: string
+    background: string
+    radius: number
+    borderWidth: number
+    borderColor: string
+    height: number
+  }
+}
+
+export const CSAT_DEFAULTS: CsatDesign = {
+  forceType: 'auto',
+  card: {
+    background: '#FFFFFF',
+    borderColor: '#ECECED',
+    borderWidth: 1,
+    radius: 16,
+    padding: 20,
+    shadow: { size: 0, y: 2, blur: 8, color: '#000000', opacity: 0.04 },
+  },
+  header: { color: '#6E6E73', size: 11, weight: '600' },
+  body: { color: '#1A1A1A', size: 15, weight: '600' },
+  trigger: {
+    fontFamily: '',
+    textSize: 14,
+    textColor: BRAND_TOKEN,
+    background: 'transparent',
+    radius: 10,
+    borderWidth: 0,
+    borderColor: '#E5E4E1',
+    height: 36,
+    fullWidth: false,
+  },
+  chips: {
+    background: '#FFFFFF',
+    borderColor: '#E5E4E1',
+    textColor: '#1F2937',
+    radius: 999,
+    textSize: 13,
+    selectedBackground: '#EEECE1',
+    selectedBorderColor: '#E5E4E1',
+    selectedTextColor: '#1F2937',
+  },
+  stars: { color: '#FFB400', size: 20 },
+  dialog: { background: '#FFFFFF', titleColor: '#1A1A1A', dividerColor: '#D1CECD' },
+  submit: {
+    fontFamily: '',
+    textSize: 14,
+    textColor: '#FFFFFF',
+    background: '#1A1A1A',
+    radius: 10,
+    borderWidth: 0,
+    borderColor: '#1A1A1A',
+    height: 48,
+  },
+}
+
+export function normalizeCsat(raw: unknown): CsatDesign {
+  const r = (raw ?? {}) as Record<string, any>
+  const d = CSAT_DEFAULTS
+  const c = (r.card ?? {}) as Record<string, any>
+  const h = (r.header ?? {}) as Record<string, any>
+  const b = (r.body ?? {}) as Record<string, any>
+  const t = (r.trigger ?? {}) as Record<string, any>
+  const ch = (r.chips ?? {}) as Record<string, any>
+  const st = (r.stars ?? {}) as Record<string, any>
+  const dl = (r.dialog ?? {}) as Record<string, any>
+  const su = (r.submit ?? {}) as Record<string, any>
+  const btn = (base: Record<string, any>, dd: CsatDesign['submit']) => ({
+    fontFamily: font(base.fontFamily, dd.fontFamily),
+    textSize: num(base.textSize, dd.textSize, 9, 24),
+    textColor: color(base.textColor, dd.textColor),
+    background: color(base.background, dd.background),
+    radius: num(base.radius, dd.radius, 0, 999),
+    borderWidth: num(base.borderWidth, dd.borderWidth, 0, 8),
+    borderColor: color(base.borderColor, dd.borderColor),
+    height: num(base.height, dd.height, 28, 72),
+  })
+  return {
+    forceType: pick(r.forceType, ['auto', 'star', 'text_options'] as const, d.forceType),
+    card: {
+      background: color(c.background, d.card.background),
+      borderColor: color(c.borderColor, d.card.borderColor),
+      borderWidth: num(c.borderWidth, d.card.borderWidth, 0, 8),
+      radius: num(c.radius, d.card.radius, 0, 60),
+      padding: num(c.padding, d.card.padding, 0, 48),
+      shadow: shadow(c.shadow, d.card.shadow),
+    },
+    header: {
+      color: color(h.color, d.header.color),
+      size: num(h.size, d.header.size, 8, 20),
+      weight: pick(String(h.weight), FONT_WEIGHTS, d.header.weight),
+    },
+    body: {
+      color: color(b.color, d.body.color),
+      size: num(b.size, d.body.size, 10, 26),
+      weight: pick(String(b.weight), FONT_WEIGHTS, d.body.weight),
+    },
+    trigger: { ...btn(t, { ...d.trigger }), fullWidth: bool(t.fullWidth, d.trigger.fullWidth) },
+    chips: {
+      background: color(ch.background, d.chips.background),
+      borderColor: color(ch.borderColor, d.chips.borderColor),
+      textColor: color(ch.textColor, d.chips.textColor),
+      radius: num(ch.radius, d.chips.radius, 0, 999),
+      textSize: num(ch.textSize, d.chips.textSize, 9, 20),
+      selectedBackground: color(ch.selectedBackground, d.chips.selectedBackground),
+      selectedBorderColor: color(ch.selectedBorderColor, d.chips.selectedBorderColor),
+      selectedTextColor: color(ch.selectedTextColor, d.chips.selectedTextColor),
+    },
+    stars: { color: color(st.color, d.stars.color), size: num(st.size, d.stars.size, 12, 36) },
+    dialog: {
+      background: color(dl.background, d.dialog.background),
+      titleColor: color(dl.titleColor, d.dialog.titleColor),
+      dividerColor: color(dl.dividerColor, d.dialog.dividerColor),
+    },
+    submit: btn(su, d.submit),
+  }
 }

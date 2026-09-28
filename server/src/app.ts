@@ -109,7 +109,16 @@ export function createApp() {
           )
           next()
         },
-        express.static(sdkDist, { maxAge: '5m' }),
+        // Hashed bundles cache hard; sdk.js, sdk.css and index.html revalidate
+        // on every load, so a rebuilt widget is what the next page view runs —
+        // a browser that cached the old sdk.js for minutes looked exactly like
+        // "the snippet does not work".
+        express.static(sdkDist, {
+          setHeaders: (res, filePath) => {
+            const hashed = /[\\/]assets[\\/]/.test(filePath)
+            res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache')
+          },
+        }),
       )
       logger.info({ sdkDist }, 'serving a local widget SDK at /sdk')
     } else {

@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactElement } from 'react'
 import {
-  ArrowUp, Bot, Check, ChevronLeft, ChevronUp, CircleHelp, Clapperboard, Copy, Ellipsis, Heart,
-  Image as ImageIcon, Mic, Paperclip, Phone, Plus, Popcorn, Search, SendHorizontal, Smile, Sparkles,
-  Star, ThumbsDown, ThumbsUp, Ticket, Utensils, Volume2, X, type LucideIcon,
+  ArrowUp, BookA, Bot, Captions, Check, ChevronLeft, ChevronUp, CircleAlert, CircleHelp, Clapperboard,
+  Contrast, Copy, Earth, Eclipse, Ellipsis, FileText, Globe, Heart, Image as ImageIcon, Info, Languages,
+  Lightbulb, Lock, MessageSquareText, Mic, Moon, MoonStar, Paperclip, Palette, Phone, Plus, Popcorn,
+  Search, SendHorizontal, ShieldCheck, Smile, Sparkles, Speech, Star, Sun, SunDim, SunMoon, ThumbsDown,
+  ThumbsUp, Ticket, Utensils, Volume2, X, type LucideIcon,
 } from 'lucide-react'
 import { MediaInput } from './MediaInput'
 import { Select } from './Select'
@@ -39,6 +41,10 @@ export const GLYPHS: Record<string, Glyph> = {
   bubble: Bot, chat: Ellipsis, spark: Sparkles, star: Star, heart: Heart, help: CircleHelp,
   search: Search, phone: Phone, ticket: Ticket, popcorn: Popcorn, film: Clapperboard, food: Utensils,
   'thumbs-up': ThumbsUp, 'thumbs-down': ThumbsDown, copy: Copy, check: Check, close: X, menu: Ellipsis,
+  globe: Globe, languages: Languages, earth: Earth, speech: Speech, captions: Captions, 'book-a': BookA,
+  moon: Moon, sun: Sun, 'sun-moon': SunMoon, 'moon-star': MoonStar, eclipse: Eclipse, contrast: Contrast,
+  'sun-dim': SunDim, lightbulb: Lightbulb, palette: Palette,
+  info: Info, alert: CircleAlert, shield: ShieldCheck, lock: Lock, doc: FileText, 'chat-text': MessageSquareText,
 }
 
 /** The glyphs offered per slot, so a send button is not offered a popcorn cup. */
@@ -51,6 +57,9 @@ export const ICON_SETS = {
   header: ['menu', 'close', 'chevron-left'],
   card: ['film', 'food', 'ticket', 'popcorn', 'phone', 'help', 'search', 'star'],
   feedback: ['thumbs-up', 'thumbs-down', 'copy', 'check'],
+  lang: ['badge', 'globe', 'languages', 'earth', 'speech', 'captions', 'book-a'],
+  theme: ['moon', 'sun', 'sun-moon', 'moon-star', 'eclipse', 'contrast', 'sun-dim', 'lightbulb', 'palette'],
+  consent: ['info', 'alert', 'shield', 'lock', 'doc', 'chat-text', 'spark', 'thumbs-up', 'star', 'help'],
 } as const
 
 export type IconSet = keyof typeof ICON_SETS
@@ -74,6 +83,17 @@ export function SlotIcon({
     return url ? <img src={url} alt="" className={`shrink-0 object-contain ${className}`} style={{ width: size, height: size }} /> : null
   }
   if (name === 'none') return null
+  // The عربي / EN language badge is text, not a drawing.
+  if (name === 'badge') {
+    return (
+      <span
+        className={`grid shrink-0 place-items-center rounded-sm font-bold ${className}`}
+        style={{ minWidth: size, height: size, color, fontSize: (size ?? 14) * 0.62, padding: '0 2px', background: 'color-mix(in srgb, currentColor 10%, transparent)' }}
+      >
+        ع
+      </span>
+    )
+  }
   const Glyph = GLYPHS[name ?? '']
   if (!Glyph) return null
   return <Glyph className={`shrink-0 ${className}`} style={style} />

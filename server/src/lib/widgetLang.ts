@@ -63,6 +63,28 @@ const COPY_PAIRS: Array<[en: string, ar: string]> = [
   ['Seats, snacks and showtimes in one chat.', 'المقاعد والسناكس والمواعيد في محادثة واحدة.'],
   ['Trending prompts', 'أسئلة شائعة'],
   ['Chat with us!', 'تحدث معنا!'],
+  // Pre-chat form defaults
+  ['Share your queries or comments here.', 'اكتب استفسارك أو تعليقك هنا.'],
+  ['Email Id', 'البريد الإلكتروني'],
+  ['Full name', 'الاسم الكامل'],
+  ['Phone number', 'رقم الهاتف'],
+  ['Message', 'الرسالة'],
+  ['Type your message here...', 'اكتب رسالتك هنا...'],
+  ['Start Chat', 'ابدأ المحادثة'],
+  // Consent gate defaults
+  ['Welcome to your AI Assistant', 'أهلاً بك في مساعدك الذكي'],
+  ['A few things to keep in mind', 'أشياء بسيطة خليك واخد بالك منها'],
+  ['Agree & Continue', 'موافق ومتابعة'],
+  ['By continuing, you agree to our Terms of Use and Privacy Policy', 'بمتابعتك أنت توافق على شروط الاستخدام وسياسة الخصوصية'],
+  ['By continuing, you agree to our', 'بمتابعتك أنت توافق على'],
+  ['Terms of Use', 'شروط الاستخدام'],
+  ['Privacy Policy', 'سياسة الخصوصية'],
+  // CSAT rating defaults
+  ['Customer Satisfaction Survey', 'استبيان رضا العملاء'],
+  ['How was your experience?', 'كيف كانت تجربتك؟'],
+  ['Rate Experience', 'قيّم تجربتك'],
+  ['Change Rating', 'تغيير التقييم'],
+  ['Submit Feedback', 'إرسال التقييم'],
 ]
 
 const norm = (s: string) => s.replace(/’/g, "'").trim()
@@ -86,6 +108,22 @@ const TEXT_PATHS = [
   'widget_v2_config.trending_prompts.displaySettings.sectionTitle',
   'widget_v2_config.chat_input.placeholderText.text',
   'launcher_title',
+  'widget_v2_config.pre_chat_form.message',
+  'widget_v2_config.pre_chat_form.design.messageLabel',
+  'widget_v2_config.pre_chat_form.design.messagePlaceholder',
+  'widget_v2_config.pre_chat_form.design.buttonText',
+  'pre_chat_form_options.pre_chat_message',
+  'widget_v2_config.consent_screen.title',
+  'widget_v2_config.consent_screen.subtitle',
+  'widget_v2_config.consent_screen.footnote',
+  'widget_v2_config.consent_screen.buttonText',
+  'widget_v2_config.consent_screen.links.terms.label',
+  'widget_v2_config.consent_screen.links.privacy.label',
+  'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.csat.header',
+  'widget_v2_config.csat.body',
+  'widget_v2_config.csat.buttonText',
+  'widget_v2_config.csat.submitText',
 ]
 
 /**
@@ -95,6 +133,28 @@ const TEXT_PATHS = [
 const BILINGUAL_PATHS = [
   'widget_v2_config.intro_screen.welcomeTitle',
   'widget_v2_config.intro_screen.welcomeSubtitle',
+]
+
+/**
+ * Plain string fields with a hand-typed translation stored beside them at
+ * `<path>_i18n.<lang>`. Mirrors PLAIN_BILINGUAL_PATHS in web/src/lib/builder.ts.
+ */
+const PLAIN_BILINGUAL_PATHS = [
+  'widget_v2_config.pre_chat_form.message',
+  'widget_v2_config.pre_chat_form.design.buttonText',
+  'widget_v2_config.pre_chat_form.design.messageLabel',
+  'widget_v2_config.pre_chat_form.design.messagePlaceholder',
+  'widget_v2_config.consent_screen.title',
+  'widget_v2_config.consent_screen.subtitle',
+  'widget_v2_config.consent_screen.footnote',
+  'widget_v2_config.consent_screen.buttonText',
+  'widget_v2_config.consent_screen.links.terms.label',
+  'widget_v2_config.consent_screen.links.privacy.label',
+  'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.csat.header',
+  'widget_v2_config.csat.body',
+  'widget_v2_config.csat.buttonText',
+  'widget_v2_config.csat.submitText',
 ]
 
 export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): WidgetConfig {
@@ -110,11 +170,39 @@ export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): Wid
     next = deepSet(next, `${path}.text`, stored)
     translated.add(`${path}.text`)
   }
+  for (const path of PLAIN_BILINGUAL_PATHS) {
+    const stored = deepGet(next, `${path}_i18n.${lang}`)
+    if (typeof stored !== 'string' || !stored.trim()) continue
+    next = deepSet(next, path, stored)
+    translated.add(path)
+  }
   for (const path of TEXT_PATHS) {
     if (translated.has(path)) continue
     const v = deepGet(next, path)
     const swapped = swap(v)
     if (swapped !== v) next = deepSet(next, path, swapped)
+  }
+  const pcFields = deepGet(next, 'widget_v2_config.pre_chat_form.fields')
+  if (Array.isArray(pcFields)) {
+    next = deepSet(next, 'widget_v2_config.pre_chat_form.fields',
+      pcFields.map((f: Any) => ({
+        ...f,
+        label: (typeof f.i18n?.[lang]?.label === 'string' && f.i18n[lang].label.trim()) ? f.i18n[lang].label : swap(f.label),
+        placeholder: (typeof f.i18n?.[lang]?.placeholder === 'string' && f.i18n[lang].placeholder.trim()) ? f.i18n[lang].placeholder : swap(f.placeholder),
+      })))
+  }
+  const pcServed = deepGet(next, 'pre_chat_form_options.pre_chat_fields')
+  if (Array.isArray(pcServed)) {
+    next = deepSet(next, 'pre_chat_form_options.pre_chat_fields',
+      pcServed.map((f: Any) => ({ ...f, label: swap(f.label), placeholder: swap(f.placeholder) })))
+  }
+  const consentPoints = deepGet(next, 'widget_v2_config.consent_screen.points')
+  if (Array.isArray(consentPoints)) {
+    next = deepSet(next, 'widget_v2_config.consent_screen.points',
+      consentPoints.map((p: Any) => ({
+        ...p,
+        text: (typeof p.i18n?.[lang]?.text === 'string' && p.i18n[lang].text.trim()) ? p.i18n[lang].text : swap(p.text),
+      })))
   }
   const cards = deepGet(next, 'widget_v2_config.quick_links.quickLinkCards')
   if (Array.isArray(cards)) {

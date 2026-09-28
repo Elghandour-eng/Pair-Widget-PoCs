@@ -6,9 +6,11 @@ import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/li
 import {
   actionCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, loadingCss,
   cardCss, cardHoverCss, cardSubtitleCss, cardTextCss, chipCss, chipHoverCss,
-  normalizeChatInput, normalizeLauncher, normalizeLoading, normalizeQuickLinks,
+  normalizeChatInput, normalizeConsent, normalizeCsat, normalizeLauncher, normalizeLoading,
+  normalizePreChat, normalizeQuickLinks,
   normalizePrompts as normalizeChatInputPrompts, normalizeToast, resolve, shadowCss,
-  textCss, toastCss, type ChatInputDesign, type LauncherDesign, type LoadingDesign, type ToastDesign,
+  textCss, toastCss, type ChatInputDesign, type ConsentDesign, type CsatDesign, type LauncherDesign,
+  type LoadingDesign, type PreChatDesign, type ToastDesign,
 } from '@/lib/inputDesign'
 import { SlotIcon } from './IconField'
 import { PairWordmark } from './brand'
@@ -103,7 +105,6 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const isDark = dark || isDarkColor(bg)
   const fg = isDark ? '#f5f5f5' : '#0f1216'
   const muted = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)'
-  const surface = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
   const titleStyle: CSSProperties = { ...(get(v2, 'header.titleStyle') ?? {}) }
   const cardStyle: CSSProperties = { ...(get(v2, 'quick_links.cardStyle') ?? {}) }
   // Quick-link cards: layout, surface, image and text, all from the config.
@@ -174,20 +175,34 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
       style={{ background: bg, color: fg, fontFamily: c.styles?.fontFamily, paddingTop: topInset }}
     >
       {headerEnabled && (
-        // The real widget keeps this row LTR in both languages: ⋮ · lang badge · title, then avatar · ×.
-        <div dir="ltr" className="flex items-center gap-2 px-3 py-3 transition-colors duration-300" style={{ background: headerBg }}>
-          <span className="text-base leading-none" style={{ color: muted }}>⋮</span>
-          <span className="shrink-0 rounded-sm px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: surface }}>
-            {widgetDir === 'rtl' ? 'EN' : 'عربي'}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-bold" style={titleStyle}>{title}</p>
-            {subtitle && <p className="truncate text-[10px]" style={{ color: muted }}>{subtitle}</p>}
-          </div>
+        // Mirrors the real widget header: avatar · title, then the header
+        // controls (language / theme, as configured) and the close button.
+        <div className="flex items-center gap-2 px-3 py-3 transition-colors duration-300" style={{ background: headerBg }}>
           {c.avatar_url ? (
             <img src={c.avatar_url} alt="" className="size-6 shrink-0 rounded-full object-cover" />
           ) : (
             <span className="size-6 shrink-0 rounded-full transition-colors duration-300" style={{ background: brand }} />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold" style={titleStyle}>{title}</p>
+            {subtitle && <p className="truncate text-[10px]" style={{ color: muted }}>{subtitle}</p>}
+          </div>
+          {get(v2, 'header.controls.lang.show') !== false && (
+            (get(v2, 'header.controls.lang.icon') ?? 'badge') === 'badge' ? (
+              // The badge names the language a tap brings, like the real widget.
+              <span className="shrink-0 rounded-sm px-1.5 py-0.5 text-[9.5px] font-bold" style={{ color: muted, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}>
+                {widgetDir === 'rtl' ? 'EN' : 'عربي'}
+              </span>
+            ) : (
+              <span className="grid size-5 shrink-0 place-items-center" style={{ color: muted }}>
+                <SlotIcon name={get(v2, 'header.controls.lang.icon')} url={get(v2, 'header.controls.lang.iconUrl')} size={14} />
+              </span>
+            )
+          )}
+          {get(v2, 'header.controls.theme.show') !== false && (
+            <span className="grid size-5 shrink-0 place-items-center" style={{ color: muted }}>
+              <SlotIcon name={get(v2, 'header.controls.theme.icon') ?? 'moon'} url={get(v2, 'header.controls.theme.iconUrl')} size={14} />
+            </span>
           )}
           <span className="text-lg leading-none" style={{ color: muted }}>×</span>
         </div>
@@ -198,7 +213,21 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
           <LoadingPreview design={normalizeLoading(get(v2, 'intro_screen.loadingState.design'))} brand={brand} />
         ) : null}
         {focus === 'toast' && <ToastPreview design={normalizeToast(c.toast_design)} brand={brand} text={get(v2, 'messages.feedback.toastMessage')} />}
-        {focus === 'loading' ? null : (
+        {focus === 'prechat' && (
+          <PreChatPreview
+            design={normalizePreChat(get(v2, 'pre_chat_form.design'))}
+            brand={brand}
+            message={get(v2, 'pre_chat_form.message') || 'Share your queries or comments here.'}
+            fields={get(v2, 'pre_chat_form.fields')}
+          />
+        )}
+        {focus === 'consent' && (
+          <ConsentPreview design={normalizeConsent(get(v2, 'consent_screen.design'))} brand={brand} cs={get(v2, 'consent_screen') ?? {}} />
+        )}
+        {focus === 'rating' && (
+          <CsatPreview design={normalizeCsat(get(v2, 'csat.design'))} brand={brand} texts={get(v2, 'csat') ?? {}} />
+        )}
+        {focus === 'loading' || focus === 'prechat' || focus === 'rating' ? null : (
         <>
         {heroEnabled && (
           hero.slides.length ? (
@@ -422,6 +451,282 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   )
 })
 
+/** The default pre-chat fields, for a config the studio has not seeded yet. */
+const PREVIEW_PC_FIELDS = [
+  { name: 'emailAddress', type: 'email', label: 'Email Id', placeholder: 'emailAddress', required: true, enabled: true },
+  { name: 'fullName', type: 'text', label: 'Full name', placeholder: 'fullName', required: false, enabled: true },
+  { name: 'phoneNumber', type: 'text', label: 'Phone number', placeholder: 'phoneNumber', required: true, enabled: true },
+]
+
+/** The pre-chat form, drawn from the same compiled values the widget is sent. */
+function PreChatPreview({ design, brand, message, fields }: { design: PreChatDesign; brand: string; message: string; fields?: unknown }) {
+  const d = design
+  const rs = (v: string) => resolve(v, brand)
+  const rows = (Array.isArray(fields) && fields.length ? fields : PREVIEW_PC_FIELDS).filter(
+    (f: Record<string, unknown>) => f.enabled !== false,
+  )
+  const inputStyle: CSSProperties = {
+    background: rs(d.field.background),
+    borderWidth: d.field.borderWidth,
+    borderStyle: d.field.borderStyle,
+    borderColor: rs(d.field.borderColor),
+    borderRadius: d.field.radius,
+    minHeight: Math.min(d.field.height, 34),
+    color: rs(d.field.placeholderColor),
+    fontSize: Math.min(d.field.textSize, 11),
+    paddingInline: 10,
+    display: 'flex',
+    alignItems: 'center',
+  }
+  const labelStyle: CSSProperties = {
+    color: rs(d.labels.color),
+    fontSize: Math.min(d.labels.size, 11),
+    fontWeight: d.labels.weight,
+  }
+  const card = d.card.enabled
+    ? ({
+        background: rs(d.card.background),
+        border: `${d.card.borderWidth}px solid ${rs(d.card.borderColor)}`,
+        borderRadius: d.card.radius,
+        padding: d.card.padding,
+        boxShadow: shadowCss(d.card.shadow, brand),
+      } as CSSProperties)
+    : undefined
+  const row = (label: string, ph: string, required: boolean, i: number) => (
+    <div key={i}>
+      {d.labels.show && (
+        <p className="mb-1" style={labelStyle}>
+          {label}
+          {required && <span style={{ color: rs(d.labels.requiredColor) }}> *</span>}
+        </p>
+      )}
+      <div style={inputStyle}>{ph}</div>
+    </div>
+  )
+  return (
+    <div className="anim-pop relative" style={card}>
+      {d.backdrop.url && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundImage: `url(${d.backdrop.url})`, backgroundSize: `${Math.min(d.backdrop.size, 160)}px auto`, backgroundRepeat: 'repeat', opacity: d.backdrop.opacity }}
+        />
+      )}
+      {d.banner.show && d.banner.url && (
+        <img src={d.banner.url} alt="" className="mb-3 w-full" style={{ height: Math.min(d.banner.height, 72), objectFit: d.banner.fit, borderRadius: d.banner.radius }} />
+      )}
+      <p
+        className="mb-3"
+        style={{ color: rs(d.message.color), fontSize: Math.min(d.message.size, 12), fontWeight: d.message.weight, textAlign: d.message.align as CSSProperties['textAlign'] }}
+      >
+        {message}
+      </p>
+      <div className="flex flex-col" style={{ gap: Math.min(d.field.gap, 12) }}>
+        {rows.map((f: Record<string, string | boolean>, i: number) => row(String(f.label ?? f.name), String(f.placeholder ?? ''), f.required === true, i))}
+        {d.showMessage &&
+          row(d.messageLabel, d.messagePlaceholder, true, 98)}
+        <span
+          className="grid place-items-center"
+          style={{
+            background: rs(d.button.background),
+            color: rs(d.button.textColor),
+            borderRadius: d.button.radius,
+            height: Math.min(d.button.height, 36),
+            fontSize: Math.min(d.button.textSize, 12),
+            fontWeight: d.button.weight,
+            width: d.button.fullWidth ? '100%' : 'fit-content',
+            paddingInline: 16,
+            boxShadow: shadowCss(d.button.shadow, brand),
+          }}
+        >
+          {d.buttonText}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/** The rating survey: the in-conversation card, and the sheet as a tap opens it. */
+function CsatPreview({ design, brand, texts }: { design: CsatDesign; brand: string; texts: Record<string, any> }) {
+  const d = design
+  const rs = (v: string) => resolve(v, brand)
+  const header = texts.header || 'Customer Satisfaction Survey'
+  const body = texts.body || 'How was your experience?'
+  const button = texts.buttonText || 'Rate Experience'
+  const submit = texts.submitText || 'Submit Feedback'
+  const stars = d.forceType !== 'text_options'
+  const chips = ['1 Star', '2 Star', '3 Star', '4 Star', '5 Star']
+  const btn = (b: CsatDesign['submit'], extra?: CSSProperties) => ({
+    fontFamily: b.fontFamily || undefined,
+    fontSize: Math.min(b.textSize, 12),
+    color: rs(b.textColor),
+    background: rs(b.background),
+    borderRadius: b.radius,
+    border: b.borderWidth > 0 ? `${b.borderWidth}px solid ${rs(b.borderColor)}` : undefined,
+    height: Math.min(b.height, 38),
+    ...extra,
+  })
+  return (
+    <div className="anim-pop flex h-full flex-col justify-between gap-3">
+      {/* The card as it lands in the conversation after a resolve */}
+      <div
+        style={{
+          background: rs(d.card.background),
+          border: `${d.card.borderWidth}px solid ${rs(d.card.borderColor)}`,
+          borderRadius: d.card.radius,
+          padding: Math.min(d.card.padding, 16),
+          boxShadow: shadowCss(d.card.shadow, brand),
+        }}
+      >
+        <p className="uppercase" style={{ color: rs(d.header.color), fontSize: Math.min(d.header.size, 10), fontWeight: d.header.weight }}>{header}</p>
+        <p className="mt-0.5" style={{ color: rs(d.body.color), fontSize: Math.min(d.body.size, 13), fontWeight: d.body.weight }}>{body}</p>
+        <span
+          className="mt-2.5 grid place-items-center"
+          style={btn({ ...d.trigger }, { width: d.trigger.fullWidth ? '100%' : 'fit-content', marginInline: 'auto', paddingInline: 12 })}
+        >
+          {button}
+        </span>
+      </div>
+      {/* The opened sheet */}
+      <div
+        className="rounded-t-2xl"
+        style={{ background: rs(d.dialog.background), boxShadow: '0 -8px 30px rgba(0,0,0,.12)' }}
+      >
+        <p
+          className="flex items-center justify-between border-b px-4 py-3 font-semibold"
+          style={{ color: rs(d.dialog.titleColor), borderColor: rs(d.dialog.dividerColor), fontSize: 13 }}
+        >
+          {body}<span style={{ opacity: 0.5 }}>×</span>
+        </p>
+        <div className="flex flex-wrap gap-1.5 p-4">
+          {stars ? (
+            <span className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <svg key={i} width={Math.min(d.stars.size, 18)} height={Math.min(d.stars.size, 18)} viewBox="0 0 24 24" fill={i <= 4 ? rs(d.stars.color) : 'none'} stroke={rs(d.stars.color)} strokeWidth="1.6"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z" /></svg>
+              ))}
+            </span>
+          ) : (
+            chips.map((c, i) => (
+              <span
+                key={c}
+                style={{
+                  fontSize: Math.min(d.chips.textSize, 11),
+                  borderRadius: d.chips.radius,
+                  padding: '4px 10px',
+                  background: i === 1 ? rs(d.chips.selectedBackground) : rs(d.chips.background),
+                  border: `1px solid ${i === 1 ? rs(d.chips.selectedBorderColor) : rs(d.chips.borderColor)}`,
+                  color: i === 1 ? rs(d.chips.selectedTextColor) : rs(d.chips.textColor),
+                }}
+              >
+                {c}
+              </span>
+            ))
+          )}
+        </div>
+        <div className="px-4 pb-4">
+          <span className="grid place-items-center" style={btn(d.submit, { width: '100%' })}>{submit}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** The consent sheet, pinned over the intro the way the widget shows it. */
+function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: string; cs: Record<string, any> }) {
+  const d = design
+  const rs = (v: string) => resolve(v, brand)
+  const points: Array<{ icon?: string; text?: string }> = Array.isArray(cs.points) && cs.points.length
+    ? cs.points
+    : [
+        { icon: 'chat-text', text: 'This assistant helps you discover films and track bookings.' },
+        { icon: 'alert', text: 'AI suggestions may occasionally be incorrect.' },
+        { icon: 'shield', text: 'Your interactions may be used to improve recommendations.' },
+      ]
+  return (
+    <div
+      className="absolute inset-0 z-10 flex items-end p-3"
+      style={{ background: `color-mix(in srgb, ${rs(d.overlayColor)} ${Math.round(d.overlayOpacity * 100)}%, transparent)` }}
+    >
+      <div
+        className="anim-pop w-full text-center"
+        style={{ background: rs(d.card.background), borderRadius: d.card.radius, padding: Math.min(d.card.padding, 16), boxShadow: shadowCss(d.card.shadow, brand) }}
+      >
+        {d.showIllustration && (
+          <span
+            className="mx-auto mb-2 grid size-10 place-items-center rounded-xl"
+            style={{ background: `color-mix(in srgb, ${brand} 8%, transparent)`, color: brand }}
+          >
+            <SlotIcon name="doc" size={20} />
+          </span>
+        )}
+        <p style={{ color: rs(d.title.color), fontSize: Math.min(d.title.size, 14), fontWeight: d.title.weight }}>
+          {cs.title || 'Welcome to your AI Assistant'}
+        </p>
+        {(cs.subtitle ?? 'A few things to keep in mind') && (
+          <p className="mt-0.5" style={{ color: rs(d.subtitle.color), fontSize: Math.min(d.subtitle.size, 10.5), fontWeight: d.subtitle.weight }}>
+            {cs.subtitle || 'A few things to keep in mind'}
+          </p>
+        )}
+        <div className="mt-2.5 flex flex-col text-start" style={{ gap: Math.min(d.points.gap, 9) }}>
+          {points.map((pt, i) => (
+            <span key={i} className="flex items-start gap-2">
+              <SlotIcon name={pt.icon || 'info'} size={Math.min(d.points.iconSize, 12)} color={rs(d.points.iconColor)} className="mt-0.5" />
+              <span style={{ color: rs(d.points.textColor), fontSize: Math.min(d.points.textSize, 10), lineHeight: 1.45 }}>{pt.text}</span>
+            </span>
+          ))}
+        </div>
+        {(cs.footnote ?? true) && (
+          <p className="mt-2.5" style={{ color: rs(d.footnote.color), fontSize: Math.min(d.footnote.size, 8.5) }}>
+            {cs.footnote || 'By continuing, you agree to our Terms of Use and Privacy Policy'}
+          </p>
+        )}
+        {(() => {
+          const raw = (cs.links ?? {}) as Record<string, any>
+          const links = [
+            { show: raw.terms?.show !== false, label: raw.terms?.label || 'Terms of Use', url: raw.terms?.url },
+            { show: raw.privacy?.show !== false, label: raw.privacy?.label || 'Privacy Policy', url: raw.privacy?.url },
+          ].filter((l) => l.show && l.url)
+          if (!links.length) return null
+          return (
+            <p className="mt-1" style={{ fontSize: Math.min(d.footnote.size, 8.5) + 0.5 }}>
+              {links.map((l, i) => (
+                <span key={i}>
+                  {i > 0 && <span className="mx-1" style={{ color: rs(d.footnote.color) }}>·</span>}
+                  <span
+                    style={{
+                      color: resolve(typeof raw.color === 'string' ? raw.color : '#brand', brand),
+                      textDecoration: raw.underline === false ? 'none' : 'underline',
+                      textUnderlineOffset: 2,
+                    }}
+                  >
+                    {l.label}
+                  </span>
+                </span>
+              ))}
+            </p>
+          )
+        })()}
+        <span
+          className="mt-2.5 grid place-items-center"
+          style={{
+            background: rs(d.button.background),
+            color: rs(d.button.textColor),
+            borderRadius: d.button.radius,
+            height: Math.min(d.button.height, 32),
+            fontSize: Math.min(d.button.textSize, 11),
+            fontWeight: d.button.weight,
+            width: d.button.fullWidth ? '100%' : 'fit-content',
+            marginInline: d.button.fullWidth ? undefined : 'auto',
+            paddingInline: 14,
+          }}
+        >
+          {cs.buttonText || 'Agree & Continue'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /**
  * The loading placeholder, drawn from the config so every value is visible as
  * it is set. The sweep and the bounce live in styles.css, driven by the custom
@@ -527,6 +832,8 @@ function ToastPreview({ design, brand, text }: { design: ToastDesign; brand: str
  */
 function LauncherPreview({ design, brand, title }: { design: LauncherDesign; brand: string; title?: string }) {
   const d = design
+  // 'none' has no launcher to draw: the panel simply opens by itself.
+  if (d.type === 'none') return null
   const label = (d.label.text || title || '').trim()
   const showLabel = d.type === 'expanded_bubble' && d.label.show && !!label
   const attention = d.attention === 'none' ? '' : `pv-launch-${d.attention}`

@@ -46,13 +46,17 @@ export function PreviewFrame() {
   }, [])
 
   // Pushed events layer on top of the latest config without mutating it.
+  // The builder's plain dark toggle counts as a pushed dark theme too — it used
+  // to flip only the fallback backgrounds, which a fully-designed config never
+  // uses, so the button looked broken on designed widgets.
   const rendered = useMemo(() => {
     if (!config) return config
     let next = config
     if (lang) next = applyLanguage(next, lang)
-    if (theme) next = applyTheme(next, theme)
+    const effectiveTheme = theme ?? (dark ? 'dark' : null)
+    if (effectiveTheme) next = applyTheme(next, effectiveTheme)
     return next
-  }, [config, lang, theme])
+  }, [config, lang, theme, dark])
 
   return (
     <div className="h-dvh w-dvw overflow-hidden">

@@ -1,7 +1,8 @@
 import {
-  ArrowDown, ArrowLeft, ArrowUp, BellRing, Check, Download, Image as ImageIcon, Languages, LayoutGrid,
-  LoaderCircle, MessagesSquare,
-  Moon, Palette, PanelTop, Plus, RotateCcw, Rocket, Save, Share2, Sparkles, Sun, TextCursorInput, Trash2,
+  ArrowDown, ArrowLeft, ArrowUp, BellRing, Check, ClipboardList, Download, Image as ImageIcon, Languages,
+  LayoutGrid, LoaderCircle, MessagesSquare,
+  Moon, Palette, PanelTop, Plus, RotateCcw, Rocket, Save, Share2, ShieldCheck, Sparkles, Star, Sun,
+  TextCursorInput, Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -16,6 +17,7 @@ import { useAuth } from '@/lib/auth'
 import { PairWordmark } from '@/components/brand'
 import {
   BILINGUAL_PATHS, PREVIEW_FRAME_PATH, applyLanguage, applyTheme, bilingualText, currentLang, currentTheme, deepGet, deepSet, setBilingualText,
+  plainBilingualText, setPlainBilingualText, translate,
   isPreviewOutMsg, type PreviewEventMsg, type PreviewInMsg, type ThemeName, type WidgetLang,
 } from '@/lib/builder'
 import {
@@ -32,7 +34,7 @@ import { useToast } from '@/lib/toast'
 
 type Section =
   | 'theme' | 'language' | 'header' | 'hero' | 'quicklinks' | 'prompts' | 'input' | 'messages'
-  | 'loading' | 'toast' | 'launcher'
+  | 'prechat' | 'consent' | 'rating' | 'loading' | 'toast' | 'launcher'
 
 const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'theme', icon: <Palette className="size-4" /> },
@@ -43,6 +45,9 @@ const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'prompts', icon: <Sparkles className="size-4" /> },
   { id: 'input', icon: <TextCursorInput className="size-4" /> },
   { id: 'messages', icon: <MessagesSquare className="size-4" /> },
+  { id: 'prechat', icon: <ClipboardList className="size-4" /> },
+  { id: 'consent', icon: <ShieldCheck className="size-4" /> },
+  { id: 'rating', icon: <Star className="size-4" /> },
   { id: 'loading', icon: <LoaderCircle className="size-4" /> },
   { id: 'toast', icon: <BellRing className="size-4" /> },
   { id: 'launcher', icon: <Rocket className="size-4" /> },
@@ -238,7 +243,10 @@ export function Builder() {
             {section === 'quicklinks' && <QuickLinksPage get={get} set={set} disabled={!editor} />}
             {section === 'prompts' && <PromptsPage get={get} set={set} disabled={!editor} />}
             {section === 'input' && <InputPage get={get} set={set} disabled={!editor} />}
-            {section === 'messages' && <MessagesPage get={get} set={set} disabled={!editor} />}
+            {section === 'messages' && <MessagesPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
+            {section === 'prechat' && <PreChatPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
+            {section === 'consent' && <ConsentPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
+            {section === 'rating' && <RatingPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'loading' && <LoadingPage get={get} set={set} disabled={!editor} />}
             {section === 'toast' && <ToastPage get={get} set={set} disabled={!editor} />}
             {section === 'launcher' && <LauncherPage get={get} set={set} disabled={!editor} />}
@@ -617,6 +625,89 @@ function LangCard({ flag, label, note, active, onClick, disabled }: { flag: stri
   )
 }
 
+/** Like BilingualField, but for plain string paths (value at `<path>`, translations at `<path>_i18n`). */
+function PlainBiField({
+  label, path, draft, setDraft, disabled, placeholder,
+}: {
+  label: string
+  path: string
+  draft: WidgetConfig
+  setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void
+  disabled?: boolean
+  placeholder?: string
+}) {
+  const { t } = useI18n()
+  const live = currentLang(draft)
+  const write = (lang: WidgetLang, v: string) => setDraft((d) => (d ? setPlainBilingualText(d, path, lang, v) : d))
+  return (
+    <div className="sm:col-span-2">
+      <label className="label">{label}</label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {(['en', 'ar'] as const).map((lang) => (
+          <div key={lang} className="relative">
+            <input
+              dir={lang === 'ar' ? 'rtl' : 'ltr'}
+              className="input pe-12"
+              value={plainBilingualText(draft, path, lang)}
+              onChange={(e) => write(lang, e.target.value)}
+              disabled={disabled}
+              placeholder={lang === 'en' ? placeholder : undefined}
+              aria-label={`${label} — ${t(`locale.${lang}`)}`}
+            />
+            <span
+              dir="ltr"
+              className={`pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase ${live === lang ? 'bg-accent text-white' : 'bg-surface text-faint'}`}
+            >
+              {lang}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** One EN/AR input pair for a field inside a list item (label, placeholder, point text). */
+function ItemBiInputs({
+  live, value, i18n, onWrite, disabled, textarea,
+}: {
+  live: WidgetLang
+  value: string
+  i18n: Partial<Record<WidgetLang, string>>
+  onWrite: (lang: WidgetLang, v: string) => void
+  disabled?: boolean
+  textarea?: boolean
+}) {
+  const shown = (lang: WidgetLang) => i18n[lang] ?? (live === lang ? value : (translate(value, lang) ?? ''))
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {(['en', 'ar'] as const).map((lang) => {
+        const common = {
+          dir: lang === 'ar' ? ('rtl' as const) : ('ltr' as const),
+          value: shown(lang),
+          disabled,
+          onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onWrite(lang, e.target.value),
+        }
+        return (
+          <div key={lang} className="relative">
+            {textarea ? (
+              <textarea className="input min-h-16 resize-y pe-12" {...common} />
+            ) : (
+              <input className="input pe-12" {...common} />
+            )}
+            <span
+              dir="ltr"
+              className={`pointer-events-none absolute end-2 top-2.5 rounded px-1.5 py-0.5 text-[9.5px] font-bold uppercase ${live === lang ? 'bg-accent text-white' : 'bg-surface text-faint'}`}
+            >
+              {lang}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function HeaderPage({ get, set, disabled }: PageProps) {
   const { t } = useI18n()
   return (
@@ -632,6 +723,30 @@ function HeaderPage({ get, set, disabled }: PageProps) {
             <ToggleField label={t('form.headerShow')} path="widget_v2_config.header.enabled" get={get} set={set} disabled={disabled} />
             <ToggleField label={t('form.headerBgOn')} path="widget_v2_config.header.background.enabled" get={get} set={set} disabled={disabled} />
           </div>
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.header.controls')}</SectionHead>
+        <p className="callout mb-4">{t('builder.header.controlsHint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.header.langToggle')} path="widget_v2_config.header.controls.lang.show" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.header.themeToggle')} path="widget_v2_config.header.controls.theme.show" get={get} set={set} disabled={disabled} />
+          {get('widget_v2_config.header.controls.lang.show') !== false && (
+            <IconField
+              label={t('builder.header.langIcon')} set="lang"
+              value={get('widget_v2_config.header.controls.lang.icon')} url={get('widget_v2_config.header.controls.lang.iconUrl')}
+              onChange={(v) => set('widget_v2_config.header.controls.lang.icon', v)} onUrlChange={(v) => set('widget_v2_config.header.controls.lang.iconUrl', v)}
+              disabled={disabled}
+            />
+          )}
+          {get('widget_v2_config.header.controls.theme.show') !== false && (
+            <IconField
+              label={t('builder.header.themeIcon')} set="theme"
+              value={get('widget_v2_config.header.controls.theme.icon')} url={get('widget_v2_config.header.controls.theme.iconUrl')}
+              onChange={(v) => set('widget_v2_config.header.controls.theme.icon', v)} onUrlChange={(v) => set('widget_v2_config.header.controls.theme.iconUrl', v)}
+              disabled={disabled}
+            />
+          )}
         </div>
       </section>
       <section>
@@ -1369,7 +1484,7 @@ function LauncherPage({ get, set, disabled }: PageProps) {
       <section>
         <SectionHead>{t('builder.section.launcher')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ChoiceField label={t('form.launcherStyle')} path={p('type')} options={['standard', 'expanded_bubble', 'chat_icon', 'icon_only']} keyPrefix="builder.launcher.type" fallback="standard" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('form.launcherStyle')} path={p('type')} options={['standard', 'expanded_bubble', 'chat_icon', 'icon_only', 'none']} keyPrefix="builder.launcher.type" fallback="standard" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('form.launcherPosition')} path={p('position')} options={['right', 'left']} keyPrefix="builder.launcher.pos" fallback="right" get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.launcher.offsetX')} path={p('offsetX')} min={0} max={120} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.launcher.offsetY')} path={p('offsetY')} min={0} max={120} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
@@ -1554,27 +1669,498 @@ function ToastPage({ get, set, disabled }: PageProps) {
   )
 }
 
-function MessagesPage({ get, set, disabled }: PageProps) {
+function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
   const { t } = useI18n()
+  const AI = 'widget_v2_config.messages.aiMessages'
+  const LO = 'widget_v2_config.messages.loadingOlder'
+  const CU = 'widget_v2_config.messages.customerMessages'
+  const FB = 'widget_v2_config.messages.feedback'
   return (
     <div className="space-y-7">
       <section>
         <SectionHead>{t('builder.msgs.ai')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ColorField label={t('builder.msgs.cardBg')} path="widget_v2_config.messages.aiMessages.CardStyles.backgroundColor" get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.msgs.text')} path="widget_v2_config.messages.aiMessages.TextStyles.color" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.style')} path={`${AI}.messageStyle`} options={['bubble', 'plain', 'card']} keyPrefix="builder.msgs.style" fallback="bubble" get={get} set={set} disabled={disabled} />
+          <div />
+          <ColorField label={t('builder.msgs.cardBg')} path={`${AI}.CardStyles.backgroundColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${AI}.CardStyles.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${AI}.CardStyles.borderWidth`} min={0} max={8} step={1} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${AI}.CardStyles.borderRadius`} min={0} max={40} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.padding')} path={`${AI}.CardStyles.padding`} min={0} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${AI}.TextStyles.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${AI}.TextStyles.fontSize`} min={10} max={22} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${AI}.TextStyles.fontWeight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.showIcon')} path={`${AI}.showAiIcon`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.aiShimmer')} path={`${AI}.showShimmer`} get={get} set={set} disabled={disabled} />
+          <MediaInput label={t('builder.msgs.iconUrl')} value={get(`${AI}.iconUrl`) ?? ''} onChange={(v) => set(`${AI}.iconUrl`, v)} disabled={disabled} />
         </div>
       </section>
       <section>
         <SectionHead>{t('builder.msgs.user')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ColorField label={t('form.userBubbleBg')} path="widget_v2_config.messages.customerMessages.bubbleStyle.backgroundColor" get={get} set={set} disabled={disabled} />
-          <ColorField label={t('form.userBubbleText')} path="widget_v2_config.messages.customerMessages.TextStyles.color" get={get} set={set} disabled={disabled} />
-          <Field label={t('form.bubbleRadius')} path="widget_v2_config.messages.customerMessages.bubbleStyle.borderRadius" get={get} set={set} disabled={disabled} placeholder="18px 18px 4px 18px" />
-          <ToggleField label={t('builder.msgs.feedback')} path="widget_v2_config.messages.feedback.showFeedbackButtons" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.btype')} path={`${CU}.bubbleType`} options={['filled', 'outline']} keyPrefix="builder.msgs.btype" fallback="filled" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.brandColor')} path={`${CU}.useBrandColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('form.userBubbleBg')} path={`${CU}.bubbleStyle.backgroundColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${CU}.bubbleStyle.borderColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('form.userBubbleText')} path={`${CU}.TextStyles.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CU}.TextStyles.fontSize`} min={10} max={22} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${CU}.TextStyles.fontWeight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.padding')} path={`${CU}.bubbleStyle.padding`} min={0} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <Field label={t('form.bubbleRadius')} path={`${CU}.bubbleStyle.borderRadius`} get={get} set={set} disabled={disabled} placeholder="18px 18px 4px 18px" />
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.msgs.loadMoreHead')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <PlainBiField label={t('builder.msgs.loadMoreText')} path={`${LO}.text`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Loading older messages…" />
+          </div>
+          <ColorField label={t('builder.msgs.loadMoreBg')} path={`${LO}.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${LO}.textColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.loadMoreSpinner')} path={`${LO}.spinnerColor`} get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.msgs.feedbackHead')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.msgs.feedback')} path={`${FB}.showFeedbackButtons`} get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.msgs.toastMsg')} path={`${FB}.toastMessage`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.fbIconSize')} path={`${FB}.style.iconSize`} min={12} max={40} step={1} fallback={24} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.fbIconColor')} path={`${FB}.style.iconColor`} get={get} set={set} disabled={disabled} />
         </div>
       </section>
     </div>
   )
 }
 
+
+/* --------------------------------- pre-chat -------------------------------- */
+
+const PC = 'widget_v2_config.pre_chat_form'
+const PCD = `${PC}.design`
+
+type PreChatFieldRow = {
+  name: string; type: string; label: string; placeholder: string
+  required: boolean; enabled: boolean; order: number; field_type: string
+  /** Hand-typed translations, applied by the language switch. */
+  i18n?: Partial<Record<WidgetLang, { label?: string; placeholder?: string }>>
+}
+
+const PC_DEFAULT_FIELDS: PreChatFieldRow[] = [
+  { name: 'emailAddress', type: 'email', label: 'Email Id', placeholder: 'emailAddress', required: true, enabled: true, order: 1, field_type: 'standard' },
+  { name: 'fullName', type: 'text', label: 'Full name', placeholder: 'fullName', required: false, enabled: true, order: 2, field_type: 'standard' },
+  { name: 'phoneNumber', type: 'text', label: 'Phone number', placeholder: 'phoneNumber', required: true, enabled: true, order: 3, field_type: 'standard' },
+]
+
+/**
+ * The pre-chat form page: whether the form gates the conversation, the copy it
+ * opens with, the three contact fields, and the design of every part of it.
+ * Fields are edited as whole rows and written back as one array, so the shape
+ * stays a real array whatever path arithmetic would have made of it.
+ */
+function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
+  const { t } = useI18n()
+  const live = currentLang(draft)
+  const stored = get(`${PC}.fields`)
+  const fields: PreChatFieldRow[] = Array.isArray(stored) && stored.length ? stored : PC_DEFAULT_FIELDS
+  const patchField = (i: number, patch: Partial<PreChatFieldRow>) =>
+    set(`${PC}.fields`, fields.map((f, j) => (j === i ? { ...f, ...patch } : f)))
+  // One language of a field's label/placeholder: the translation is stored on
+  // the item, and the live value follows the widget's current language.
+  const writeFieldText = (i: number, key: 'label' | 'placeholder', lang: WidgetLang, v: string) =>
+    set(`${PC}.fields`, fields.map((f, j) => {
+      if (j !== i) return f
+      const next: PreChatFieldRow = { ...f, i18n: { ...(f.i18n ?? {}), [lang]: { ...((f.i18n ?? {})[lang] ?? {}), [key]: v } } }
+      if (live === lang) next[key] = v
+      return next
+    }))
+
+  return (
+    <div className="space-y-7">
+      <section>
+        <SectionHead>{t('builder.section.prechat')}</SectionHead>
+        <p className="callout mb-4">{t('builder.pc.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.pc.enable')} path={`${PC}.enabled`} get={get} set={set} disabled={disabled} />
+          <div />
+          <PlainBiField label={t('builder.pc.message')} path={`${PC}.message`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Share your queries or comments here." />
+        </div>
+      </section>
+
+      <section>
+        <SectionHead>{t('builder.pc.fields')}</SectionHead>
+        <div className="space-y-3">
+          {fields.map((f, i) => (
+            <div key={f.name} className="card space-y-3 p-3.5">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="mono text-[11px] font-bold text-ink">{f.name}</span>
+                <span className="badge">{f.type}</span>
+                <span className="ms-auto flex gap-4">
+                  <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-muted">
+                    <input type="checkbox" checked={f.enabled !== false} disabled={disabled} onChange={(e) => patchField(i, { enabled: e.target.checked })} />
+                    {t('builder.pc.field.enabled')}
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-muted">
+                    <input type="checkbox" checked={!!f.required} disabled={disabled} onChange={(e) => patchField(i, { required: e.target.checked })} />
+                    {t('builder.pc.field.required')}
+                  </label>
+                </span>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="label">{t('builder.pc.field.label')}</label>
+                  <ItemBiInputs live={live} value={f.label} i18n={{ en: f.i18n?.en?.label, ar: f.i18n?.ar?.label }}
+                    onWrite={(lang, v) => writeFieldText(i, 'label', lang, v)} disabled={disabled} />
+                </div>
+                <div>
+                  <label className="label">{t('builder.pc.field.placeholder')}</label>
+                  <ItemBiInputs live={live} value={f.placeholder ?? ''} i18n={{ en: f.i18n?.en?.placeholder, ar: f.i18n?.ar?.placeholder }}
+                    onWrite={(lang, v) => writeFieldText(i, 'placeholder', lang, v)} disabled={disabled} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Disclosure summary={t('builder.pc.design.message')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.msgs.text')} path={`${PCD}.message.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${PCD}.message.size`} min={9} max={28} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${PCD}.message.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.chips.align')} path={`${PCD}.message.align`} options={[...TEXT_ALIGNS]} keyPrefix="builder.align" fallback="start" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.labels')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.pc.design.labelsShow')} path={`${PCD}.labels.show`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${PCD}.labels.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${PCD}.labels.size`} min={8} max={24} step={0.5} fallback={13} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${PCD}.labels.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="600" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.pc.design.requiredColor')} path={`${PCD}.labels.requiredColor`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.inputs')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${PCD}.field.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${PCD}.field.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${PCD}.field.borderWidth`} min={0} max={8} step={1} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${PCD}.field.radius`} min={0} max={999} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.inputHeight')} path={`${PCD}.field.height`} min={28} max={72} step={1} fallback={40} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.gap')} path={`${PCD}.field.gap`} min={4} max={40} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${PCD}.field.textColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${PCD}.field.textSize`} min={9} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.pc.design.placeholderColor')} path={`${PCD}.field.placeholderColor`} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.pc.design.focus')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.pc.design.focusBorder')} path={`${PCD}.field.focusBorderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.ring')} path={`${PCD}.field.focusRingWidth`} min={0} max={12} step={1} fallback={3} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.pc.design.ringColor')} path={`${PCD}.field.focusRingColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.ringOpacity')} path={`${PCD}.field.focusRingOpacity`} min={0} max={1} step={0.02} fallback={0.18} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.messageBox')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.pc.design.messageBoxOn')} path={`${PCD}.showMessage`} get={get} set={set} disabled={disabled} />
+          <div />
+          <PlainBiField label={t('builder.pc.design.messageLabel')} path={`${PCD}.messageLabel`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Message" />
+          <PlainBiField label={t('builder.pc.design.messagePh')} path={`${PCD}.messagePlaceholder`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Type your message here..." />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.button')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PlainBiField label={t('builder.pc.design.buttonText')} path={`${PCD}.buttonText`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Start Chat" />
+          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${PCD}.button.fullWidth`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.input.fieldBg')} path={`${PCD}.button.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${PCD}.button.textColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${PCD}.button.radius`} min={0} max={999} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.inputHeight')} path={`${PCD}.button.height`} min={30} max={72} step={1} fallback={44} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${PCD}.button.textSize`} min={9} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${PCD}.button.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="600" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.input.hoverBg')} path={`${PCD}.button.hoverBackground`} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={`${PCD}.button.shadow`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.media')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.pc.design.bannerOn')} path={`${PCD}.banner.show`} get={get} set={set} disabled={disabled} />
+          <div />
+          <MediaInput label={t('builder.pc.design.banner')} value={get(`${PCD}.banner.url`) ?? ''} onChange={(v) => set(`${PCD}.banner.url`, v)} disabled={disabled} />
+          <div className="grid gap-4">
+            <NumField label={t('builder.pc.design.bannerH')} path={`${PCD}.banner.height`} min={32} max={280} step={2} fallback={96} unit="px" get={get} set={set} disabled={disabled} />
+            <ChoiceField label={t('builder.cards.imageFit')} path={`${PCD}.banner.fit`} options={[...IMAGE_FITS]} keyPrefix="builder.fit" fallback="cover" get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.msgs.radius')} path={`${PCD}.banner.radius`} min={0} max={60} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          </div>
+          <MediaInput label={t('builder.pc.design.backdrop')} value={get(`${PCD}.backdrop.url`) ?? ''} onChange={(v) => set(`${PCD}.backdrop.url`, v)} disabled={disabled} />
+          <div className="grid gap-4">
+            <NumField label={t('builder.pc.design.backdropOpacity')} path={`${PCD}.backdrop.opacity`} min={0} max={1} step={0.02} fallback={0.06} get={get} set={set} disabled={disabled} />
+            <NumField label={t('builder.pc.design.backdropSize')} path={`${PCD}.backdrop.size`} min={40} max={800} step={10} fallback={220} unit="px" get={get} set={set} disabled={disabled} />
+          </div>
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.pc.design.card')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.pc.design.cardOn')} path={`${PCD}.card.enabled`} get={get} set={set} disabled={disabled} />
+          <div />
+          <ColorField label={t('builder.input.fieldBg')} path={`${PCD}.card.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${PCD}.card.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${PCD}.card.borderWidth`} min={0} max={8} step={1} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${PCD}.card.radius`} min={0} max={60} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.padding')} path={`${PCD}.card.padding`} min={0} max={48} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={`${PCD}.card.shadow`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+    </div>
+  )
+}
+
+/* ------------------------------- consent gate ------------------------------ */
+
+const CS = 'widget_v2_config.consent_screen'
+const CSD = `${CS}.design`
+
+type ConsentPointRow = { icon: string; text: string; i18n?: Partial<Record<WidgetLang, { text?: string }>> }
+
+const CS_DEFAULT_POINTS: ConsentPointRow[] = [
+  { icon: 'chat-text', text: 'This assistant helps you discover films, get recommendations and track bookings.' },
+  { icon: 'alert', text: 'AI suggestions may occasionally be incorrect. Please review details before purchasing.' },
+  { icon: 'shield', text: 'Your interactions may be used to improve recommendations and your experience.' },
+]
+
+/**
+ * The welcome gate page: the consent sheet's copy, its points (each with an
+ * icon), and the design of the sheet, texts and agree button.
+ */
+function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
+  const { t } = useI18n()
+  const live = currentLang(draft)
+  const stored = get(`${CS}.points`)
+  const points: ConsentPointRow[] = Array.isArray(stored) && stored.length ? stored : CS_DEFAULT_POINTS
+  const write = (next: ConsentPointRow[]) => set(`${CS}.points`, next)
+  const patchPoint = (i: number, patch: Partial<ConsentPointRow>) =>
+    write(points.map((pt, j) => (j === i ? { ...pt, ...patch } : pt)))
+  const writePointText = (i: number, lang: WidgetLang, v: string) =>
+    write(points.map((pt, j) => {
+      if (j !== i) return pt
+      const next: ConsentPointRow = { ...pt, i18n: { ...(pt.i18n ?? {}), [lang]: { text: v } } }
+      if (live === lang) next.text = v
+      return next
+    }))
+
+  return (
+    <div className="space-y-7">
+      <section>
+        <SectionHead>{t('builder.section.consent')}</SectionHead>
+        <p className="callout mb-4">{t('builder.cs.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.cs.enable')} path={`${CS}.enabled`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cs.illustration')} path={`${CSD}.showIllustration`} get={get} set={set} disabled={disabled} />
+          <PlainBiField label={t('builder.cs.title')} path={`${CS}.title`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Welcome to your AI Assistant" />
+          <PlainBiField label={t('builder.cs.subtitle')} path={`${CS}.subtitle`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="A few things to keep in mind" />
+          <PlainBiField label={t('builder.cs.footnote')} path={`${CS}.footnote`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="By continuing, you agree to our" />
+          <PlainBiField label={t('builder.cs.buttonText')} path={`${CS}.buttonText`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Agree & Continue" />
+        </div>
+      </section>
+
+      <section>
+        <SectionHead>{t('builder.cs.points')}</SectionHead>
+        <div className="space-y-3">
+          {points.map((pt, i) => (
+            <div key={i} className="card space-y-3 p-3.5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <IconField
+                  label={t('builder.pc.field.label')} set="consent"
+                  value={pt.icon} url={undefined}
+                  onChange={(v) => patchPoint(i, { icon: v })} onUrlChange={() => {}}
+                  disabled={disabled}
+                />
+                <div className="flex items-end gap-2">
+                  <button
+                    className="btn-ghost btn-sm ms-auto"
+                    onClick={() => write(points.filter((_, j) => j !== i))}
+                    disabled={disabled || points.length <= 1}
+                    aria-label={t('common.delete')}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="label">{t('builder.cs.point.text')}</label>
+                <ItemBiInputs live={live} textarea value={pt.text} i18n={{ en: pt.i18n?.en?.text, ar: pt.i18n?.ar?.text }}
+                  onWrite={(lang, v) => writePointText(i, lang, v)} disabled={disabled} />
+              </div>
+            </div>
+          ))}
+          <button className="btn-ghost btn-sm" onClick={() => write([...points, { icon: 'info', text: '' }])} disabled={disabled || points.length >= 6}>
+            <Plus className="size-4" />
+            {t('builder.cs.addPoint')}
+          </button>
+        </div>
+      </section>
+
+      <Disclosure summary={t('builder.cs.links')}>
+        <p className="callout mb-4">{t('builder.cs.links.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.terms.show`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.privacy.show`} get={get} set={set} disabled={disabled} />
+          <PlainBiField label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.label')}`} path={`${CS}.links.terms.label`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Terms of Use" />
+          <Field label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.url')}`} path={`${CS}.links.terms.url`} get={get} set={set} disabled={disabled} placeholder="https://…" />
+          <PlainBiField label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.label')}`} path={`${CS}.links.privacy.label`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Privacy Policy" />
+          <Field label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.url')}`} path={`${CS}.links.privacy.url`} get={get} set={set} disabled={disabled} placeholder="https://…" />
+          <ColorField label={t('builder.cs.links.color')} path={`${CS}.links.color`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cs.links.underline')} path={`${CS}.links.underline`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cs.design.sheet')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${CSD}.card.background`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${CSD}.card.radius`} min={0} max={60} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.padding')} path={`${CSD}.card.padding`} min={0} max={48} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.cs.overlay')} path={`${CSD}.overlayColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cs.overlayOpacity')} path={`${CSD}.overlayOpacity`} min={0} max={1} step={0.05} fallback={0.45} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cs.design.texts')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.cs.title')} path={`${CSD}.title.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CSD}.title.size`} min={10} max={32} step={0.5} fallback={17} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.cs.subtitle')} path={`${CSD}.subtitle.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CSD}.subtitle.size`} min={8} max={24} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.cs.footnote')} path={`${CSD}.footnote.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CSD}.footnote.size`} min={7} max={18} step={0.5} fallback={10.5} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cs.design.pointsStyle')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.msgs.text')} path={`${CSD}.points.textColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CSD}.points.textSize`} min={8} max={20} step={0.5} fallback={12.5} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.chips.iconColor')} path={`${CSD}.points.iconColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.iconSize')} path={`${CSD}.points.iconSize`} min={10} max={32} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.gap')} path={`${CSD}.points.gap`} min={4} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.cs.design.button')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${CSD}.button.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${CSD}.button.textColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${CSD}.button.radius`} min={0} max={999} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.inputHeight')} path={`${CSD}.button.height`} min={30} max={72} step={1} fallback={44} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${CSD}.button.textSize`} min={9} max={24} step={0.5} fallback={13.5} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.textWeight')} path={`${CSD}.button.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="600" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${CSD}.button.fullWidth`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+    </div>
+  )
+}
+
+/* ------------------------------- rating (CSAT) ----------------------------- */
+
+const RT = 'widget_v2_config.csat'
+const RTD = `${RT}.design`
+
+/**
+ * The rating survey page: the texts the survey shows (overriding what the
+ * survey message carries), which type it renders as, and the design of the
+ * card, the sheet, the chips or stars, and both buttons.
+ */
+function RatingPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
+  const { t } = useI18n()
+  return (
+    <div className="space-y-7">
+      <section>
+        <SectionHead>{t('builder.section.rating')}</SectionHead>
+        <p className="callout mb-4">{t('builder.rt.hint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.rt.type')} path={`${RTD}.forceType`} options={['auto', 'star', 'text_options']} keyPrefix="builder.rt.type" fallback="auto" get={get} set={set} disabled={disabled} />
+          <div />
+          <PlainBiField label={t('builder.rt.header')} path={`${RT}.header`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Customer Satisfaction Survey" />
+          <PlainBiField label={t('builder.rt.question')} path={`${RT}.body`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="How was your experience?" />
+          <PlainBiField label={t('builder.rt.trigger')} path={`${RT}.buttonText`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Rate Experience" />
+          <PlainBiField label={t('builder.rt.submit')} path={`${RT}.submitText`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Submit Feedback" />
+        </div>
+      </section>
+
+      <Disclosure summary={t('builder.rt.card')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${RTD}.card.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${RTD}.card.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${RTD}.card.borderWidth`} min={0} max={8} step={1} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${RTD}.card.radius`} min={0} max={60} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.padding')} path={`${RTD}.card.padding`} min={0} max={48} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+          <div />
+          <ColorField label={t('builder.rt.header')} path={`${RTD}.header.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${RTD}.header.size`} min={8} max={20} step={0.5} fallback={11} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.rt.question')} path={`${RTD}.body.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${RTD}.body.size`} min={10} max={26} step={0.5} fallback={15} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.rt.trigger')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FontField label={t('builder.rt.font')} path={`${RTD}.trigger.fontFamily`} allowInherit get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${RTD}.trigger.textSize`} min={9} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${RTD}.trigger.textColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.input.fieldBg')} path={`${RTD}.trigger.background`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${RTD}.trigger.radius`} min={0} max={999} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${RTD}.trigger.borderWidth`} min={0} max={8} step={1} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${RTD}.trigger.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.inputHeight')} path={`${RTD}.trigger.height`} min={28} max={72} step={1} fallback={36} unit="px" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${RTD}.trigger.fullWidth`} get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={`${t('builder.rt.chips')} · ${t('builder.rt.stars')}`}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${RTD}.chips.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${RTD}.chips.borderColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${RTD}.chips.textColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${RTD}.chips.radius`} min={0} max={999} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.rt.selBg')} path={`${RTD}.chips.selectedBackground`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.rt.selBorder')} path={`${RTD}.chips.selectedBorderColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.rt.selText')} path={`${RTD}.chips.selectedTextColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${RTD}.chips.textSize`} min={9} max={20} step={0.5} fallback={13} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.rt.stars')} path={`${RTD}.stars.color`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.iconSize')} path={`${RTD}.stars.size`} min={12} max={36} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+
+      <Disclosure summary={t('builder.rt.sheet')}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.input.fieldBg')} path={`${RTD}.dialog.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${RTD}.dialog.titleColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${RTD}.dialog.dividerColor`} get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.rt.submit')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FontField label={t('builder.rt.font')} path={`${RTD}.submit.fontFamily`} allowInherit get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.textSize')} path={`${RTD}.submit.textSize`} min={9} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.text')} path={`${RTD}.submit.textColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.input.fieldBg')} path={`${RTD}.submit.background`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.radius')} path={`${RTD}.submit.radius`} min={0} max={999} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.borderWidth')} path={`${RTD}.submit.borderWidth`} min={0} max={8} step={1} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.borderColor')} path={`${RTD}.submit.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.pc.design.inputHeight')} path={`${RTD}.submit.height`} min={30} max={72} step={1} fallback={48} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </Disclosure>
+    </div>
+  )
+}
