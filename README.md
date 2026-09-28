@@ -1,5 +1,8 @@
 # Pair Widget PoCs — Widget Studio
 
+
+
+
 A small, production-grade dashboard for designing Pair chat widgets per channel.
 
 Register a **channel name + Pair widget ID**, then choose where that widget's design is served from:
