@@ -23,7 +23,30 @@ function isMobilePhone(value: string): boolean {
   }
 }
 
-export function createPreChatFormSchema(preChatFields: PreChatField[]) {
+/** Validation copy in both widget languages. */
+const MSG = {
+  en: {
+    required: (label: string) => `${label} is required`,
+    email: 'Please enter a valid email address',
+    phone: 'Please enter a valid mobile phone number',
+    name: 'Please enter your real name (letters only, at least 2 characters)',
+    message: 'Message is required',
+  },
+  ar: {
+    required: (label: string) => `${label} مطلوب`,
+    email: 'من فضلك أدخل بريدًا إلكترونيًا صحيحًا',
+    phone: 'من فضلك أدخل رقم هاتف محمول صحيحًا',
+    name: 'من فضلك أدخل اسمًا صحيحًا (حروف فقط، حرفان على الأقل)',
+    message: 'الرسالة مطلوبة',
+  },
+}
+
+/** Letters (any script), spaces and common name punctuation — no digits. */
+const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M}'’.\- ]{1,79}$/u
+const isName = (v: string) => NAME_RE.test(v.trim())
+
+export function createPreChatFormSchema(preChatFields: PreChatField[], requireMessage = true, locale?: string) {
+  const t = /^ar/i.test(locale ?? 'en') ? MSG.ar : MSG.en
   const schemaObject: Record<string, z.ZodTypeAny> = {}
 
   preChatFields.forEach((field) => {
@@ -35,17 +58,30 @@ export function createPreChatFormSchema(preChatFields: PreChatField[]) {
       if (field.required) {
         schemaObject[field.name] = z
           .string()
-          .min(1, { message: `${field.label} is required` })
-          .refine(isMobilePhone, {
-            message: 'Please enter a valid mobile phone number',
-          })
+          .min(1, { message: t.required(field.label) })
+          .refine(isMobilePhone, { message: t.phone })
       } else {
         schemaObject[field.name] = z
           .string()
           .optional()
-          .refine((val) => !val || val.trim() === '' || isMobilePhone(val), {
-            message: 'Please enter a valid mobile phone number',
-          })
+          .refine((val) => !val || val.trim() === '' || isMobilePhone(val), { message: t.phone })
+      }
+      return
+    }
+
+    // A name field takes real names: letters in any script, no digits.
+    const isNameField = /name/i.test(field.name) && field.type !== 'email'
+    if (isNameField) {
+      if (field.required) {
+        schemaObject[field.name] = z
+          .string()
+          .min(1, { message: t.required(field.label) })
+          .refine(isName, { message: t.name })
+      } else {
+        schemaObject[field.name] = z
+          .string()
+          .optional()
+          .refine((val) => !val || val.trim() === '' || isName(val), { message: t.name })
       }
       return
     }
@@ -56,8 +92,8 @@ export function createPreChatFormSchema(preChatFields: PreChatField[]) {
           // Required email: must be present and valid
           schemaObject[field.name] = z
             .string()
-            .min(1, { message: `${field.label} is required` })
-            .email({ message: 'Please enter a valid email address' })
+            .min(1, { message: t.required(field.label) })
+            .email({ message: t.email })
         } else {
           // Optional email: if provided, must be valid; empty string is allowed
           schemaObject[field.name] = z
@@ -73,7 +109,7 @@ export function createPreChatFormSchema(preChatFields: PreChatField[]) {
                 return z.string().email().safeParse(val).success
               },
               {
-                message: 'Please enter a valid email address',
+                message: t.email,
               },
             )
         }
@@ -81,7 +117,7 @@ export function createPreChatFormSchema(preChatFields: PreChatField[]) {
       case 'text':
       default:
         if (field.required) {
-          schemaObject[field.name] = z.string().min(1, { message: `${field.label} is required` })
+          schemaObject[field.name] = z.string().min(1, { message: t.required(field.label) })
         } else {
           // Optional text: allow empty string
           schemaObject[field.name] = z.string().optional().or(z.literal(''))
@@ -90,8 +126,11 @@ export function createPreChatFormSchema(preChatFields: PreChatField[]) {
     }
   })
 
-  // Message is always required by default
-  schemaObject.message = z.string().min(1, { message: 'Message is required' })
+  // The message box is required while it is shown; a form the studio set to
+  // fields-only registers the contact without one.
+  schemaObject.message = requireMessage
+    ? z.string().min(1, { message: t.message })
+    : z.string().optional().or(z.literal(''))
 
   return z.object(schemaObject)
 }

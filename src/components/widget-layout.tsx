@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 
+import { ConsentGate } from '@/components/consent-gate'
 import { IncomingMessagePreview } from '@/components/incoming-message-preview'
 import { Card } from '@/components/ui/card'
 import { WidgetEye } from '@/components/widget-eye/components/widget-eye'
@@ -48,6 +49,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
         >
           {children}
         </Card>
+        <ConsentGate />
       </motion.div>
     )
   }
@@ -95,6 +97,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
             >
               {children}
             </Card>
+            <ConsentGate />
           </motion.div>
         )}
       </AnimatePresence>
@@ -103,7 +106,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
       <IncomingMessagePreview />
 
       {/* Chat Bubble Button - only in standalone mode */}
-      {(!isOpen || !widgetConfig.openAutomatically) && <WidgetEye />}
+      {widgetConfig.type !== 'none' && (!isOpen || !widgetConfig.openAutomatically) && <WidgetEye />}
     </div>
   )
 }

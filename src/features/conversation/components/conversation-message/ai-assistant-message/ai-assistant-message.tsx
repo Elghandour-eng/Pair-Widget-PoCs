@@ -44,10 +44,13 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
     : undefined
 
   if (isPending) {
+    // With the shimmer off (AI-bot channels), the pending reply shows only its
+    // header — the streamed text takes over the moment it starts.
+    const aiShimmer = widgetConfig.messagesConfig?.aiMessages?.showShimmer !== false
     return (
       <div className="flex w-full flex-col items-start gap-4 bg-transparent px-4 py-2">
         <AiAssistantMessageHeader isPending={true} />
-        <AiAssistantMessageShimmer cardStyles={cardStyles} />
+        {aiShimmer && <AiAssistantMessageShimmer cardStyles={cardStyles} />}
       </div>
     )
   }

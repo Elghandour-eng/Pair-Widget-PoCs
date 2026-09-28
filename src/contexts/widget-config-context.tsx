@@ -1,15 +1,20 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, type ReactNode, startTransition, useContext, useEffect, useMemo, useState } from 'react'
 
 import { WidgetConfigQueryOptions } from '@/config/queries/use-widget-config-queries'
 import type { PairAiWidgetSettings, WidgetConfig } from '@/config/types/widget-config'
 import { mapToWidgetConfig } from '@/config/utils/map-widget-config'
+import { getViewOverride, setViewOverride, type ViewOverride } from '@/core/view-override'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { getWidgetId } from '@/utils/widget-id'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
 interface WidgetConfigContextType {
   widgetConfig: WidgetConfig
+  /** The visitor's own language/theme choice, from the header controls. */
+  view: ViewOverride
+  setView: (view: ViewOverride) => void
 }
 
 const WidgetConfigContext = createContext<WidgetConfigContextType | undefined>(undefined)
@@ -17,8 +22,38 @@ const WidgetConfigContext = createContext<WidgetConfigContextType | undefined>(u
 export function WidgetConfigProvider({ children }: { children: ReactNode }) {
   logger.debug('WidgetConfigProvider', 'Initializing widget config provider')
 
+  // The visitor's language/theme choice: kept per widget, applied by fetching
+  // the config again from the matching /pv base.
+  const [view, setViewState] = useState<ViewOverride>(() => getViewOverride(getWidgetId()))
+  const setView = (next: ViewOverride) => {
+    setViewOverride(getWidgetId(), next)
+    // A transition keeps the current design on screen while the re-themed /
+    // re-translated config loads — no white flash from the suspense boundary.
+    startTransition(() => setViewState(next))
+    // Announce the switch to whoever hosts us — it shows up in any postMessage
+    // console watching the SDK, and a host page could react to it too.
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'widget:viewChanged', data: { lang: next.lang ?? 'default', theme: next.theme ?? 'design' } },
+          '*',
+        )
+      }
+    } catch {
+      // Cross-origin host without a listener: nothing to announce to.
+    }
+  }
+
   // Fetch API config
-  const { data: apiConfig } = useSuspenseQuery(WidgetConfigQueryOptions())
+  const { data: apiConfig } = useSuspenseQuery(WidgetConfigQueryOptions(view))
+
+  // The document follows the config's own locale, so an Arabic view lays the
+  // whole widget out right-to-left exactly as the studio previews it.
+  useEffect(() => {
+    const locale = typeof apiConfig.locale === 'string' ? apiConfig.locale : 'en'
+    document.documentElement.lang = locale
+    document.documentElement.dir = /^(ar|he|fa|ur)/i.test(locale) ? 'rtl' : 'ltr'
+  }, [apiConfig.locale])
 
   // State to store postMessage settings from host SDK
   const [sdkConfig, setSdkConfig] = useState<Partial<PairAiWidgetSettings> | undefined>(undefined)
@@ -107,7 +142,7 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
 
   logger.debug('WidgetConfigProvider', 'Widget config mapped successfully', widgetConfig)
 
-  return <WidgetConfigContext.Provider value={{ widgetConfig }}>{children}</WidgetConfigContext.Provider>
+  return <WidgetConfigContext.Provider value={{ widgetConfig, view, setView }}>{children}</WidgetConfigContext.Provider>
 }
 
 export function useWidgetConfigContext() {

@@ -18,6 +18,10 @@ function WidgetCloseBtn() {
     }
   }
 
+  // With no launcher at all there is nothing to reopen the panel with, so the
+  // close button goes too — the panel simply stays.
+  if (widgetConfig.type === 'none') return null
+
   return (
     <Button variant="ghost" size="icon-sm" onClick={handleClose} className="min-[668px]:hidden">
       <X className="size-5" />

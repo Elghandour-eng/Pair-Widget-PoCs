@@ -1,3 +1,4 @@
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { AiAssistantMessageShimmer } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message-shimmer'
 
 interface TypingIndicatorProps {
@@ -6,9 +7,13 @@ interface TypingIndicatorProps {
 }
 
 export function TypingIndicator({ senderName = 'AI Assistant', senderType = 'ai' }: TypingIndicatorProps) {
+  const { widgetConfig } = useWidgetConfigContext()
   const isAi = senderType === 'ai' || senderType === 'ai_agent'
+  // An AI-bot channel can turn the big shimmer off (its replies stream in);
+  // it then gets the compact typing dots like a human agent.
+  const aiShimmer = widgetConfig.messagesConfig?.aiMessages?.showShimmer !== false
 
-  if (isAi) {
+  if (isAi && aiShimmer) {
     return (
       <div className="animate-fade-in flex w-full flex-col items-start gap-4 bg-transparent py-2 pl-4 select-none">
         <AiAssistantMessageShimmer />

@@ -13,7 +13,15 @@ export function IntroContent() {
   const hasQuickLinks = !!quickLinksConfig?.show && (quickLinksConfig.links || []).length > 0
 
   const heroImageStyles = introConfig?.heroImage?.styles as Record<string, unknown> | undefined
-  const hasExplicitHeight = !!(heroImageStyles?.height || heroImageStyles?.maxHeight || heroImageStyles?.['max-height'])
+  // An aspect ratio sizes the hero as much as a height does; `height: 'auto'`
+  // alongside one is not "no height", so it must not trigger the fallback cap.
+  const hasExplicitHeight = !!(
+    (heroImageStyles?.height && heroImageStyles.height !== 'auto') ||
+    heroImageStyles?.maxHeight ||
+    heroImageStyles?.['max-height'] ||
+    heroImageStyles?.aspectRatio ||
+    heroImageStyles?.['aspect-ratio']
+  )
 
   // The hero is a slide list. `heroImage` remains the single-slide fallback for
   // configs written before the list existed.

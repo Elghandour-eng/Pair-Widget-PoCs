@@ -145,6 +145,10 @@
   // Show bubble after CSS is loaded
   function showBubble() {
     if (!bubbleHolder) return
+    if (config.type === 'none') {
+      bubbleHolder.style.display = 'none'
+      return
+    }
     bubbleHolder.style.opacity = ''
     bubbleHolder.style.visibility = ''
     bubbleHolder.style.pointerEvents = ''
@@ -400,9 +404,10 @@
         badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
         // Show bubble on mobile
         bubble.classList.remove('pair-ai--hide-mobile')
-        // Make sure bubble is visible when closed
+        // Make sure bubble is visible when closed — unless there is no
+        // launcher at all, in which case nothing ever shows.
         if (bubbleHolder) {
-          bubbleHolder.style.display = ''
+          bubbleHolder.style.display = config.type === 'none' ? 'none' : ''
           bubbleHolder.style.opacity = ''
           bubbleHolder.style.visibility = ''
           bubbleHolder.style.pointerEvents = ''
@@ -597,10 +602,17 @@
     if (newConfig.type) config.type = newConfig.type
     if (newConfig.launcherTitle) config.launcherTitle = newConfig.launcherTitle
     if (newConfig.openAutomatically !== undefined) config.openAutomatically = newConfig.openAutomatically
+    // No launcher at all: the panel opens and stays; the bubble never shows.
+    if (config.type === 'none') config.openAutomatically = true
     if (newConfig.primaryColor) config.primaryColor = newConfig.primaryColor
     if (newConfig.launcherStyles) config.launcherStyles = newConfig.launcherStyles
     if (newConfig.showFooter !== undefined) config.showFooter = newConfig.showFooter
     if (newConfig.welcome_title_var !== undefined) config.welcome_title_var = newConfig.welcome_title_var
+    // The studio's saved panel size wins over whatever the pasted snippet froze.
+    if (newConfig.panel) {
+      config.panel = newConfig.panel
+      applyPanelSize(widgetHolder)
+    }
 
     // 1. Update position classes on holders
     if (config.position !== oldPosition) {
@@ -693,6 +705,7 @@
       position: settings.position || 'right',
       type: settings.type || 'standard',
       launcherTitle: settings.launcherTitle || 'Chat with us!',
+      panel: settings.panel || options.panel,
       user: options.user,
       openAutomatically: settings.openAutomatically || options.openAutomatically || false,
       userId: settings.userId || options.userId || null,
@@ -701,6 +714,9 @@
       metadata: settings.metadata,
       welcome_title_var: settings.welcome_title_var || options.welcome_title_var,
     }
+
+    // A 'none' launcher means the panel opens by itself and there is no bubble.
+    if (config.type === 'none') config.openAutomatically = true
 
     console.log('[PairAI SDK] Initializing with config:', config)
 

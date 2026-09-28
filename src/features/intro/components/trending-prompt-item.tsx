@@ -1,17 +1,6 @@
 import type { CSSProperties } from 'react'
 
-import {
-  CircleHelp,
-  Clapperboard,
-  Phone,
-  Popcorn,
-  Search,
-  Sparkles,
-  Star,
-  Ticket,
-  TrendingUp,
-  Utensils,
-} from 'lucide-react'
+import { CircleHelp, Clapperboard, Phone, Popcorn, Search, Sparkles, Star, Ticket, Utensils } from 'lucide-react'
 
 import { Spinner } from '@/components/ui/spinner'
 import type { TrendingPromptData } from '@/config/types/widget-config'
@@ -45,6 +34,12 @@ interface TrendingPromptItemProps {
   isCardLayout?: boolean
   /** Size and colour for a drawn glyph; an uploaded image only takes the size. */
   iconStyle?: { size?: number; color?: string }
+  /** The studio's glyph for every chip, used when the chip names none itself. */
+  defaultIcon?: string
+  /** The upload behind `defaultIcon: 'custom'`. */
+  defaultIconUrl?: string
+  /** Which side of the text the icon sits on. */
+  iconPosition?: 'start' | 'end'
 }
 
 export function TrendingPromptItem({
@@ -57,9 +52,22 @@ export function TrendingPromptItem({
   isLoading,
   isCardLayout,
   iconStyle,
+  defaultIcon,
+  defaultIconUrl,
+  iconPosition,
 }: TrendingPromptItemProps) {
   const isColumn = isCardLayout ?? chipStyles?.flexDirection === 'column'
-  const Glyph = PROMPT_GLYPHS[prompt.icon as keyof typeof PROMPT_GLYPHS]
+  // A chip's own icon wins; otherwise the studio's default for all chips. An
+  // upload only counts when it is what the icon actually names — a chip set to
+  // `custom`, a chip with no name at all, or the studio default set to it.
+  const iconName = prompt.icon || defaultIcon
+  const iconUrl =
+    prompt.icon === 'custom' || !prompt.icon
+      ? prompt.iconUrl || (defaultIcon === 'custom' ? defaultIconUrl : undefined)
+      : undefined
+  // The studio's default glyph is the sparkle, so an unknown name lands there
+  // rather than on an icon the builder never offered.
+  const Glyph = PROMPT_GLYPHS[iconName as keyof typeof PROMPT_GLYPHS] ?? Sparkles
   const iconSize = iconStyle?.size ?? 24
 
   return (
@@ -67,6 +75,7 @@ export function TrendingPromptItem({
       className={cn(
         'flex cursor-pointer rounded-full border border-[#E5E4E1] bg-[#FFF] px-3 py-2 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50',
         isColumn ? 'h-full w-full flex-col gap-4 pt-4 pb-3' : 'items-center justify-center gap-1.5',
+        !isColumn && iconPosition === 'end' && 'flex-row-reverse',
       )}
       style={chipStyles}
       onClick={onClick}
@@ -76,17 +85,15 @@ export function TrendingPromptItem({
         <Spinner className="size-4" />
       ) : (
         showIcon &&
-        (prompt.iconUrl ? (
+        (iconUrl ? (
           <img
-            src={prompt.iconUrl}
+            src={iconUrl}
             alt={prompt.text}
             className="object-contain"
             style={{ width: iconSize, height: iconSize }}
           />
-        ) : Glyph ? (
-          <Glyph size={iconSize} style={{ color: iconStyle?.color }} />
         ) : (
-          <TrendingUp size={iconSize} style={{ color: iconStyle?.color }} />
+          <Glyph size={iconSize} className="shrink-0" style={{ color: iconStyle?.color }} />
         ))
       )}
       <span

@@ -64,6 +64,8 @@ const CountrySelect = ({ disabled, value: selectedCountry, options: countryList,
   const scrollAreaRef = React.useRef<HTMLDivElement>(null)
   const [searchValue, setSearchValue] = React.useState('')
   const [isOpen, setIsOpen] = React.useState(false)
+  // The list follows the widget's own language, like every other string.
+  const isArabic = typeof document !== 'undefined' && /^ar/i.test(document.documentElement.lang)
 
   return (
     <Popover
@@ -78,14 +80,20 @@ const CountrySelect = ({ disabled, value: selectedCountry, options: countryList,
         <Button
           type="button"
           variant="outline"
-          className="flex gap-1 rounded-s-lg rounded-e-none border-r-0 px-3 focus:z-10"
+          className="pair-phone-trigger flex gap-1.5 rounded-s-lg rounded-e-none border-e-0 px-3 focus:z-10"
           disabled={disabled}
         >
           <FlagComponent country={selectedCountry} countryName={selectedCountry} />
-          <ChevronsUpDown className={cn('-mr-2 size-4 opacity-50', disabled ? 'hidden' : 'opacity-100')} />
+          {/* The dial code next to the flag, so the picker reads as one. */}
+          {selectedCountry && (
+            <span className="text-[12px] font-medium tabular-nums opacity-80">
+              +{RPNInput.getCountryCallingCode(selectedCountry)}
+            </span>
+          )}
+          <ChevronsUpDown className={cn('-mr-2 size-3.5 opacity-50', disabled ? 'hidden' : 'opacity-100')} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="pair-phone-pop w-[280px] p-0" align="start">
         <Command>
           <CommandInput
             value={searchValue}
@@ -100,11 +108,11 @@ const CountrySelect = ({ disabled, value: selectedCountry, options: countryList,
                 }
               }, 0)
             }}
-            placeholder="Search country..."
+            placeholder={isArabic ? 'ابحث عن دولة…' : 'Search country...'}
           />
           <CommandList>
             <ScrollArea ref={scrollAreaRef} className="h-72">
-              <CommandEmpty>No country found.</CommandEmpty>
+              <CommandEmpty>{isArabic ? 'لا توجد دولة بهذا الاسم.' : 'No country found.'}</CommandEmpty>
               <CommandGroup>
                 {countryList.map(({ value, label }) =>
                   value ? (
@@ -149,7 +157,7 @@ const CountrySelectOption = ({
     <CommandItem className="gap-2" onSelect={handleSelect}>
       <FlagComponent country={country} countryName={countryName} />
       <span className="flex-1 text-sm">{countryName}</span>
-      <span className="text-foreground/50 text-sm">{`+${RPNInput.getCountryCallingCode(country)}`}</span>
+      <span className="pair-dial text-foreground/50 text-sm">{`+${RPNInput.getCountryCallingCode(country)}`}</span>
       <CheckIcon className={`ml-auto size-4 ${country === selectedCountry ? 'opacity-100' : 'opacity-0'}`} />
     </CommandItem>
   )

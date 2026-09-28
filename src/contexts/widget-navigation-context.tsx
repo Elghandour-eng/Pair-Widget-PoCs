@@ -1,4 +1,8 @@
+import { tokenStorage } from '@/core/token-storage'
+import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
+import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
+import { getWidgetId } from '@/utils/widget-id'
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
@@ -23,10 +27,31 @@ interface WidgetNavigationContextType {
 
 const WidgetNavigationContext = createContext<WidgetNavigationContextType | undefined>(undefined)
 
+/**
+ * Where a visitor lands when the widget opens: a returning visitor — one with
+ * a token and a previous conversation (prefetched by the route loader) —
+ * lands straight in that conversation; everyone else starts on the intro.
+ */
+function initialScreen(): { screen: WidgetScreen; id: string | null } {
+  try {
+    if (!tokenStorage.get(getWidgetId())) return { screen: 'intro', id: null }
+    const cached = queryClient.getQueryData(ConversationsQueryOptions().queryKey)
+    const ulid = cached?.data?.[0]?.ulid
+    if (ulid) {
+      logger.debug('WidgetNavigationProvider', 'Returning visitor, opening last conversation', { ulid })
+      return { screen: 'conversation', id: ulid }
+    }
+  } catch (err) {
+    logger.debug('WidgetNavigationProvider', 'Could not resolve initial screen', err)
+  }
+  return { screen: 'intro', id: null }
+}
+
 export function WidgetNavigationProvider({ children }: { children: ReactNode }) {
-  // Start with 'intro' screen
-  const [currentScreen, setCurrentScreen] = useState<WidgetScreen>('intro')
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  // Returning visitors start in their conversation; new ones on the intro.
+  const [initial] = useState(initialScreen)
+  const [currentScreen, setCurrentScreen] = useState<WidgetScreen>(initial.screen)
+  const [conversationId, setConversationId] = useState<string | null>(initial.id)
   const [navigationDirection, setNavigationDirection] = useState<NavigationDirection>('forward')
   const [initialMessage, setInitialMessage] = useState<string | null>(null)
 

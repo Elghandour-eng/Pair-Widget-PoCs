@@ -20,6 +20,11 @@ logger.debug('main', 'Application initialization started')
 
 const router = createRouter({
   routeTree,
+  // Vite sets this from the build's `base`. Without it the router matches
+  // against the full path, so serving the widget anywhere but the root of an
+  // origin means no route matches: the app mounts, renders nothing, and never
+  // reaches the point where it tells the SDK it is ready.
+  basepath: import.meta.env.BASE_URL,
   context: {},
   defaultPreload: 'intent',
   scrollRestoration: true,

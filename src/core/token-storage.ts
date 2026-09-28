@@ -32,6 +32,13 @@ export const tokenStorage = {
       logger.debug('tokenStorage', 'Window is undefined, returning void')
       return
     }
+    // A backend that still requires the pre-chat form answers register with
+    // token: null. Storing that literal made every later call send
+    // `Authorization: Bearer null` and 401 — so nothing false-y is ever kept.
+    if (!token || token === 'null' || token === 'undefined') {
+      logger.debug('tokenStorage', 'Refusing to store an empty token', { widgetId })
+      return
+    }
     const key = getTokenKey(widgetId)
     localStorage.setItem(key, token)
     logger.debug('tokenStorage', 'Token saved', { widgetId, key })

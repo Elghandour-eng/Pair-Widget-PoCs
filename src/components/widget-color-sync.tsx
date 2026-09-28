@@ -13,7 +13,7 @@ const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 export function WidgetColorSync() {
   const { widgetConfig } = useWidgetConfigContext()
   const { setBubbleColor } = useWidgetUIContext()
-  const hasSentConfigRef = useRef(false)
+  const lastSentRef = useRef('')
 
   const sendConfigToSdk = () => {
     if (window.parent && window.self !== window.top) {
@@ -25,6 +25,9 @@ export function WidgetColorSync() {
         openAutomatically: widgetConfig.openAutomatically,
         launcherStyles: widgetConfig.launcherStyles,
         showFooter: widgetConfig.showFooter,
+        // The studio's saved panel size, so the SDK sizes its holder to the
+        // design even when the pasted snippet predates it.
+        panel: widgetConfig.launcherDesign?.panel,
       }
       logger.debug('WidgetColorSync', 'Sending widget config update to SDK', configPayload)
       window.parent.postMessage({ type: 'widget:configUpdated', config: configPayload }, '*')
@@ -32,12 +35,23 @@ export function WidgetColorSync() {
   }
 
   useEffect(() => {
-    if (widgetConfig.primaryColor && !hasSentConfigRef.current) {
+    // Re-send whenever the mapped config actually changes — a language or
+    // theme switch re-fetches the config, and the launcher must follow it.
+    const fingerprint = JSON.stringify([
+      widgetConfig.primaryColor,
+      widgetConfig.position,
+      widgetConfig.type,
+      widgetConfig.launcherTitle,
+      widgetConfig.launcherStyles,
+      widgetConfig.launcherDesign?.panel,
+      widgetConfig.showFooter,
+    ])
+    if (widgetConfig.primaryColor && lastSentRef.current !== fingerprint) {
       // Send legacy bubble color for safety
       setBubbleColor(widgetConfig.primaryColor)
       // Send complete config update to SDK
       sendConfigToSdk()
-      hasSentConfigRef.current = true
+      lastSentRef.current = fingerprint
     }
   }, [widgetConfig, setBubbleColor])
 

@@ -47,10 +47,21 @@ export function useSendChatMessageFlow() {
     // Auto-register if not registered yet and pre-chat form is not required
     if (!tokenStorage.get(widgetId)) {
       try {
-        await preChatMutation({
+        const reg = await preChatMutation({
           pre_chat_data: {},
           ...(widgetConfig.userId ? { user_id: widgetConfig.userId } : {}),
         })
+        // The backend, not the config, has the last word: no token plus
+        // requires_pre_chat means the form must be filled first — silently
+        // continuing used to send unauthenticated calls that all 401'd.
+        if (!reg?.token) {
+          if (reg?.requires_pre_chat) {
+            setInitialMessage(messageContent)
+            navigateToPreChat()
+            return
+          }
+          throw new Error('Registration returned no visitor token')
+        }
       } catch (err) {
         logger.debug('useSendChatMessageFlow', 'Failed to auto-register user', err)
         toast.error('Failed to start chat. Please try again.', {

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Mic, Play, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { uiText } from '@/lib/ui-strings'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -104,11 +105,11 @@ export function VoiceRecorder({ isUploading = false, uploadProgress, onSend, onC
   const isBusy = isConverting || isUploading
 
   const progressLabel = (() => {
-    if (isConverting) return 'Processing audio…'
+    if (isConverting) return uiText(widgetConfig.locale, 'processing')
     if (isUploading && uploadProgress && uploadProgress.total > 1) {
-      return `Sending ${uploadProgress.current}/${uploadProgress.total}…`
+      return uiText(widgetConfig.locale, 'sendingPart', { c: uploadProgress.current, t: uploadProgress.total })
     }
-    if (isUploading) return 'Sending…'
+    if (isUploading) return uiText(widgetConfig.locale, 'sending')
     return null
   })()
 

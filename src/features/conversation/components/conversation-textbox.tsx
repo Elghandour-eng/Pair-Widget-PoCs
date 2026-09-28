@@ -1,5 +1,9 @@
 import type { CSSProperties } from 'react'
-import { EmojiPicker } from '@/components/emoji-picker'
+// Lazy: the emoji data and the mp3 encoder are only fetched on first use.
+const EmojiPicker = lazy(() => import('@/components/emoji-picker').then((m) => ({ default: m.EmojiPicker })))
+const VoiceRecorder = lazy(() =>
+  import('@/features/conversation/components/voice-recorder').then((m) => ({ default: m.VoiceRecorder })),
+)
 import { AttachIcon } from '@/components/icons/attach-icon'
 import { EmojiIcon } from '@/components/icons/emoji-icon'
 import { MicIcon } from '@/components/icons/mic-icon'
@@ -9,7 +13,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { WIDGET_ALLOWED_MIME_TYPES } from '@/constants/file-upload'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
-import { VoiceRecorder } from '@/features/conversation/components/voice-recorder'
 import { useMediaMessageSender } from '@/features/conversation/hooks/use-media-message-sender'
 import { useSendChatMessageFlow } from '@/features/conversation/hooks/use-send-chat-message-flow'
 import { useVoiceMessageSender } from '@/features/conversation/hooks/use-voice-message-sender'
@@ -18,8 +21,9 @@ import { cn } from '@/lib/utils'
 import { queryClient } from '@/queryClient'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { getWidgetId } from '@/utils/widget-id'
+import { uiText } from '@/lib/ui-strings'
 import { useLayoutEffect } from '@tanstack/react-router'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Message } from '../types/message'
 
@@ -284,15 +288,17 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
   if (isVoiceMode) {
     return (
       <div className={isFullWidth ? 'w-full pt-4' : 'w-full px-4 pt-4 pb-6'}>
-        <VoiceRecorder
-          isUploading={isVoiceProcessing}
-          uploadProgress={voiceProgress}
-          onSend={async (payload) => {
-            await sendVoiceMessage(payload.segments, payload.totalDurationMs)
-            setIsVoiceMode(false)
-          }}
-          onCancel={() => setIsVoiceMode(false)}
-        />
+        <Suspense fallback={<div className="min-h-11.5" />}>
+          <VoiceRecorder
+            isUploading={isVoiceProcessing}
+            uploadProgress={voiceProgress}
+            onSend={async (payload) => {
+              await sendVoiceMessage(payload.segments, payload.totalDurationMs)
+              setIsVoiceMode(false)
+            }}
+            onCancel={() => setIsVoiceMode(false)}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -387,7 +393,9 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
           `}</style>
           <textarea
             ref={textEditorRef}
-            placeholder={isGenerating ? 'Generating...' : widgetConfig.chatInput.placeholder.text}
+            placeholder={
+              isGenerating ? uiText(widgetConfig.locale, 'generating') : widgetConfig.chatInput.placeholder.text
+            }
             value={isGenerating ? '' : message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -422,12 +430,16 @@ function ConversationTextbox({ conversationId, messages = [] }: ConversationText
                   <EmojiIcon className="size-4" style={actionIcon} />
                 )}
               </button>
-              <EmojiPicker
-                isOpen={isEmojiPickerOpen}
-                onClose={() => setIsEmojiPickerOpen(false)}
-                onSelect={handleEmojiSelect}
-                buttonRef={emojiButtonRef}
-              />
+              {isEmojiPickerOpen && (
+                <Suspense fallback={null}>
+                  <EmojiPicker
+                    isOpen={isEmojiPickerOpen}
+                    onClose={() => setIsEmojiPickerOpen(false)}
+                    onSelect={handleEmojiSelect}
+                    buttonRef={emojiButtonRef}
+                  />
+                </Suspense>
+              )}
             </div>
           )}
 

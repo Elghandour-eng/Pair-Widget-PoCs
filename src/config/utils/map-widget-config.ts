@@ -134,6 +134,21 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
           cart: rawHeader.actions?.cart ?? false,
           favorites: rawHeader.actions?.favorites ?? false,
         },
+        // The language and theme switches are on unless the studio turns them
+        // off; their glyphs default to the ones the studio previews.
+        controls: {
+          lang: {
+            show: rawHeader.controls?.lang?.show ?? true,
+            // The default is the عربي / EN text badge; a glyph is the studio's choice.
+            icon: rawHeader.controls?.lang?.icon ?? 'badge',
+            iconUrl: rawHeader.controls?.lang?.iconUrl,
+          },
+          theme: {
+            show: rawHeader.controls?.theme?.show ?? true,
+            icon: rawHeader.controls?.theme?.icon ?? 'moon',
+            iconUrl: rawHeader.controls?.theme?.iconUrl,
+          },
+        },
       }
     : undefined
 
@@ -181,6 +196,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const rawQL = apiResponse.widget_v2_config.quick_links
   const quickLinks: QuickLinksConfig = {
     show: rawQL.showQuickLinks.value,
+    title: rawQL.displaySettings?.sectionTitle,
     position: rawQL.displaySettings?.position ?? 'under_welcome',
     carouselLoop: rawQL.displaySettings?.carouselLoop ?? false,
     cardStyles: rawQL.cardStyle
@@ -207,6 +223,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   // trending prompts
   const v2Trending = apiResponse.widget_v2_config?.trending_prompts
+  // The studio stores `#brand` for "follow the widget colour"; it is not a CSS
+  // colour, so it is resolved here rather than handed to a style attribute.
+  const promptIconColor =
+    v2Trending?.design?.iconColor === '#brand' ? apiResponse.widget_color : v2Trending?.design?.iconColor
   const trendingPrompts: TrendingPromptsConfig | undefined = v2Trending
     ? {
         show: v2Trending.showTrendingPrompts.value,
@@ -220,9 +240,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         layout: v2Trending.displaySettings?.layout ?? 'chip',
         // TODO: This carouselLoop property is mocked for now. Sync with BE when they support carouselLoop in displaySettings.
         carouselLoop: v2Trending.displaySettings?.carouselLoop ?? false,
-        iconStyle: v2Trending.design
-          ? { size: v2Trending.design.iconSize, color: v2Trending.design.iconColor }
-          : undefined,
+        iconStyle: v2Trending.design ? { size: v2Trending.design.iconSize, color: promptIconColor } : undefined,
+        defaultIcon: v2Trending.design?.icon,
+        defaultIconUrl: v2Trending.design?.iconUrl,
+        iconPosition: v2Trending.design?.iconPosition,
+        chipLayout: v2Trending.design?.layout,
+        gap: v2Trending.design?.gap,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
           id: `trending-prompt-${idx}`,
           text: chip.text,
@@ -241,13 +264,16 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     styles: rawSendIcon?.styles,
   }
 
+  // The studio writes the emoji toggle as `showEmojiPicker` and folds the
+  // attach button into `attachmentMenu`; older configs still carry `stickers`
+  // and `fileUpload`, so both spellings are read.
   const chatInput: ChatInputConfig = {
     styles: rawChatInput.styles ?? {},
     layout: rawChatInput.inputLayout?.type ?? 'floating_pill',
     sendButtonIcon,
     actions: {
-      showEmojiPicker: rawChatInput.inputActions?.stickers || false,
-      showFileUpload: rawChatInput.inputActions?.fileUpload || false,
+      showEmojiPicker: rawChatInput.inputActions?.showEmojiPicker ?? rawChatInput.inputActions?.stickers ?? false,
+      showFileUpload: rawChatInput.inputActions?.fileUpload ?? rawChatInput.inputActions?.attachmentMenu ?? false,
       showVoiceMessages: rawChatInput.inputActions?.voiceMessages || false,
       showAttachmentMenu: rawChatInput.inputActions?.attachmentMenu || false,
     },
@@ -255,10 +281,12 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       text: rawChatInput.placeholderText?.text ?? 'Ask me Anything...',
       styles: rawChatInput.placeholderText?.styles ?? {},
     },
+    design: rawChatInput.design,
   }
 
   const rawMessages = apiResponse.widget_v2_config?.messages
   const messagesConfig: MessagesConfig = {
+    loadingOlder: rawMessages?.loadingOlder,
     feedback: rawMessages?.feedback
       ? {
           showFeedbackButtons: rawMessages.feedback.showFeedbackButtons ?? true,
@@ -277,6 +305,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
           CardStyles: rawMessages.aiMessages.CardStyles ?? {},
           TextStyles: rawMessages.aiMessages.TextStyles ?? {},
           showAiIcon: rawMessages.aiMessages.showAiIcon ?? true,
+          showShimmer: rawMessages.aiMessages.showShimmer ?? true,
           messageStyle: rawMessages.aiMessages.messageStyle ?? 'plain',
         }
       : undefined,
@@ -293,13 +322,16 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   return {
     name: apiResponse.name,
     enabled: true, // Widget is enabled if config is returned
+    locale: apiResponse.locale,
     position: apiResponse.launcher_position || windowSettings?.position || 'right',
     type: apiResponse.launcher_style
       ? apiResponse.launcher_style === 'expanded_bubble'
         ? 'expanded_bubble'
         : apiResponse.launcher_style === 'icon_only'
           ? 'icon_only'
-          : 'standard'
+          : apiResponse.launcher_style === 'none'
+            ? 'none'
+            : 'standard'
       : windowSettings?.type,
     launcherTitle: apiResponse.launcher_title || windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
@@ -328,7 +360,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     showHeader: apiResponse.widget_header ?? true,
     showFooter: apiResponse.powered_by_pair_ai ?? true,
     openAutomatically:
-      apiResponse.opening_method === 'automatically_open' || windowSettings?.openAutomatically || false,
+      apiResponse.opening_method === 'automatically_open' ||
+      apiResponse.launcher_style === 'none' ||
+      windowSettings?.openAutomatically ||
+      false,
     userId: windowSettings?.userId,
     visitorCredential:
       windowSettings?.accessToken || windowSettings?.accessTokenExpiresIn || windowSettings?.refreshFn
@@ -340,6 +375,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
           }
         : undefined,
     metadata: windowSettings?.metadata,
+    consentScreen: apiResponse.widget_v2_config?.consent_screen,
+    csat: apiResponse.widget_v2_config?.csat,
     hostHeaderMappings: apiResponse.headers,
     hostParamMappings: apiResponse.params,
     // Deprecated used for Welcome Screen

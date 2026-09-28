@@ -17,9 +17,116 @@ export interface PreChatField {
   field_type: PreChatFieldType
 }
 
+/**
+ * The studio's compiled pre-chat design: every part of the contact form — the
+ * intro message, labels, inputs, message box and submit button — plus the
+ * texts the form shows. Arrives normalized (all keys present).
+ */
+export interface PreChatDesignDto {
+  buttonText?: string
+  showMessage?: boolean
+  messageLabel?: string
+  messagePlaceholder?: string
+  message?: { color?: string; size?: number; weight?: string; align?: string }
+  labels?: { show?: boolean; color?: string; size?: number; weight?: string; requiredColor?: string }
+  field?: {
+    background?: string
+    borderWidth?: number
+    borderColor?: string
+    borderStyle?: string
+    radius?: number
+    height?: number
+    textColor?: string
+    textSize?: number
+    placeholderColor?: string
+    gap?: number
+    focusBorderColor?: string
+    focusRingWidth?: number
+    focusRingColor?: string
+    focusRingOpacity?: number
+  }
+  button?: {
+    background?: string
+    textColor?: string
+    radius?: number
+    height?: number
+    textSize?: number
+    weight?: string
+    fullWidth?: boolean
+    shadow?: { size?: number; y?: number; blur?: number; color?: string; opacity?: number }
+    hoverBackground?: string
+  }
+  card?: {
+    enabled?: boolean
+    background?: string
+    borderWidth?: number
+    borderColor?: string
+    radius?: number
+    padding?: number
+    shadow?: { size?: number; y?: number; blur?: number; color?: string; opacity?: number }
+  }
+  /** A brand banner image at the top of the form. */
+  banner?: { show?: boolean; url?: string; height?: number; fit?: string; radius?: number }
+  /** A repeating brand pattern behind the form. */
+  backdrop?: { url?: string; opacity?: number; size?: number }
+}
+
 export interface PreChatFormOptions {
   pre_chat_fields: PreChatField[]
   pre_chat_message: string
+  design?: PreChatDesignDto
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Consent screen (welcome gate)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One "thing to keep in mind" row on the consent sheet. */
+export interface ConsentPointDto {
+  icon?: string
+  text: string
+}
+
+/** One footnote link (terms / privacy). Only http(s) URLs are served. */
+export interface ConsentLinkDto {
+  show?: boolean
+  label?: string
+  url?: string
+}
+
+/** The welcome / consent sheet shown over the widget until it is accepted. */
+export interface ConsentScreenDto {
+  enabled?: boolean
+  title?: string
+  subtitle?: string
+  points?: ConsentPointDto[]
+  footnote?: string
+  buttonText?: string
+  links?: { color?: string; underline?: boolean; terms?: ConsentLinkDto; privacy?: ConsentLinkDto }
+  design?: {
+    showIllustration?: boolean
+    overlayColor?: string
+    overlayOpacity?: number
+    card?: {
+      background?: string
+      radius?: number
+      padding?: number
+      shadow?: { size?: number; y?: number; blur?: number; color?: string; opacity?: number }
+    }
+    title?: { color?: string; size?: number; weight?: string }
+    subtitle?: { color?: string; size?: number; weight?: string }
+    points?: { textColor?: string; textSize?: number; iconColor?: string; iconSize?: number; gap?: number }
+    footnote?: { color?: string; size?: number }
+    button?: {
+      background?: string
+      textColor?: string
+      radius?: number
+      height?: number
+      textSize?: number
+      weight?: string
+      fullWidth?: boolean
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,6 +166,19 @@ export interface HeaderActions {
   favorites: boolean
 }
 
+/** One header control: whether it shows, and the glyph (or upload) it wears. */
+export interface HeaderControlDto {
+  show?: boolean
+  icon?: string
+  iconUrl?: string
+}
+
+/** The studio's header controls: a language switch and a theme switch. */
+export interface HeaderControlsDto {
+  lang?: HeaderControlDto
+  theme?: HeaderControlDto
+}
+
 export interface HeaderDto {
   enabled: boolean
   iconId?: string
@@ -73,6 +193,7 @@ export interface HeaderDto {
   titleStyle: CSSProperties
   subtitleStyle: CSSProperties
   actions: HeaderActions
+  controls?: HeaderControlsDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,6 +299,8 @@ export interface QuickLinkDisplaySettings {
   carouselLoop: boolean
   showTitle?: boolean
   showSubtitle?: boolean
+  /** The heading over the cards, as the studio words it. */
+  sectionTitle?: string
 }
 
 export interface QuickLinkCard {
@@ -241,6 +364,13 @@ export interface QuickLinksDesignDto {
 export interface PromptsDesignDto {
   iconSize?: number
   iconColor?: string
+  /** The default glyph in front of every chip; a chip's own `icon` wins. */
+  icon?: string
+  /** The upload behind `icon: 'custom'`. */
+  iconUrl?: string
+  iconPosition?: 'start' | 'end'
+  layout?: 'wrap' | 'stack' | 'scroll'
+  gap?: number
 }
 
 export interface TrendingPrompts {
@@ -259,10 +389,12 @@ export interface TrendingPrompts {
 export type InputLayoutType = 'floating_pill' | 'full_width_bar'
 
 export interface InputActions {
-  stickers: boolean
-  fileUpload: boolean
-  voiceMessages: boolean
-  attachmentMenu: boolean
+  stickers?: boolean
+  fileUpload?: boolean
+  voiceMessages?: boolean
+  attachmentMenu?: boolean
+  /** The studio writes the emoji toggle under this name. */
+  showEmojiPicker?: boolean
 }
 
 export interface PlaceholderText {
@@ -363,6 +495,8 @@ export interface LauncherDesignDto {
   entrance?: 'pop' | 'slide' | 'fade' | 'none'
   attention?: 'none' | 'pulse' | 'bounce' | 'wiggle'
   hoverScale?: number
+  /** The panel the widget opens into; the SDK sizes its holder from this. */
+  panel?: { width?: number; height?: number; maxHeight?: number; minHeight?: number; bottom?: number; radius?: number }
 }
 
 export interface ChatInput {
@@ -401,9 +535,19 @@ export interface AiMessages {
   CardStyles: CSSProperties
   TextStyles: CSSProperties
   showAiIcon: boolean
+  /** false: an AI-bot channel skips the waiting shimmer (replies stream in). */
+  showShimmer?: boolean
   messageStyle: MessageStyle
   // TODO: update this when BE supports it
   iconUrl?: string
+}
+
+/** The "loading older messages" pill shown while a previous page is fetched. */
+export interface LoadingOlder {
+  text?: string
+  textColor?: string
+  background?: string
+  spinnerColor?: string
 }
 
 export interface CustomerMessages {
@@ -414,6 +558,7 @@ export interface CustomerMessages {
 }
 
 export interface Messages {
+  loadingOlder?: LoadingOlder
   feedback: Feedback
   aiMessages: AiMessages
   customerMessages: CustomerMessages
@@ -422,6 +567,15 @@ export interface Messages {
 // ─────────────────────────────────────────────────────────────────────────────
 // widget_v2_config (root)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** The studio's CSAT rating section: text overrides plus the compiled design. */
+export interface CsatSectionDto {
+  header?: string
+  body?: string
+  buttonText?: string
+  submitText?: string
+  design?: Record<string, any>
+}
 
 export interface WidgetV2Config {
   header?: HeaderDto
@@ -434,6 +588,10 @@ export interface WidgetV2Config {
   trending_prompts: TrendingPrompts
   chat_input: ChatInput
   messages: Messages
+  consent_screen?: ConsentScreenDto
+  /** The studio's editable pre-chat block; served flattened onto the top-level fields. */
+  pre_chat_form?: unknown
+  csat?: CsatSectionDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -485,7 +643,7 @@ export interface WidgetConfigDto {
   visitor_credentials: unknown[]
   widget_header?: boolean
   opening_method?: 'automatically_open' | 'chat_icon'
-  launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard' | 'icon_only'
+  launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard' | 'icon_only' | 'none'
   launcher_position?: 'left' | 'right'
   styles?: CSSProperties
   launcher_styles?: CSSProperties

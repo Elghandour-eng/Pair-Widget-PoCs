@@ -9,6 +9,9 @@ interface UseCarouselProps {
   autoplayInterval?: number
   minCardWidth?: number // in pixels
   gap?: number // in pixels
+  /** Right-to-left layout, from the widget's own locale — not the document,
+   *  which is only updated after the switched config has already rendered. */
+  rtl?: boolean
 }
 
 export function useCarousel({
@@ -19,6 +22,7 @@ export function useCarousel({
   autoplayInterval = 3000,
   minCardWidth = 5.71 * 16, // approx 91.36px
   gap = 8,
+  rtl = false,
 }: UseCarouselProps) {
   const [containerWidth, setContainerWidth] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -45,6 +49,11 @@ export function useCarousel({
     loop,
     align: 'start',
     active,
+    // Without this an RTL track measures its snaps backwards: autoplay then
+    // scrolls past the cards and holds on blank space.
+    direction: rtl ? 'rtl' : 'ltr',
+    // Never offer a snap that shows trailing empty track.
+    containScroll: 'trimSnaps',
   })
 
   // Re-initialize Embla when slide sizes change
@@ -62,9 +71,11 @@ export function useCarousel({
 
     const startAutoplay = () => {
       intervalId = setInterval(() => {
-        if (emblaApi) {
-          emblaApi.scrollNext()
-        }
+        if (!emblaApi) return
+        // Off the end (loop off or not engaged), wrap to the start rather
+        // than pushing into blank track.
+        if (emblaApi.canScrollNext()) emblaApi.scrollNext()
+        else emblaApi.scrollTo(0)
       }, autoplayInterval)
     }
 

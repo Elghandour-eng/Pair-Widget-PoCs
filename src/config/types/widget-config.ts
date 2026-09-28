@@ -25,6 +25,11 @@ export interface HeaderConfig {
     cart: boolean
     favorites: boolean
   }
+  /** Header controls: the language and theme switches and the glyphs they wear. */
+  controls: {
+    lang: { show: boolean; icon: string; iconUrl?: string }
+    theme: { show: boolean; icon: string; iconUrl?: string }
+  }
 }
 
 export interface VisitorCredential {
@@ -60,8 +65,11 @@ declare global {
 export interface WidgetConfig {
   name: string
   enabled: boolean
+  /** The config's own language, as served — what the language switch toggles from. */
+  locale?: string
   position: 'left' | 'right'
-  type?: 'expanded_bubble' | 'standard' | 'icon_only'
+  /** 'none': no launcher at all — the panel opens by itself and stays. */
+  type?: 'expanded_bubble' | 'standard' | 'icon_only' | 'none'
   launcherTitle?: string
   primaryColor: string
   requiresPreChat: boolean
@@ -105,10 +113,16 @@ export interface WidgetConfig {
   launcherDesign?: LauncherDesignDto
   toastDesign?: ToastDesignDto
   headerConfig?: HeaderConfig
+  /** The welcome / consent sheet shown until the visitor accepts it. */
+  consentScreen?: import('./widget-config-dto').ConsentScreenDto
+  /** The CSAT rating survey's studio overrides and design. */
+  csat?: import('./widget-config-dto').CsatSectionDto
 }
 
 export interface QuickLinksConfig {
   show: boolean
+  /** The heading over the cards; nothing is drawn without one. */
+  title?: string
   position: 'under_welcome' | 'above_welcome'
   carouselLoop: boolean
   cardStyles?: CSSProperties
@@ -143,8 +157,17 @@ export interface TrendingPromptsConfig {
   // TODO: update this when BE supports it
   showTitle?: boolean
   carouselLoop?: boolean
-  /** Size and colour for drawn chip glyphs. */
+  /** Size and colour for drawn chip glyphs; the colour arrives resolved. */
   iconStyle?: { size?: number; color?: string }
+  /** The studio's default glyph, for chips that carry none of their own. */
+  defaultIcon?: string
+  /** The upload behind `defaultIcon: 'custom'`. */
+  defaultIconUrl?: string
+  iconPosition?: 'start' | 'end'
+  /** How the chips flow, as the studio words it; `layout: 'card'` still wins. */
+  chipLayout?: 'wrap' | 'stack' | 'scroll'
+  /** Space between chips, in px. */
+  gap?: number
 }
 
 export interface TrendingPromptData {
@@ -237,6 +260,12 @@ export interface ChatInputConfig {
 
 // TODO: Start consuming this configuration in the message and feedback UI components
 export interface MessagesConfig {
+  loadingOlder?: {
+    text?: string
+    textColor?: string
+    background?: string
+    spinnerColor?: string
+  }
   feedback?: {
     style?: CSSProperties & {
       iconSize?: string
@@ -251,6 +280,8 @@ export interface MessagesConfig {
     CardStyles?: CSSProperties
     TextStyles?: CSSProperties
     showAiIcon?: boolean
+    /** false: an AI-bot channel skips the waiting shimmer (replies stream in). */
+    showShimmer?: boolean
     messageStyle?: string
     iconUrl?: string
   }
@@ -269,6 +300,8 @@ export interface AutoAssignmentConfig {}
 export interface PreChatFormOptions {
   pre_chat_fields: PreChatField[]
   pre_chat_message: string
+  /** The studio's compiled pre-chat design (see PreChatDesignDto). */
+  design?: import('./widget-config-dto').PreChatDesignDto
 }
 
 export interface PreChatField {

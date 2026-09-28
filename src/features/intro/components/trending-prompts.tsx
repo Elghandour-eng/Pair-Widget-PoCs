@@ -21,6 +21,15 @@ export function TrendingPrompts() {
 
   const { showIcon, chipStyles, textStyle, prompts, titleStyle, iconStyle } = config
   const title = config.title ?? 'Trending prompts'
+  const itemProps = {
+    iconStyle,
+    showIcon,
+    chipStyles,
+    textStyle,
+    defaultIcon: config.defaultIcon,
+    defaultIconUrl: config.defaultIconUrl,
+    iconPosition: config.iconPosition,
+  }
 
   const isPending = isConversationsLoading || isSendPending
 
@@ -45,6 +54,7 @@ export function TrendingPrompts() {
     active: isCardLayout,
     loop: config.carouselLoop,
     autoplay: config.carouselLoop,
+    rtl: /^(ar|he|fa|ur)/i.test(widgetConfig.locale ?? 'en'),
   })
 
   if (prompts.length === 0) {
@@ -60,7 +70,11 @@ export function TrendingPrompts() {
       )}
       <div ref={containerRef} className="w-full">
         {isCardLayout ? (
-          <div className="w-full cursor-grab overflow-hidden active:cursor-grabbing" ref={emblaRef}>
+          <div
+            key={/^(ar|he|fa|ur)/i.test(widgetConfig.locale ?? 'en') ? 'rtl' : 'ltr'}
+            className="w-full cursor-grab overflow-hidden active:cursor-grabbing"
+            ref={emblaRef}
+          >
             <div className="-ms-2 flex">
               {prompts.map((prompt) => (
                 <div
@@ -69,11 +83,8 @@ export function TrendingPrompts() {
                   style={{ flex: `0 0 ${basisPercentage}%` }}
                 >
                   <TrendingPromptItem
-                    iconStyle={iconStyle}
+                    {...itemProps}
                     prompt={prompt}
-                    showIcon={showIcon}
-                    chipStyles={chipStyles}
-                    textStyle={textStyle}
                     onClick={() => handlePromptClick(prompt.id, prompt.text)}
                     disabled={isPending && loadingPromptId === prompt.id}
                     isLoading={loadingPromptId === prompt.id}
@@ -84,15 +95,23 @@ export function TrendingPrompts() {
             </div>
           </div>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          // The chips flow the way the studio laid them out: wrapping, one per
+          // row, or one sideways-scrolling row — spaced by the studio's gap.
+          <ul
+            className={
+              config.chipLayout === 'stack'
+                ? 'flex flex-col items-start'
+                : config.chipLayout === 'scroll'
+                  ? 'flex overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+                  : 'flex flex-wrap'
+            }
+            style={{ gap: config.gap ?? 8 }}
+          >
             {prompts.map((prompt) => (
-              <li key={prompt.id}>
+              <li key={prompt.id} className="shrink-0">
                 <TrendingPromptItem
-                  iconStyle={iconStyle}
+                  {...itemProps}
                   prompt={prompt}
-                  showIcon={showIcon}
-                  chipStyles={chipStyles}
-                  textStyle={textStyle}
                   onClick={() => handlePromptClick(prompt.id, prompt.text)}
                   disabled={isPending && loadingPromptId === prompt.id}
                   isLoading={loadingPromptId === prompt.id}

@@ -45,12 +45,17 @@ function EmojiPickerWrapper({ isOpen, onClose, onSelect, buttonRef }: EmojiPicke
 
   if (!isOpen) return null
 
+  // Pinned inside the panel viewport, not hung off the button: a 320px pop
+  // anchored to a right-side button used to overflow the panel edge and get
+  // clipped by its overflow.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 400
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 700
   return (
-    <div ref={pickerRef} className={cn('absolute right-0 bottom-full z-50 mb-3')}>
+    <div ref={pickerRef} className={cn('fixed z-50')} style={{ insetInline: 12, bottom: 92 }}>
       <EmojiPicker
         onEmojiClick={handleEmojiClick}
-        width={320}
-        height={350}
+        width={Math.min(320, vw - 24)}
+        height={Math.min(350, vh - 200)}
         previewConfig={{ showPreview: false }}
         skinTonesDisabled
         lazyLoadEmojis

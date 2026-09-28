@@ -1,20 +1,31 @@
 import { BackIcon } from '@/components/icons/back-icon'
 import { Button } from '@/components/ui/button'
 import { WidgetHeader } from '@/components/widget-header'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { isDarkBackground } from '@/lib/utils'
 // import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 // import { REPLY_TIME_MAP } from '@/constants/reply-time'
 
 function PreChatHeader() {
-  // const { widgetConfig } = useWidgetConfigContext()
+  const { widgetConfig } = useWidgetConfigContext()
   const { navigateToIntro } = useWidgetNavigation()
+  // The back chevron follows the theme; ghost hover stays currentColor-based
+  // so a dark header never grows a white chip behind it.
+  const dark = isDarkBackground(widgetConfig.widgetBgColor)
   // const isHostOnline = true
   // const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time]
 
   return (
     // Add shadow bottom
     <WidgetHeader className="flex-row items-center gap-2 py-4 shadow-xs">
-      <Button variant="ghost" size="icon-sm" onClick={navigateToIntro}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={navigateToIntro}
+        className="hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)] hover:text-current"
+        style={{ color: dark ? '#FFFFFF' : undefined }}
+      >
         <BackIcon className="h-5 w-auto" />
       </Button>
       {/* <div className="flex items-center gap-2">

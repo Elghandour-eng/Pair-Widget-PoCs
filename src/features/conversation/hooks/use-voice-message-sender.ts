@@ -26,7 +26,7 @@ export interface SendProgress {
 
 export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderProps) {
   const queryClient = useQueryClient()
-  const { navigateToConversation } = useWidgetNavigation()
+  const { navigateToConversation, navigateToPreChat } = useWidgetNavigation()
   const { subscribeToConversation } = useUnreadMessages()
   const { mutateAsync: preChatMutation } = usePreChat()
   const { widgetConfig } = useWidgetConfigContext()
@@ -56,10 +56,21 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
       // Auto-register if not registered yet and pre-chat form is not required
       if (!tokenStorage.get(widgetId)) {
         try {
-          await preChatMutation({
+          const reg = await preChatMutation({
             pre_chat_data: {},
             ...(widgetConfig.userId ? { user_id: widgetConfig.userId } : {}),
           })
+          // The backend has the last word: no token means the pre-chat form
+          // must be filled first — sending on would only 401.
+          if (!reg?.token) {
+            setIsProcessing(false)
+            setProgress({ current: 0, total: 0 })
+            if (reg?.requires_pre_chat) {
+              navigateToPreChat()
+              return
+            }
+            throw new Error('Registration returned no visitor token')
+          }
         } catch (err) {
           logger.debug('useVoiceMessageSender', 'Failed to auto-register user', err)
           toast.error('Failed to start chat. Please try again.', {
@@ -141,6 +152,14 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
         }
       }
 
+      // Sending from the intro into an already-existing conversation skipped
+      // the new-conversation branch above, so the visitor stayed on the intro
+      // with no sign of their message. Land them in the conversation either way.
+      if (resolvedConversationIdRef.current) {
+        navigateToConversation(resolvedConversationIdRef.current)
+        subscribeToConversation(resolvedConversationIdRef.current)
+      }
+
       setIsProcessing(false)
       setProgress({ current: 0, total: 0 })
     },
@@ -151,6 +170,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
       uploadMediaMutation,
       sendMessageMutation,
       navigateToConversation,
+      navigateToPreChat,
       subscribeToConversation,
       queryClient,
     ],

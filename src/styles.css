@@ -324,3 +324,34 @@ button.epr-btn.epr-emoji {
 .pair-toast-wide {
   width: 100%;
 }
+
+/* The widget is a phone-sized surface inside an iframe: its scroll areas pan
+   like a phone's, without desktop scrollbars. This is also what lets the host
+   page keep the iframe at its real width — it used to widen it by a scrollbar
+   just to push one out of view, which cost the content its right padding. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Consent sheet entrance: rises from the bottom edge like a phone sheet. */
+@keyframes consent-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.anim-consent-rise {
+  animation: consent-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-consent-rise {
+    animation: none;
+  }
+}

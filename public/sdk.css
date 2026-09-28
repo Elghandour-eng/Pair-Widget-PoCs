@@ -6,6 +6,9 @@
 #pair-ai-bubble-holder {
   position: fixed;
   bottom: 20px;
+  /* Clear the home-indicator strip on notched phones; the plain 20px above
+     stays the fallback where env()/max() are unknown. */
+  bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px));
   z-index: 2147483000;
   opacity: 1;
   visibility: visible;
@@ -380,9 +383,11 @@
   /* Sized by custom properties so a channel can set the panel's dimensions.
      The fallbacks are the sizes this used to be hardcoded to. */
   bottom: var(--pair-panel-bottom, 104px);
-  width: var(--pair-panel-width, 400px);
+  /* Never wider or taller than the page itself: on a narrow window the panel
+     keeps a 20px gutter each side instead of running under the viewport edge. */
+  width: min(var(--pair-panel-width, 400px), calc(100vw - 40px));
   height: var(--pair-panel-height, calc(100vh - var(--pair-panel-bottom, 104px) - 20px));
-  max-height: var(--pair-panel-max-height, 700px);
+  max-height: min(var(--pair-panel-max-height, 700px), calc(100vh - var(--pair-panel-bottom, 104px) - 20px));
   min-height: var(--pair-panel-min-height, 250px);
   border-radius: var(--pair-panel-radius, 16px);
   overflow: hidden;
@@ -396,13 +401,33 @@
     visibility 0s linear 0s;
 }
 
-@media (min-width: 668px) {
+@media (min-width: 481px) {
   .pair-ai-widget-holder.pair-ai-widget-holder--auto-open {
     bottom: var(--pair-panel-bottom, 16px);
     height: var(--pair-panel-height, calc(100vh - 32px));
     /* Previously `none`, which is what made an auto-opened panel run the full
-       height of a tall browser window. The cap is still a channel's to raise. */
-    max-height: var(--pair-panel-max-height, 700px);
+       height of a tall browser window. The cap is still a channel's to raise —
+       but never past the viewport, or the panel's top slides off screen. */
+    max-height: min(var(--pair-panel-max-height, 700px), calc(100vh - var(--pair-panel-bottom, 16px) - 16px));
+  }
+}
+
+/* Mobile browsers resize 100dvh with the collapsing URL bar; 100vh does not.
+   The rule above stays the fallback for browsers without dvh. */
+@supports (height: 100dvh) {
+  .pair-ai-widget-holder {
+    height: var(--pair-panel-height, calc(100dvh - var(--pair-panel-bottom, 104px) - 20px));
+    max-height: min(var(--pair-panel-max-height, 700px), calc(100dvh - var(--pair-panel-bottom, 104px) - 20px));
+  }
+}
+
+/* Landscape phones and other short windows: the saved bottom offset would eat
+   most of the height, so the panel drops down next to the page edge instead. */
+@media (min-width: 481px) and (max-height: 560px) {
+  .pair-ai-widget-holder {
+    bottom: 12px;
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
   }
 }
 
@@ -439,7 +464,9 @@
 }
 
 /* ========== MOBILE STYLES ========== */
-@media (max-width: 667px) {
+/* Full-bleed only on true phone widths. A narrow desktop window or an embedded
+   preview pane keeps the normal bottom panel (clamped to the viewport above). */
+@media (max-width: 480px) {
   .pair-ai-widget-holder,
   .pair-ai-widget-holder.pair-ai-position-left {
     top: 0;
@@ -448,6 +475,8 @@
     bottom: 0;
     width: 100%;
     height: 100%;
+    /* Track the real visible height on phones whose URL bar collapses. */
+    height: 100dvh;
     max-height: none;
     border-radius: 0;
   }

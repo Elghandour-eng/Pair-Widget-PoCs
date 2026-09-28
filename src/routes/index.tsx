@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Suspense, lazy } from 'react'
 
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -8,6 +9,7 @@ import { WidgetUnreadSync } from '@/components/widget-unread-sync'
 import { WidgetVisitorTokenRefreshSync } from '@/components/widget-visitor-token-refresh-sync'
 import { DEV_WINDOW_SETTINGS } from '@/config/constants/dev-window-settings'
 import { WidgetConfigQueryOptions } from '@/config/queries/use-widget-config-queries'
+import { getViewOverride } from '@/core/view-override'
 import { mapToWidgetConfig } from '@/config/utils/map-widget-config'
 import { UnreadMessagesProvider } from '@/contexts/unread-messages-context'
 import { WidgetConfigProvider } from '@/contexts/widget-config-context'
@@ -17,7 +19,11 @@ import { tokenStorage } from '@/core/token-storage'
 import { ConversationPage } from '@/features/conversation/pages/conversation-page'
 import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
 import { IntroPage } from '@/features/intro/pages/intro-page'
-import { PreChatFormPage } from '@/features/pre-chat-form/pages/pre-chat-form-page'
+// Lazy: the pre-chat screen carries zod + libphonenumber's full metadata +
+// the country picker — none of it belongs in the first paint.
+const PreChatFormPage = lazy(() =>
+  import('@/features/pre-chat-form/pages/pre-chat-form-page').then((m) => ({ default: m.PreChatFormPage })),
+)
 import { WelcomePage } from '@/features/welcome/pages/welcome-page'
 import { loadAllFontsFromConfigAsync } from '@/lib/font-loader'
 import { queryClient } from '@/queryClient'
@@ -110,7 +116,9 @@ function WidgetRouter() {
             transition={transition}
             className="absolute inset-0 flex h-full w-full flex-col"
           >
-            <PreChatFormPage />
+            <Suspense fallback={null}>
+              <PreChatFormPage />
+            </Suspense>
           </motion.div>
         )}
 
@@ -154,7 +162,8 @@ export const Route = createFileRoute('/')({
   },
   beforeLoad: async () => {
     logger.debug('loader', 'Route loader started, ensuring widget config query data')
-    const data = await queryClient.ensureQueryData(WidgetConfigQueryOptions())
+    // A language/theme the visitor picked earlier applies from the first paint.
+    const data = await queryClient.ensureQueryData(WidgetConfigQueryOptions(getViewOverride(getWidgetId())))
     logger.debug('loader', 'Widget config query data ensured', data)
 
     // Load fonts before the widget is initialized to prevent flash of unstyled text
