@@ -147,16 +147,9 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
     <button
       type="button"
       onClick={handleClick}
-      className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-(--Strokes-Primary,#E5E4E1) bg-(--Surface-Base,#FFF) p-2 text-left font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Secondary,#616161) transition-colors hover:bg-gray-50 focus:outline-none"
-      style={
-        isDark
-          ? {
-              background: 'rgba(255,255,255,0.06)',
-              borderColor: 'rgba(255,255,255,0.16)',
-              color: 'rgba(255,255,255,0.85)',
-            }
-          : undefined
-      }
+      dir="auto"
+      className="flex cursor-pointer items-center gap-1.5 border px-3.5 py-2 text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal shadow-sm transition-all hover:-translate-y-px hover:shadow focus:outline-none active:translate-y-0"
+      style={chipStyle}
     >
       {iconUrl && <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />}
       <span>{label}</span>
