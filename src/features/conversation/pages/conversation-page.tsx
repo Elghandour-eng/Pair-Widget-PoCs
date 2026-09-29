@@ -14,6 +14,7 @@ import { ConversationTextbox } from '../components/conversation-textbox'
 import { QuestionInput } from '../components/question-input'
 import { QuestionProvider, useQuestionContext } from '../contexts/question-context'
 import { useMessages } from '../queries/use-messages-queries'
+import { isSseTransport, sseSubscribe } from '@/core/sse-transport'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
@@ -26,6 +27,11 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
 
   const { widgetConfig } = useWidgetConfigContext()
   const { currentScreen } = useWidgetNavigation()
+
+  // SSE mode: make sure this conversation's stream is open (covers resumed conversations after a reload)
+  useEffect(() => {
+    if (conversationId && isSseTransport()) sseSubscribe(conversationId)
+  }, [conversationId])
   const { isOpen } = useWidgetUIContext()
   const { setViewingConversation } = useUnreadMessages()
   const { activeQuestionGroup } = useQuestionContext()

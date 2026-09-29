@@ -57,6 +57,15 @@ function ConversationMessage({
   websiteName,
   isLastMessage,
 }: ConversationMessageProps) {
+  // An optimistic (not yet confirmed) visitor message renders dimmed with a soft pulse
+  if (message.ulid.startsWith('temp-')) {
+    return (
+      <div className="animate-pulse opacity-55 transition-opacity" style={{ animationDuration: '1.6s' }}>
+        <TextMessage message={message} isUnread={isUnread} primaryColor={primaryColor} websiteName={websiteName} />
+      </div>
+    )
+  }
+
   // Determine message type and render appropriate component
   // Audio detection runs first — the API currently returns voice messages as message_type "text"
   if (isAudioMessage(message)) {
