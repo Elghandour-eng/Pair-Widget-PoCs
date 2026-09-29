@@ -131,7 +131,6 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
           borderColor: cardBorder,
           borderRadius: cardRadius,
           color: cardText,
-          boxShadow: `0 8px 28px ${accent}14`,
         }}
       >
         {/* Header Block */}
