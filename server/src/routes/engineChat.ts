@@ -93,7 +93,7 @@ function hydrateComponents(list: unknown): unknown {
       if (items.length === 0 && cat) {
         const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase())
         // the price-list renderer reads label/label_en
-        items = matched.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price }))
+        items = matched.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
         title = title ?? matched[0]?.category_ar
         title_en = title_en ?? matched[0]?.category
       } else if (items.length > 0) {
@@ -105,6 +105,7 @@ function hydrateComponents(list: unknown): unknown {
             label: (it.name_ar ?? it.label ?? m?.name_ar ?? m?.name ?? nm) as string,
             label_en: (it.name ?? it.label_en ?? m?.name ?? nm) as string,
             price: (it.price ?? m?.price ?? '') as string,
+            image: (m?.image ?? '') as string,
           }
         })
       }
@@ -674,7 +675,11 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: 
   const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
   if (app) return { type: 'app_links', content: { lang, ...(app.data as Record<string, unknown>) } }
   const menu = comps.find((c) => c.type === 'template' && c.template === 'menu_list')
-  if (menu) return { type: 'price_list', content: { lang, ...(menu.data as Record<string, unknown>) } }
+  if (menu) {
+    const md = menu.data as { items?: Array<{ image?: string }> }
+    const hasImages = Array.isArray(md.items) && md.items.some((i) => i.image)
+    return { type: hasImages ? 'menu_cards' : 'price_list', content: { lang, ...(menu.data as Record<string, unknown>) } }
+  }
   return undefined
 }
 
