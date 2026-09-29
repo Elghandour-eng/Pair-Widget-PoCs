@@ -53,11 +53,18 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
     dismissQuestionGroup(messageUlid)
   }
 
+  // Joiners and prefixes always follow the question's own language — an Arabic
+  // conversation never sees "and", "Q1:" or English helper copy.
+  const isArabicQ = /[\u0600-\u06FF]/.test(questions.map((q) => q.question + q.options.join('')).join(''))
+
   const formatAnswers = (ansList: string[]) => {
     if (ansList.length === 0) return ''
     if (ansList.length === 1) return ansList[0]
+    if (isArabicQ) {
+      if (ansList.length === 2) return `${ansList[0]} و${ansList[1]}`
+      return `${ansList.slice(0, -1).join('، ')} و${ansList[ansList.length - 1]}`
+    }
     if (ansList.length === 2) return `${ansList[0]} and ${ansList[1]}`
-
     const allButLast = ansList.slice(0, -1).join(', ')
     const last = ansList[ansList.length - 1]
     return `${allButLast}, and ${last}`
@@ -69,13 +76,19 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
     // Compile all answers and submit!
     setIsSending(true)
 
-    const content = questions
-      .map((q, idx) => {
-        const ansList = answers[q.question] || []
-        const formatted = formatAnswers(ansList)
-        return `Q${idx + 1}: ${q.question}\nA: ${formatted}`
-      })
-      .join('\n\n')
+    // One question sends just the answer; several send localized Q/A pairs.
+    const content =
+      questions.length === 1
+        ? formatAnswers(answers[questions[0].question] || [])
+        : questions
+            .map((q, idx) => {
+              const ansList = answers[q.question] || []
+              const formatted = formatAnswers(ansList)
+              return isArabicQ
+                ? `س${idx + 1}: ${q.question}\nج: ${formatted}`
+                : `Q${idx + 1}: ${q.question}\nA: ${formatted}`
+            })
+            .join('\n\n')
 
     try {
       await sendMessageMutation({
@@ -101,12 +114,15 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
   return (
     <div className={isFullWidth ? 'w-full p-4' : 'w-full px-4 pt-4 pb-6'}>
       {/* Outer Card Container */}
-      <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#CAC8C6] bg-white shadow-[0_-4px_18.4px_0_rgba(173,147,50,0.06)] select-none">
+      <div
+        dir={isArabicQ ? 'rtl' : 'ltr'}
+        className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#CAC8C6] bg-white shadow-[0_-4px_18.4px_0_rgba(173,147,50,0.06)] select-none"
+      >
         {/* Header Block */}
         <div className="flex flex-col items-start gap-2 self-stretch border-b border-[#E5E4E1] bg-white px-4 pt-4 pb-2">
           {/* Navigation & Dismiss controls */}
           <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-1.5">
+            <div className={totalQuestions > 1 ? 'flex items-center gap-1.5' : 'hidden'}>
               <button
                 type="button"
                 onClick={handlePrev}
@@ -117,7 +133,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
                 <ChevronLeft className="size-4 text-[#616161]" />
               </button>
               <span className="min-w-8 text-center font-(family-name:--Font-primary,'DM_Sans') text-xs font-normal text-[#616161]">
-                {currentNumber} of {totalQuestions}
+                {isArabicQ ? `${currentNumber} من ${totalQuestions}` : `${currentNumber} of ${totalQuestions}`}
               </span>
               <button
                 type="button"
@@ -157,7 +173,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
                   key={option}
                   type="button"
                   onClick={() => toggleAnswer(question.question, option, 'single')}
-                  className="flex w-full items-center gap-2 border-b border-[#E5E4E1] bg-white p-4 text-left font-(family-name:--Font-primary,'DM_Sans') text-sm text-[#1A1A1A] transition-colors last:border-b-0 hover:bg-[#F9F9FB]"
+                  className="flex w-full items-center gap-2 border-b border-[#E5E4E1] bg-white p-4 text-start font-(family-name:--Font-primary,'DM_Sans') text-sm text-[#1A1A1A] transition-colors last:border-b-0 hover:bg-[#F9F9FB]"
                 >
                   {/* Radio Indicator */}
                   <div
@@ -179,7 +195,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
           <div className="flex flex-col items-start gap-2.5 self-stretch bg-white p-4">
             {/* Guide Text */}
             <span className="font-(family-name:--Font-primary,'DM_Sans') text-xs leading-[130%] font-normal text-[#616161]">
-              Choose all that apply
+              {isArabicQ ? 'اختار كل اللي يناسبك' : 'Choose all that apply'}
             </span>
 
             {/* Horizontal Wrap Options Container */}

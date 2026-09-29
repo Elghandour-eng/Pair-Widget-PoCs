@@ -194,7 +194,7 @@ export function StreamingMessage({ stream }: StreamingMessageProps) {
   const message = parseStreamingMessage(stream)
 
   return (
-    <div className="animate-fade-in flex w-full flex-col items-start gap-4 bg-transparent">
+    <div className="animate-fade-in streaming-live flex w-full flex-col items-start gap-4 bg-transparent">
       <AiAssistantMessage message={message} isLastMessage={true} />
     </div>
   )
