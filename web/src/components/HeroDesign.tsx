@@ -24,6 +24,7 @@ export const HeroDesignSlide = memo(function HeroDesignSlide({
   rtl,
   uid,
   badgeFallback,
+  fontFamily,
 }: {
   design: HeroDesign
   brand: string
@@ -31,10 +32,12 @@ export const HeroDesignSlide = memo(function HeroDesignSlide({
   uid: string
   /** The channel's name, for a design whose badge carries no text of its own. */
   badgeFallback?: string
+  /** The channel's font stack, so the hero matches the widget around it. */
+  fontFamily?: string
 }) {
   const svg = useMemo(
-    () => buildHeroSvg(design, { uid, patternHref, rtl, brand, badgeFallback }),
-    [design, uid, rtl, brand, badgeFallback],
+    () => buildHeroSvg(design, { uid, patternHref, rtl, brand, badgeFallback, fontFamily }),
+    [design, uid, rtl, brand, badgeFallback, fontFamily],
   )
   return (
     <div

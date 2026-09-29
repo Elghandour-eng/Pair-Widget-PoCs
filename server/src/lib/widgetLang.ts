@@ -31,6 +31,7 @@ function deepSet(o: WidgetConfig, path: string, val: unknown): WidgetConfig {
 
 /** Bilingual copy pairs (kept in sync with web/src/lib/builder.ts). */
 const COPY_PAIRS: Array<[en: string, ar: string]> = [
+  ['How may I help you?', 'شلون اقدر اخدمك'],
   ['Your cinema, one message away', 'سينماك على بُعد رسالة'],
   ['Films, food, cinemas and help, all in one chat.', 'الأفلام والأكل والفروع والمساعدة، كلها في محادثة واحدة.'],
   ['What I can help with', 'كيف أقدر أساعدك'],

@@ -30,6 +30,9 @@ export const FONT_PRESETS: { value: string; label: string }[] = [
   { value: "'Work Sans', sans-serif", label: 'Work Sans' },
   { value: "'Nunito', sans-serif", label: 'Nunito' },
   { value: "'Montserrat', sans-serif", label: 'Montserrat' },
+  // Montserrat carries no Arabic, so the pair falls through to Alexandria —
+  // a geometric Arabic built on the same forms — for Arabic glyphs.
+  { value: "'Montserrat', 'Alexandria', sans-serif", label: 'Montserrat + Alexandria (Arabic)' },
   { value: "'Lato', sans-serif", label: 'Lato' },
   { value: "'Open Sans', sans-serif", label: 'Open Sans' },
   { value: "'Roboto', sans-serif", label: 'Roboto' },

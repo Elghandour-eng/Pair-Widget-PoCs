@@ -206,6 +206,7 @@ export const currentLang = (config: WidgetConfig | null): WidgetLang =>
  * it does not know untouched.
  */
 const COPY_PAIRS: Array<[en: string, ar: string]> = [
+  ['How may I help you?', 'شلون اقدر اخدمك'],
   ['Your cinema, one message away', 'سينماك على بُعد رسالة'],
   ['Films, food, cinemas and help, all in one chat.', 'الأفلام والأكل والفروع والمساعدة، كلها في محادثة واحدة.'],
   ['What I can help with', 'كيف أقدر أساعدك'],

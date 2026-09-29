@@ -1,4 +1,4 @@
-import { ArrowLeft, Copy, Database, Download, Globe, Monitor, Moon, RotateCcw, Save, Smartphone, Sun, Tablet, Trash2, Wand2, Zap } from 'lucide-react'
+import { ArrowLeft, Copy, Database, Globe, Monitor, Moon, RotateCcw, Save, Smartphone, Sun, Tablet, Trash2, Wand2, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PreviewStage, stageSize, type PreviewDevice } from '@/components/WidgetPreview'
@@ -11,9 +11,10 @@ import { useAuditLabel, useFormatDate, useI18n, type MsgKey } from '@/lib/i18n'
 import { useToast } from '@/lib/toast'
 import { DesignForm } from './DesignForm'
 import { Compare, NotesPanel } from './NotesComparePanels'
+import { VersionsPanel } from './VersionsPanel'
 
-type Tab = 'design' | 'json' | 'embed' | 'compare' | 'activity' | 'notes'
-const TABS: Tab[] = ['design', 'json', 'embed', 'compare', 'activity', 'notes']
+type Tab = 'design' | 'json' | 'embed' | 'compare' | 'activity' | 'versions' | 'notes'
+const TABS: Tab[] = ['design', 'json', 'embed', 'compare', 'activity', 'versions', 'notes']
 
 export function WidgetDetail() {
   const { widgetId = '' } = useParams()
@@ -27,6 +28,9 @@ export function WidgetDetail() {
   const [widget, setWidget] = useState<Widget | null>(null)
   const [stored, setStored] = useState<WidgetConfig | null>(null)
   const [audit, setAudit] = useState<AuditEntry[]>([])
+  // How many notes still want attention. Shown on the tab, because a note
+  // nobody knows about is the same as no note at all.
+  const [openNotes, setOpenNotes] = useState(0)
   const [live, setLive] = useState<WidgetConfig | null>(null)
   const [liveErr, setLiveErr] = useState<string | null>(null)
   const [sdkBaseUrl, setSdkBaseUrl] = useState('')
@@ -46,6 +50,10 @@ export function WidgetDetail() {
       setWidget(r.widget)
       setStored(r.storedConfig)
       setAudit(r.audit)
+      api
+        .getFeedback(widgetId, { perPage: 1 })
+        .then((f) => setOpenNotes((f.counts?.open ?? 0) + (f.counts?.in_progress ?? 0)))
+        .catch(() => setOpenNotes(0))
       setSdkBaseUrl(r.sdkBaseUrl)
       setDraft(JSON.stringify(r.storedConfig ?? {}, null, 2))
     } catch (e) {
@@ -82,11 +90,6 @@ export function WidgetDetail() {
     if (!parsed.ok) throw new Error(parsed.error)
     const r = await api.saveConfig(widgetId, parsed.value)
     setWidget(r.widget); setStored(parsed.value); toast.ok(t('detail.saved')); load()
-  })
-  const importApi = () => run('import', async () => {
-    const r = await api.importFromApi(widgetId)
-    setWidget(r.widget); setStored(r.storedConfig); setDraft(JSON.stringify(r.storedConfig, null, 2)); setLive(r.storedConfig)
-    toast.ok(t('detail.imported')); load()
   })
   const switchSource = (source: Source) => run('source', async () => {
     const r = await api.updateWidget(widgetId, { source })
@@ -148,11 +151,6 @@ export function WidgetDetail() {
           <button className="btn-ghost btn-sm" onClick={copyUrl} title={t('detail.copyUrl')} aria-label={t('detail.copyUrl')}>
             <CopyIcon copied={copied} fallback={<Copy className="size-4" />} />
           </button>
-          {editor && (
-            <button className="btn-ghost btn-sm" onClick={importApi} disabled={!!busy} title={t('detail.import')} aria-label={t('detail.import')}>
-              {busy === 'import' ? <Spinner className="size-4" /> : <Download className="size-4" />}
-            </button>
-          )}
           {can('admin') && (
             <button className="btn-danger btn-sm" onClick={() => setConfirmDelete(true)} title={t('detail.delete')} aria-label={t('detail.delete')}>
               <Trash2 className="size-4" />
@@ -172,6 +170,11 @@ export function WidgetDetail() {
           <div className="scroll-pane flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line px-2.5 pt-1.5">
             {TABS.map((tk) => (
               <button key={tk} onClick={() => setTab(tk)} data-active={tab === tk} className="tab shrink-0">
+                {tk === 'notes' && openNotes > 0 && (
+                  <span className="me-1.5 inline-grid min-w-[17px] place-items-center rounded-full bg-accent px-1 py-px align-middle text-[9.5px] font-bold text-white">
+                    {openNotes}
+                  </span>
+                )}
                 {t(`detail.tab.${tk}` as MsgKey)}
               </button>
             ))}
@@ -204,6 +207,17 @@ export function WidgetDetail() {
             {tab === 'embed' && <EmbedPanel widget={widget} sdkBaseUrl={sdkBaseUrl} panel={normalizeLauncher((stored as Record<string, unknown> | null)?.launcher_design).panel} />}
             {tab === 'compare' && <Compare live={live} liveErr={liveErr} stored={stored} onRefresh={loadLive} />}
             {tab === 'notes' && <NotesPanel widgetId={widgetId} editor={editor} />}
+            {tab === 'versions' && (
+              <VersionsPanel
+                widgetId={widgetId}
+                editor={editor}
+                onRestored={(cfg) => {
+                  setStored(cfg)
+                  setDraft(JSON.stringify(cfg, null, 2))
+                  load()
+                }}
+              />
+            )}
             {tab === 'activity' && (
               <ul className="divide-y divide-divider text-[13px]">
                 {audit.length === 0 && <li className="py-10 text-center text-faint/80">{t('activity.empty')}</li>}

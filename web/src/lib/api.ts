@@ -32,6 +32,16 @@ export interface FeedbackNote {
   updatedAt?: string
   updatedBy?: string
 }
+/** A design the widget used to have. */
+export interface ConfigVersion {
+  id: string
+  at: string
+  by: string
+  label: string
+  bytes: number
+  savedAt: string | null
+  savedBy: string | null
+}
 export interface LogFilters { level?: string; action?: string; q?: string; page?: number; perPage?: number }
 export type WidgetConfig = Record<string, unknown>
 
@@ -87,6 +97,17 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
+  getVersions: (widgetId: string) =>
+    request<{ versions: ConfigVersion[] }>(`/widgets/${encodeURIComponent(widgetId)}/versions`),
+  getVersion: (widgetId: string, versionId: string) =>
+    request<{ config: WidgetConfig }>(
+      `/widgets/${encodeURIComponent(widgetId)}/versions/${encodeURIComponent(versionId)}`,
+    ),
+  restoreVersion: (widgetId: string, versionId: string) =>
+    request<{ widget: Widget; config: WidgetConfig }>(
+      `/widgets/${encodeURIComponent(widgetId)}/versions/${encodeURIComponent(versionId)}/restore`,
+      { method: 'POST' },
+    ),
   updateWidget: (widgetId: string, body: Partial<Pick<Widget, 'channelName' | 'source' | 'apiBaseUrl' | 'notes'>>) =>
     request<{ widget: Widget }>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteWidget: (widgetId: string) => request<void>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'DELETE' }),

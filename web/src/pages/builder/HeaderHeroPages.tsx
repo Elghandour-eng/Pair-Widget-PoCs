@@ -285,6 +285,7 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
       <Disclosure summary={t('builder.hero.copy')}>
         <div className="grid gap-4 sm:grid-cols-2">
           <ChoiceField label={t('builder.hero.layout')} path={p('layout')} options={[...HERO_LAYOUTS]} keyPrefix="builder.hero.layout" fallback="text-left" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.hero.mirror')} path={p('mirrorInRtl')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.badge.show')} path={p('badge.show')} get={get} set={set} disabled={disabled} />
           <Field label={t('builder.hero.badge.text')} path={p('badge.text')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.badge.logo')} path={p('badge.showLogo')} get={get} set={set} disabled={disabled} />

@@ -32,7 +32,35 @@ export interface AuditEntry {
   detail?: string
 }
 
+/** A past design, and what it was replaced by. */
+export interface ConfigVersionMeta {
+  id: string
+  /** When this snapshot was taken — i.e. when the design was replaced. */
+  at: string
+  /** Who made the change that replaced it. */
+  by: string
+  /** Why the snapshot exists: 'saved', 'before import from Pair', 'before restore'. */
+  label: string
+  bytes: number
+  /** When the snapshotted design itself was last saved, if known. */
+  savedAt: string | null
+  savedBy: string | null
+}
+
+/** A stored version, payload included. The payload stays a string until asked for. */
+export interface ConfigVersion extends ConfigVersionMeta {
+  config: string
+}
+
 const MAX_AUDIT = 50
+/**
+ * How many past designs are kept per widget.
+ *
+ * A design is ~12KB, so twenty of them is a quarter of a megabyte — cheap
+ * against the alternative, which is what used to happen: a save, or an import
+ * from Pair, overwrote the only copy and there was no way back.
+ */
+const MAX_VERSIONS = 20
 const parse = (raw: string | null): WidgetRecord | null => (raw ? (JSON.parse(raw) as WidgetRecord) : null)
 
 async function audit(widgetId: string, entry: AuditEntry): Promise<void> {
@@ -158,8 +186,42 @@ export async function getStoredConfig(widgetId: string): Promise<WidgetConfig | 
   return raw ? (JSON.parse(raw) as WidgetConfig) : null
 }
 
-export async function saveStoredConfig(widgetId: string, config: WidgetConfig, actor: string): Promise<WidgetRecord> {
+/**
+ * Keeps the design that is about to be replaced.
+ *
+ * Snapshotting the OUTGOING design rather than the incoming one is what makes
+ * "undo" mean what a person expects: the top of the list is always the state
+ * just before the change they are looking at.
+ */
+async function snapshot(widgetId: string, label: string, actor: string): Promise<void> {
+  const previous = await redis.get(keys.widgetConfig(widgetId))
+  if (!previous) return
+  const w = await getWidget(widgetId).catch(() => null)
+  const entry: ConfigVersion = {
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    at: new Date().toISOString(),
+    by: actor,
+    label,
+    bytes: previous.length,
+    savedAt: w?.configUpdatedAt ?? null,
+    savedBy: w?.configUpdatedBy ?? null,
+    config: previous,
+  }
+  await redis
+    .multi()
+    .lpush(keys.versions(widgetId), JSON.stringify(entry))
+    .ltrim(keys.versions(widgetId), 0, MAX_VERSIONS - 1)
+    .exec()
+}
+
+export async function saveStoredConfig(
+  widgetId: string,
+  config: WidgetConfig,
+  actor: string,
+  label = 'saved',
+): Promise<WidgetRecord> {
   const w = await getWidget(widgetId)
+  await snapshot(widgetId, label, actor)
   const now = new Date().toISOString()
   w.configUpdatedAt = now
   w.configUpdatedBy = actor
@@ -170,12 +232,46 @@ export async function saveStoredConfig(widgetId: string, config: WidgetConfig, a
   return w
 }
 
+/** The stored designs, newest first, without their payloads. */
+export async function listVersions(widgetId: string): Promise<ConfigVersionMeta[]> {
+  const raws = await redis.lrange(keys.versions(widgetId), 0, MAX_VERSIONS - 1)
+  return raws.map((r) => {
+    const { config: _config, ...meta } = JSON.parse(r) as ConfigVersion
+    return meta
+  })
+}
+
+/** One stored design, by id. */
+export async function getVersion(widgetId: string, versionId: string): Promise<WidgetConfig> {
+  const raws = await redis.lrange(keys.versions(widgetId), 0, MAX_VERSIONS - 1)
+  for (const raw of raws) {
+    const entry = JSON.parse(raw) as ConfigVersion
+    if (entry.id === versionId) return JSON.parse(entry.config) as WidgetConfig
+  }
+  throw notFound(`No stored version ${versionId} for widget ${widgetId}`)
+}
+
+/**
+ * Puts a stored design back. The design being replaced is itself snapshotted
+ * first, so a restore is as reversible as any other change.
+ */
+export async function restoreVersion(
+  widgetId: string,
+  versionId: string,
+  actor: string,
+): Promise<{ record: WidgetRecord; config: WidgetConfig }> {
+  const config = await getVersion(widgetId, versionId)
+  const record = await saveStoredConfig(widgetId, config, actor, 'before restore')
+  await audit(widgetId, { at: record.updatedAt, by: actor, action: 'version restored', detail: versionId })
+  return { record, config }
+}
+
 /** Pull the live config from Pair and store it in Redis (does not change the source). */
 export async function importFromApi(widgetId: string, actor: string): Promise<{ record: WidgetRecord; config: WidgetConfig }> {
   const w = await getWidget(widgetId)
   const config = await fetchPairConfig(widgetId, w.apiBaseUrl)
   await invalidateApiCache(widgetId)
-  const record = await saveStoredConfig(widgetId, config, actor)
+  const record = await saveStoredConfig(widgetId, config, actor, 'before import from Pair')
   await audit(widgetId, { at: record.updatedAt, by: actor, action: 'imported from api' })
   return { record, config }
 }

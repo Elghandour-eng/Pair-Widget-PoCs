@@ -1,4 +1,4 @@
-import { ChevronRight, Database, Globe, Plus, Search } from 'lucide-react'
+import { ChevronRight, Database, Download, Globe, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { PREVIEW_H, PREVIEW_W, WidgetPreview } from '@/components/WidgetPreview'
@@ -12,6 +12,30 @@ export function Widgets() {
   const { can } = useAuth()
   const { t } = useI18n()
   const fmt = useFormatDate()
+  // Export lives on the row as well as inside the widget: the list is where
+  // someone goes to grab a design, and making them open the channel first to
+  // reach the same button is a step for nothing.
+  const [exporting, setExporting] = useState<string | null>(null)
+  const exportDesign = async (w: Widget) => {
+    setExporting(w.widgetId)
+    try {
+      const r = await api.getWidget(w.widgetId)
+      if (!r.storedConfig) throw new Error(t('ver.noDesign'))
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(r.storedConfig, null, 2)], { type: 'application/json' }),
+      )
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${w.channelName.replace(/[^\w.-]+/g, '-')}-${w.widgetId}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.ok(t('ver.exported'))
+    } catch (err) {
+      toast.err(err instanceof Error ? err.message : String(err))
+    } finally {
+      setExporting(null)
+    }
+  }
   const toast = useToast()
   const [widgets, setWidgets] = useState<Widget[] | null>(null)
   const [q, setQ] = useState('')
@@ -85,6 +109,7 @@ export function Widgets() {
                   <th className="th text-start">{t('widgets.col.source')}</th>
                   <th className="th hidden text-start lg:table-cell">{t('widgets.col.configSaved')}</th>
                   <th className="th hidden text-start xl:table-cell">{t('widgets.col.updated')}</th>
+                  <th className="th w-0 text-end"><span className="sr-only">{t('ver.export')}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-divider">
@@ -113,6 +138,17 @@ export function Widgets() {
                     <td className="td hidden whitespace-nowrap text-muted xl:table-cell">
                       {fmt(w.updatedAt)}
                       <span className="block text-[11px] text-faint">{t('common.by', { name: w.updatedBy })}</span>
+                    </td>
+                    <td className="td text-end">
+                      <button
+                        className="btn-ghost btn-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                        onClick={() => exportDesign(w)}
+                        disabled={exporting === w.widgetId}
+                        title={t('ver.export')}
+                        aria-label={t('ver.export')}
+                      >
+                        {exporting === w.widgetId ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
+                      </button>
                     </td>
                   </tr>
                 ))}

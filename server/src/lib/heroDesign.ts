@@ -148,6 +148,14 @@ export interface HeroMotionCfg {
 
 export interface HeroDesign {
   layout: HeroLayout
+  /**
+   * Whether the composition mirrors in a right-to-left language.
+   *
+   * Mirroring is the usual answer — the art moves to the reading side. But a
+   * design whose art IS the brand mark reads as reversed when flipped, so a
+   * channel can keep the Latin arrangement in both languages.
+   */
+  mirrorInRtl: boolean
   background: HeroBackground
   pattern: HeroPatternCfg
   decor: HeroDecorCfg
@@ -181,6 +189,7 @@ const pick = <T extends string>(v: unknown, allowed: readonly T[], fallback: T):
 /** The neutral design every preset and every stored slide is layered onto. */
 export const HERO_DESIGN_DEFAULTS: HeroDesign = {
   layout: 'text-left',
+  mirrorInRtl: true,
   background: { type: 'color', color: '#000000', from: '#341C4C', to: '#132A3E', angle: 135 },
   pattern: { asset: 'none', color: '#E30613', opacity: 0.9, scale: 1, target: 'background', fade: false },
   decor: { shape: 'none', x: 192, y: 24, w: 200, h: 173, color: '#FFFFFF', color2: '#FFFFFF', fill: '#FFFFFF', point: 0.32, opacity: 1 },
@@ -207,6 +216,7 @@ export function normalizeHeroDesign(raw: unknown): HeroDesign {
   const mo = (r.motion ?? {}) as Record<string, any>
   return {
     layout: pick(r.layout, HERO_LAYOUTS, d.layout),
+    mirrorInRtl: bool(r.mirrorInRtl, d.mirrorInRtl),
     background: {
       type: pick(bg.type, ['color', 'gradient'] as const, d.background.type),
       color: color(bg.color, d.background.color),
@@ -416,6 +426,12 @@ export interface HeroRenderCtx {
   badgeFallback?: string
   /** Drops all animation — honours prefers-reduced-motion at the call site. */
   still?: boolean
+  /**
+   * The channel's own font stack. A hero drawn in a different face than the
+   * widget around it reads as a pasted-in image, so the badge and the copy
+   * follow the config's font when it has one.
+   */
+  fontFamily?: string
 }
 
 /** `<defs>` for the pattern, plus the drifting tiled rect that carries its colour. */
@@ -514,8 +530,8 @@ function decorGeometry(design: HeroDesign): { parts: string; shapes: string } {
 }
 
 /** Badge, title and subtitle. Laid out from the right in RTL rather than mirrored. */
-function copyBlock(design: HeroDesign, ctx: HeroRenderCtx, brand: string): string {
-  const rtl = ctx.rtl === true
+function copyBlock(design: HeroDesign, ctx: HeroRenderCtx, brand: string, rtl: boolean): string {
+  const font = ctx.fontFamily?.trim() || HERO_FONT
   const { badge, title, subtitle, layout } = design
   const centered = layout === 'text-center'
   const inset = 20
@@ -544,7 +560,7 @@ function copyBlock(design: HeroDesign, ctx: HeroRenderCtx, brand: string): strin
     if (label) {
       const tx = startX + (logo ? logoSize + gap : 0)
       out.push(
-        `<text x="${n(tx)}" y="${n(inset + badge.size * 1.55)}" text-anchor="start" font-family="${HERO_FONT}" font-size="${n(badge.size)}" font-weight="700" letter-spacing="${n(badge.size * 0.15)}" fill="${badge.color}">${esc(label)}</text>`,
+        `<text x="${n(tx)}" y="${n(inset + badge.size * 1.55)}" text-anchor="start" font-family="${font}" font-size="${n(badge.size)}" font-weight="700" letter-spacing="${n(badge.size * 0.15)}" fill="${badge.color}">${esc(label)}</text>`,
       )
     }
   }
@@ -559,12 +575,12 @@ function copyBlock(design: HeroDesign, ctx: HeroRenderCtx, brand: string): strin
 
   const titleTexts = titleLines.map((line) => {
     y += titleLH
-    return `<text x="${n(bodyX)}" y="${n(y - title.size * 0.26)}" text-anchor="${anchor}"${dir} font-family="${HERO_FONT}" font-size="${n(title.size)}" font-weight="600" letter-spacing="${n(-title.size * 0.01)}" fill="${title.color}">${esc(line)}</text>`
+    return `<text x="${n(bodyX)}" y="${n(y - title.size * 0.26)}" text-anchor="${anchor}"${dir} font-family="${font}" font-size="${n(title.size)}" font-weight="600" letter-spacing="${n(-title.size * 0.01)}" fill="${title.color}">${esc(line)}</text>`
   })
   y += gap
   const subTexts = subLines.map((line) => {
     y += subLH
-    return `<text x="${n(bodyX)}" y="${n(y - subtitle.size * 0.35)}" text-anchor="${anchor}"${dir} font-family="${HERO_FONT}" font-size="${n(subtitle.size)}" fill="${subtitle.color}">${esc(line)}</text>`
+    return `<text x="${n(bodyX)}" y="${n(y - subtitle.size * 0.35)}" text-anchor="${anchor}"${dir} font-family="${font}" font-size="${n(subtitle.size)}" fill="${subtitle.color}">${esc(line)}</text>`
   })
 
   if (titleTexts.length) out.push(`<g class="ci">${titleTexts.join('')}</g>`)
@@ -616,7 +632,9 @@ function motionCss(design: HeroDesign, ctx: HeroRenderCtx): string {
 export function buildHeroSvg(design: HeroDesign, ctx: HeroRenderCtx): string {
   const { uid } = ctx
   const brand = color(ctx.brand, '#E30613')
-  const rtl = ctx.rtl === true
+  // A design that opts out of mirroring keeps its Latin arrangement in Arabic:
+  // the art stays on the same side and the copy lays out from the left.
+  const rtl = ctx.rtl === true && design.mirrorInRtl !== false
 
   const bg =
     design.background.type === 'gradient'
@@ -643,7 +661,7 @@ export function buildHeroSvg(design: HeroDesign, ctx: HeroRenderCtx): string {
 <defs>${bg.defs}${clipDefs}${pattern.defs}</defs>
 <rect width="${HERO_ART_W}" height="${HERO_ART_H}" fill="${bg.fill}"/>
 <g${mirror}>${artLayers}</g>
-${copyBlock(design, ctx, brand)}
+${copyBlock(design, ctx, brand, rtl)}
 </svg>`
 }
 

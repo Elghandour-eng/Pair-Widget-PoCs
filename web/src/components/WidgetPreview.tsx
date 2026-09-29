@@ -237,6 +237,7 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
               brand={brand}
               rtl={widgetDir === 'rtl'}
               badgeFallback={title}
+              fontFamily={c.styles?.fontFamily}
               overlay={(slide) =>
                 // The widget overlays its welcome copy on the hero, but a designed
                 // slide may carry its own — drawing both would double the text.
@@ -651,9 +652,12 @@ function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: s
         className="anim-pop w-full text-center"
         style={{ background: rs(d.card.background), borderRadius: d.card.radius, padding: Math.min(d.card.padding, 16), boxShadow: shadowCss(d.card.shadow, brand) }}
       >
+        {d.showHandle && (
+          <span className="mx-auto mb-2.5 block h-1 w-9 rounded-full" style={{ background: rs(d.points.cardBorder) }} />
+        )}
         {d.showIllustration && (
           <span
-            className="mx-auto mb-2 grid size-10 place-items-center rounded-xl"
+            className="mx-auto mb-2 grid size-10 place-items-center rounded-full"
             style={{ background: `color-mix(in srgb, ${brand} 8%, transparent)`, color: brand }}
           >
             <SlotIcon name="doc" size={20} />
@@ -669,40 +673,50 @@ function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: s
         )}
         <div className="mt-2.5 flex flex-col text-start" style={{ gap: Math.min(d.points.gap, 9) }}>
           {points.map((pt, i) => (
-            <span key={i} className="flex items-start gap-2">
+            <span
+              key={i}
+              className="flex items-start gap-2"
+              style={
+                d.points.card
+                  ? {
+                      background: rs(d.points.cardBackground),
+                      border: `1px solid ${rs(d.points.cardBorder)}`,
+                      borderRadius: d.points.cardRadius,
+                      padding: Math.min(d.points.cardPadding, 9),
+                    }
+                  : undefined
+              }
+            >
               <SlotIcon name={pt.icon || 'info'} size={Math.min(d.points.iconSize, 12)} color={rs(d.points.iconColor)} className="mt-0.5" />
               <span style={{ color: rs(d.points.textColor), fontSize: Math.min(d.points.textSize, 10), lineHeight: 1.45 }}>{pt.text}</span>
             </span>
           ))}
         </div>
-        {(cs.footnote ?? true) && (
-          <p className="mt-2.5" style={{ color: rs(d.footnote.color), fontSize: Math.min(d.footnote.size, 8.5) }}>
-            {cs.footnote || 'By continuing, you agree to our Terms of Use and Privacy Policy'}
-          </p>
-        )}
         {(() => {
+          // One sentence with the links inside it, the way the reference reads —
+          // a separate row of bare links looks like an afterthought.
           const raw = (cs.links ?? {}) as Record<string, any>
           const links = [
-            { show: raw.terms?.show !== false, label: raw.terms?.label || 'Terms of Use', url: raw.terms?.url },
-            { show: raw.privacy?.show !== false, label: raw.privacy?.label || 'Privacy Policy', url: raw.privacy?.url },
-          ].filter((l) => l.show && l.url)
-          if (!links.length) return null
+            { show: raw.terms?.show !== false, label: raw.terms?.label || 'Terms of Use' },
+            { show: raw.privacy?.show !== false, label: raw.privacy?.label || 'Privacy Policy' },
+          ].filter((l) => l.show)
+          const note = typeof cs.footnote === 'string' ? cs.footnote : 'By continuing, you accept our'
+          if (!note && !links.length) return null
+          const linkStyle: CSSProperties = {
+            color: resolve(typeof raw.color === 'string' ? raw.color : '#brand', brand),
+            textDecoration: raw.underline === false ? 'none' : 'underline',
+            textUnderlineOffset: 2,
+          }
           return (
-            <p className="mt-1" style={{ fontSize: Math.min(d.footnote.size, 8.5) + 0.5 }}>
+            <p className="mt-2.5" style={{ color: rs(d.footnote.color), fontSize: Math.min(d.footnote.size, 8.5), lineHeight: 1.5 }}>
+              {note}
               {links.map((l, i) => (
                 <span key={i}>
-                  {i > 0 && <span className="mx-1" style={{ color: rs(d.footnote.color) }}>·</span>}
-                  <span
-                    style={{
-                      color: resolve(typeof raw.color === 'string' ? raw.color : '#brand', brand),
-                      textDecoration: raw.underline === false ? 'none' : 'underline',
-                      textUnderlineOffset: 2,
-                    }}
-                  >
-                    {l.label}
-                  </span>
+                  {i === 0 ? ' ' : ' & '}
+                  <span style={linkStyle}>{l.label}</span>
                 </span>
               ))}
+              {links.length ? '.' : ''}
             </p>
           )
         })()}

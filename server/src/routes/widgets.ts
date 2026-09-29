@@ -10,8 +10,9 @@ import { assertWidgetAccess, loadWidgetAccess } from '../middleware/widgetAccess
 import { fetchPairConfig } from '../services/pairApi.js'
 import { grantWidgetAccess } from '../services/users.js'
 import {
-  createWidget, deleteWidget, getAudit, getStoredConfig, getWidget, importFromApi,
-  listWidgets, resolveConfig, saveStoredConfig, sourceSchema, updateWidget,
+  createWidget, deleteWidget, getAudit, getStoredConfig, getVersion, getWidget, importFromApi,
+  listVersions, listWidgets, resolveConfig, restoreVersion, saveStoredConfig, sourceSchema,
+  updateWidget,
 } from '../services/widgets.js'
 
 export const widgetsRouter = Router()
@@ -150,6 +151,59 @@ widgetsRouter.put(
   asyncHandler(async (req, res) => {
     const config = configBody.parse(req.body)
     res.json({ widget: await saveStoredConfig(req.params.widgetId, config, req.user!.email) })
+  }),
+)
+
+/* ------------------------------ design history ------------------------------ */
+
+/**
+ * The designs this widget used to have, newest first.
+ *
+ * Payloads are left out: the list is for choosing, and a design is ~12KB.
+ */
+widgetsRouter.get(
+  '/:widgetId/versions',
+  asyncHandler(async (req, res) => {
+    res.json({ versions: await listVersions(req.params.widgetId) })
+  }),
+)
+
+/** One past design. `?download=1` sends it as a file — this is the export. */
+widgetsRouter.get(
+  '/:widgetId/versions/:versionId',
+  asyncHandler(async (req, res) => {
+    const { widgetId, versionId } = req.params
+    const config = await getVersion(widgetId, versionId)
+    if (req.query.download) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="${widgetId}-${versionId}.json"`)
+      res.send(JSON.stringify(config, null, 2))
+      return
+    }
+    res.json({ config })
+  }),
+)
+
+/** Puts a past design back. The design it replaces is snapshotted first. */
+widgetsRouter.post(
+  '/:widgetId/versions/:versionId/restore',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    const { record, config } = await restoreVersion(req.params.widgetId, req.params.versionId, req.user!.email)
+    res.json({ widget: record, config })
+  }),
+)
+
+/** The current design as a file, for keeping or moving to another channel. */
+widgetsRouter.get(
+  '/:widgetId/export',
+  asyncHandler(async (req, res) => {
+    const { widgetId } = req.params
+    const config = await getStoredConfig(widgetId)
+    if (!config) throw badRequest('This widget has no studio design to export yet')
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${widgetId}-design.json"`)
+    res.send(JSON.stringify(config, null, 2))
   }),
 )
 

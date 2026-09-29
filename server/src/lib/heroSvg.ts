@@ -28,6 +28,9 @@ import {
 
 export type HeroSvgSlide = { kind: 'design'; design: HeroDesign } | { kind: 'image'; dataUri: string }
 
+/** The face the baked hero draws in, when the config names none. */
+const OVERLAY_FONT = "Montserrat, 'IBM Plex Sans Arabic', Jost, system-ui, sans-serif"
+
 /** How long the crossfade between two slides takes. */
 const FADE_MS = 700
 
@@ -117,15 +120,23 @@ function dotsMarkup(uid: string, n: number, carousel: HeroCarousel, brand: strin
  * design. Baking it in — same scrim, same sizes — is what makes the two agree,
  * and the served config then blanks the SDK's own copy so it is never doubled.
  */
-function overlayMarkup(uid: string, title: string, subtitle: string, rtl: boolean): string {
+function overlayMarkup(uid: string, title: string, subtitle: string, rtl: boolean, textRtl = rtl): string {
   if (!title && !subtitle) return ''
   const pad = 12
-  // In SVG, `text-anchor: start` under `direction: rtl` anchors the text's right
-  // edge at x and lets it run leftwards; `end` would push it off the artboard.
-  const anchor = 'start'
+  // The copy needs more room off the bottom than off the side: the carousel
+  // dots sit directly beneath the hero.
+  const padBottom = 20
+  // Two different things decide the layout here, and conflating them is what
+  // put the full stop on the wrong end of an Arabic line:
+  //   `rtl`     — which side of the slide the copy block sits on, from the art.
+  //   `textRtl` — which way the words themselves run, from the language.
+  // A design that keeps its Latin arrangement still needs Arabic to be typeset
+  // as Arabic. Under `direction: rtl` SVG's `start` anchor is the RIGHT edge,
+  // so a left-hand block needs `end` and a right-hand block needs `start`.
   const x = rtl ? HERO_ART_W - pad : pad
-  const dir = rtl ? ' direction="rtl"' : ''
-  const font = "Montserrat, 'IBM Plex Sans Arabic', Jost, system-ui, sans-serif"
+  const anchor = textRtl ? (rtl ? 'start' : 'end') : rtl ? 'end' : 'start'
+  const dir = textRtl ? ' direction="rtl"' : ''
+  const font = OVERLAY_FONT
   const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   // There are no text metrics here, so lines break on an average glyph width.
   const wrap = (text: string, size: number, maxLines: number): string[] => {
@@ -146,7 +157,7 @@ function overlayMarkup(uid: string, title: string, subtitle: string, rtl: boolea
   const titleLH = 18
   const subLH = 13
   const blockH = titleLines.length * titleLH + (subLines.length ? subLines.length * subLH + 3 : 0)
-  let y = HERO_ART_H - pad - blockH
+  let y = HERO_ART_H - padBottom - blockH
 
   const lines: string[] = []
   for (const line of titleLines) {
@@ -159,10 +170,14 @@ function overlayMarkup(uid: string, title: string, subtitle: string, rtl: boolea
     lines.push(`<text x="${x}" y="${y - 3}" text-anchor="${anchor}"${dir} font-family="${font}" font-size="10.5" fill="#FFFFFF" opacity="0.9">${esc(line)}</text>`)
   }
 
+  // The scrim exists to carry the white copy at the bottom, so it stops short of
+  // the top: spanning the whole slide dimmed the badge with it, which on a light
+  // design left the wordmark barely legible.
+  const scrimTop = Math.max(0, Math.min(HERO_ART_H - 1, HERO_ART_H - blockH - padBottom - pad * 2))
   return `<defs><linearGradient id="${uid}sc" x1="0" y1="1" x2="0" y2="0">
-    <stop offset="0%" stop-color="#000000" stop-opacity="0.6"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="0%" stop-color="#000000" stop-opacity="0.62"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/>
   </linearGradient></defs>
-  <rect x="0" y="0" width="${HERO_ART_W}" height="${HERO_ART_H}" fill="url(#${uid}sc)"/>
+  <rect x="0" y="${scrimTop}" width="${HERO_ART_W}" height="${HERO_ART_H - scrimTop}" fill="url(#${uid}sc)"/>
   ${lines.join('\n  ')}`
 }
 
@@ -173,6 +188,8 @@ export function renderHeroSvg(opts: {
   carousel?: unknown
   /** The channel's name, for a design whose badge carries no text of its own. */
   badgeFallback?: string
+  /** The channel's font stack, so the hero is drawn in the widget's own face. */
+  fontFamily?: string
   /** The widget's welcome copy, laid over any slide that carries none of its own. */
   overlay?: { title?: string; subtitle?: string }
 }): string {
@@ -189,6 +206,9 @@ export function renderHeroSvg(opts: {
   const ovSub = opts.overlay?.subtitle?.trim() ?? ''
 
   const layers = shown.map((slide, i) => {
+    // A design that opts out of mirroring keeps its Latin arrangement, and the
+    // overlay has to follow it — otherwise the copy lands on top of the art.
+    const slideRtl = rtl && !(slide.kind === 'design' && slide.design.mirrorInRtl === false)
     const art =
       slide.kind === 'image'
         ? `<image href="${slide.dataUri}" x="0" y="0" width="${HERO_ART_W}" height="${HERO_ART_H}" preserveAspectRatio="xMidYMid slice"/>`
@@ -199,10 +219,11 @@ export function renderHeroSvg(opts: {
             rtl,
             brand: opts.brand,
             badgeFallback: opts.badgeFallback,
+            fontFamily: opts.fontFamily || OVERLAY_FONT,
           })
     // A design carrying copy of its own keeps it, exactly as the dashboard does.
     const carriesText = slide.kind === 'design' && (slide.design.title.show || slide.design.subtitle.show)
-    const inner = carriesText ? art : art + overlayMarkup(`${uid}o${i}`, ovTitle, ovSub, rtl)
+    const inner = carriesText ? art : art + overlayMarkup(`${uid}o${i}`, ovTitle, ovSub, slideRtl, rtl)
     const style = cycling ? ` class="sl" style="animation-delay:${-i * carousel.intervalMs}ms;opacity:${i === 0 ? 1 : 0}"` : ''
     return `<g${style}>${inner}</g>`
   })

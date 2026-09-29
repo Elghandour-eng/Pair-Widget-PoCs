@@ -59,6 +59,31 @@ const heroOverlayOf = (config: Record<string, any>) => ({
   subtitle: one(config?.widget_v2_config?.intro_screen?.welcomeSubtitle?.text) ?? one(config?.welcome_tagline) ?? '',
 })
 
+/**
+ * A short hash of everything the hero is drawn from.
+ *
+ * It rides in the image URL so a changed design gets a changed URL: without it
+ * a browser holds the old hero for the full cache lifetime, and a design edit
+ * looks like it did not take. It also keys the server's own render cache, so
+ * an unrelated edit elsewhere in the config does not throw the render away.
+ */
+function heroRevision(config: Record<string, any>): string {
+  const { slides, carousel } = heroOf(config)
+  return createHash('sha1')
+    .update(
+      JSON.stringify({
+        slides,
+        carousel,
+        overlay: heroOverlayOf(config),
+        brand: config.widget_color,
+        locale: config.locale,
+        font: config.styles?.fontFamily,
+      }),
+    )
+    .digest('base64url')
+    .slice(0, 12)
+}
+
 /** A config's hero, read through the shared normaliser so both sides agree on it. */
 const heroOf = (config: Record<string, any>) => {
   const hs = config?.widget_v2_config?.intro_screen?.heroSection
@@ -338,8 +363,9 @@ function materializeHero<T>(config: T, origin: string, widgetId: string, lng?: s
   const hs = next.widget_v2_config.intro_screen.heroSection
   const rtl = /^(ar|he|fa|ur)/i.test(one(next.locale) ?? 'en')
   const dir = rtl ? 'rtl' : 'ltr'
+  const rev = heroRevision(next)
   const drawn = (params: Record<string, string>) => {
-    const q = new URLSearchParams({ widget: widgetId, dir, ...params })
+    const q = new URLSearchParams({ widget: widgetId, dir, ...params, v: rev })
     if (lng) q.set('lng', lng)
     return `${origin}/api/public/hero.svg?${q.toString()}`
   }
@@ -404,10 +430,7 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
   // Keyed on the hero itself (plus brand and direction, which it is drawn with),
   // so an unrelated edit elsewhere in the config does not throw the render away.
   const overlay = heroOverlayOf(c)
-  const revision = createHash('sha1')
-    .update(JSON.stringify({ slides, carousel, overlay, brand: c.widget_color, locale: c.locale }))
-    .digest('base64url')
-  const key = `${widget}|${revision}|${dir === 'rtl' || dir === 'ltr' ? dir : ''}|${picked ? only : 'all'}`
+  const key = `${widget}|${heroRevision(c)}|${dir === 'rtl' || dir === 'ltr' ? dir : ''}|${picked ? only : 'all'}`
   let hit = svgCache.get(key)
 
   if (!hit) {
@@ -426,7 +449,15 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
     }
     const rtl = dir === 'rtl' || (dir !== 'ltr' && /^(ar|he|fa|ur)/i.test(one(c.locale) ?? 'en'))
     const badgeFallback = one(c.widget_v2_config?.header?.content?.title) ?? one(c.name) ?? ''
-    const body = renderHeroSvg({ slides: drawable, brand: one(c.widget_color), rtl, carousel, badgeFallback, overlay })
+    const body = renderHeroSvg({
+      slides: drawable,
+      brand: one(c.widget_color),
+      rtl,
+      carousel,
+      badgeFallback,
+      overlay,
+      fontFamily: one(c.styles?.fontFamily),
+    })
     hit = { etag: `W/"${createHash('sha1').update(body).digest('base64url')}"`, body }
     // Small bound: a handful of widgets x languages, and any entry is cheap to rebuild.
     if (svgCache.size > 64) svgCache.delete(svgCache.keys().next().value as string)

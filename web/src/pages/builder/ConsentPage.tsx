@@ -6,7 +6,8 @@ import { currentLang, type WidgetLang } from '@/lib/builder'
 import { FONT_WEIGHTS } from '@/lib/inputDesign'
 import { useI18n } from '@/lib/i18n'
 import {
-  ChoiceField, ColorField, Field, ItemBiInputs, NumField, PlainBiField, ToggleField, type PageProps,
+  BrandColorField, ChoiceField, ColorField, Field, ItemBiInputs, NumField, PlainBiField, ToggleField,
+  type PageProps,
 } from './fields'
 
 const CS = 'widget_v2_config.consent_screen'
@@ -48,6 +49,7 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         <div className="grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.cs.enable')} path={`${CS}.enabled`} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.cs.illustration')} path={`${CSD}.showIllustration`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cs.handle')} path={`${CSD}.showHandle`} get={get} set={set} disabled={disabled} />
           <PlainBiField label={t('builder.cs.title')} path={`${CS}.title`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Welcome to your AI Assistant" />
           <PlainBiField label={t('builder.cs.subtitle')} path={`${CS}.subtitle`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="A few things to keep in mind" />
           <PlainBiField label={t('builder.cs.footnote')} path={`${CS}.footnote`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="By continuing, you agree to our" />
@@ -57,6 +59,18 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
 
       <section>
         <SectionHead>{t('builder.cs.points')}</SectionHead>
+        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.cs.pointCard')} path={`${CSD}.points.card`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.cs.pointGap')} path={`${CSD}.points.gap`} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+          {get(`${CSD}.points.card`) !== false && (
+            <>
+              <BrandColorField label={t('builder.cs.pointBg')} path={`${CSD}.points.cardBackground`} get={get} set={set} disabled={disabled} />
+              <BrandColorField label={t('builder.cs.pointBorder')} path={`${CSD}.points.cardBorder`} get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.input.radius')} path={`${CSD}.points.cardRadius`} min={0} max={40} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.input.padX')} path={`${CSD}.points.cardPadding`} min={0} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+            </>
+          )}
+        </div>
         <div className="space-y-3">
           {points.map((pt, i) => (
             <div key={i} className="card space-y-3 p-3.5">

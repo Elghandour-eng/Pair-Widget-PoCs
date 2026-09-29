@@ -1250,12 +1250,26 @@ export function normalizePreChat(raw: unknown): PreChatDesign {
  */
 export interface ConsentDesign {
   showIllustration: boolean
+  /** The grab handle a bottom sheet carries, as on iOS. */
+  showHandle: boolean
   overlayColor: string
   overlayOpacity: number
   card: { background: string; radius: number; padding: number; shadow: Shadow }
   title: { color: string; size: number; weight: FontWeight }
   subtitle: { color: string; size: number; weight: FontWeight }
-  points: { textColor: string; textSize: number; iconColor: string; iconSize: number; gap: number }
+  points: {
+    textColor: string
+    textSize: number
+    iconColor: string
+    iconSize: number
+    gap: number
+    /** Each point in its own bordered card, rather than a plain icon-and-text row. */
+    card: boolean
+    cardBackground: string
+    cardBorder: string
+    cardRadius: number
+    cardPadding: number
+  }
   footnote: { color: string; size: number }
   button: {
     background: string
@@ -1270,12 +1284,16 @@ export interface ConsentDesign {
 
 export const CONSENT_DEFAULTS: ConsentDesign = {
   showIllustration: true,
+  showHandle: true,
   overlayColor: '#000000',
   overlayOpacity: 0.45,
   card: { background: '#FFFFFF', radius: 20, padding: 20, shadow: { size: 0, y: 10, blur: 40, color: '#000000', opacity: 0.2 } },
   title: { color: '#1A1A1A', size: 17, weight: '700' },
   subtitle: { color: '#6E6E73', size: 12, weight: '400' },
-  points: { textColor: '#3A3A3C', textSize: 12.5, iconColor: '#6E6E73', iconSize: 16, gap: 12 },
+  points: {
+    textColor: '#3A3A3C', textSize: 12.5, iconColor: '#6E6E73', iconSize: 16, gap: 8,
+    card: true, cardBackground: '#FFFFFF', cardBorder: '#E5E5EA', cardRadius: 12, cardPadding: 12,
+  },
   footnote: { color: '#8E8E93', size: 10.5 },
   button: { background: BRAND_TOKEN, textColor: '#FFFFFF', radius: 12, height: 44, textSize: 13.5, weight: '600', fullWidth: true },
 }
@@ -1291,6 +1309,7 @@ export function normalizeConsent(raw: unknown): ConsentDesign {
   const b = (r.button ?? {}) as Record<string, any>
   return {
     showIllustration: bool(r.showIllustration, d.showIllustration),
+    showHandle: bool(r.showHandle, d.showHandle),
     overlayColor: color(r.overlayColor, d.overlayColor),
     overlayOpacity: num(r.overlayOpacity, d.overlayOpacity, 0, 1),
     card: {
@@ -1311,10 +1330,15 @@ export function normalizeConsent(raw: unknown): ConsentDesign {
     },
     points: {
       textColor: color(p.textColor, d.points.textColor),
-      textSize: num(p.textSize, d.points.textSize, 8, 20),
+      textSize: num(p.textSize, d.points.textSize, 8, 24),
       iconColor: color(p.iconColor, d.points.iconColor),
-      iconSize: num(p.iconSize, d.points.iconSize, 10, 32),
-      gap: num(p.gap, d.points.gap, 4, 32),
+      iconSize: num(p.iconSize, d.points.iconSize, 8, 40),
+      gap: num(p.gap, d.points.gap, 0, 32),
+      card: bool(p.card, d.points.card),
+      cardBackground: color(p.cardBackground, d.points.cardBackground),
+      cardBorder: color(p.cardBorder, d.points.cardBorder),
+      cardRadius: num(p.cardRadius, d.points.cardRadius, 0, 40),
+      cardPadding: num(p.cardPadding, d.points.cardPadding, 0, 32),
     },
     footnote: {
       color: color(f.color, d.footnote.color),
