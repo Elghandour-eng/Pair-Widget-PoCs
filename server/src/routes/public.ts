@@ -602,7 +602,7 @@ const DOC_API: DocRow[] = [
 ]
 
 const DOC_SEND: DocRow[] = [
-  { name: 'sdk:setView', takes: '{ lang?, theme? }', what: 'Re-fetches the config from the matching view. No reload.' },
+  { name: 'sdk:setView', takes: '{ lang?, theme? }', what: 'Re-fetches the config for that view. No reload.' },
   { name: 'sdk:setLanguage', takes: '{ lang }', what: 'Language only, theme untouched.' },
   { name: 'sdk:setTheme', takes: '{ theme }', what: 'Theme only, language untouched.' },
   { name: 'sdk:getState', takes: '—', what: 'Answered with widget:state.' },
@@ -628,18 +628,72 @@ const docRows = (rows: DocRow[]) =>
     .map((r) => `<tr><td><code>${esc(r.name)}</code></td><td><code class="dim">${r.takes}</code></td><td>${r.what}</td></tr>`)
     .join('')
 
-/** A code block with its language chip and a copy button. */
-const codeBlock = (lang: string, body: string) =>
-  `<figure class="code"><figcaption><span>${esc(lang)}</span><button type="button" class="cp" aria-label="Copy">Copy</button></figcaption><pre><code>${esc(body)}</code></pre></figure>`
+/* --------------------------- syntax highlighting --------------------------- */
+
+const KEYWORDS: Record<string, string> = {
+  js: 'var let const function return if else for while new typeof true false null undefined this try catch import from export default async await',
+  kotlin: 'val var fun class object return if else for while true false null this import package private public override suspend',
+  swift: 'let var func class struct guard return if else for while true false nil self import print',
+}
+
+/**
+ * A small highlighter for the samples on this page.
+ *
+ * Bundling a highlighting library for four code blocks would cost more than the
+ * page itself, and these samples are a known, fixed set — so this covers what
+ * they actually contain (comments, strings, numbers, keywords, tags) and
+ * nothing more. Everything is escaped as it is emitted.
+ */
+function highlight(lang: string, code: string): string {
+  const kind = lang === 'html' ? 'js' : lang === 'kotlin' ? 'kotlin' : lang === 'swift' ? 'swift' : 'js'
+  const words = new Set(KEYWORDS[kind].split(' '))
+  // Order matters: comments and strings must win before anything looks inside them.
+  const re = new RegExp(
+    [
+      '(<!--[\\s\\S]*?-->)',
+      '(/\\*[\\s\\S]*?\\*/|//[^\\n]*)',
+      '(`(?:\\\\.|[^`\\\\])*`|\'(?:\\\\.|[^\'\\\\\\n])*\'|"(?:\\\\.|[^"\\\\\\n])*")',
+      '(</?[A-Za-z][\\w-]*)',
+      '(\\b\\d+(?:\\.\\d+)?\\b)',
+      '([A-Za-z_$][\\w$]*)',
+    ].join('|'),
+    'g',
+  )
+  let out = ''
+  let last = 0
+  for (let m = re.exec(code); m; m = re.exec(code)) {
+    out += esc(code.slice(last, m.index))
+    const [full, htmlComment, comment, str, tag, num, word] = m
+    if (htmlComment || comment) out += `<span class="t-c">${esc(full)}</span>`
+    else if (str) out += `<span class="t-s">${esc(full)}</span>`
+    else if (tag) out += `<span class="t-t">${esc(full)}</span>`
+    else if (num) out += `<span class="t-n">${esc(full)}</span>`
+    else if (word) {
+      if (words.has(word)) out += `<span class="t-k">${esc(full)}</span>`
+      else if (word === 'YOUR_WIDGET_ID') out += `<span class="t-p ph">${esc(full)}</span>`
+      else if (/^(PairWidget|PairAiWidgetSDK|PairAiWidgetSettings|webView|window|document|console)$/.test(word))
+        out += `<span class="t-o">${esc(full)}</span>`
+      else out += esc(full)
+    } else out += esc(full)
+    last = m.index + full.length
+  }
+  return out + esc(code.slice(last))
+}
+
+/** A code block: language chip, copy button, highlighted body. */
+const codeBlock = (lang: string, body: string, tall = false) =>
+  `<figure class="code${tall ? ' tall' : ''}"><figcaption><span class="lang">${esc(lang)}</span>` +
+  `<button type="button" class="cp">Copy</button></figcaption>` +
+  `<pre><code>${highlight(lang, body)}</code></pre></figure>`
 
 /**
  * The integration reference: the script, the control API, every message in both
  * directions, how headers and params are filled, and the Android and iOS
  * equivalents.
  *
- * Deliberately not tied to one widget — it is the doc you hand to whoever is
- * integrating, on any widget. The id is a field at the top that rewrites every
- * snippet on the page, so nobody has to hand-edit the samples.
+ * Deliberately not tied to one widget — it is the page you hand to whoever is
+ * integrating, whichever widget they are integrating. The id is a single field
+ * that rewrites every sample, so nobody edits a snippet by hand.
  */
 publicRouter.get(
   '/docs',
@@ -653,7 +707,7 @@ publicRouter.get(
       '  window.PairAiWidgetSettings = {',
       `    beBaseUrl: '${origin}',`,
       '  }',
-      "  ;(function (d, t) {",
+      '  ;(function (d, t) {',
       `    var BASE_URL = '${base}'`,
       '    var g = d.createElement(t), s = d.getElementsByTagName(t)[0]',
       "    g.src = BASE_URL + '/sdk.js'",
@@ -690,17 +744,17 @@ publicRouter.get(
     ].join('\n')
 
     const android = [
-      '// There is no separate mobile SDK: the widget is a web page, so the app',
-      '// hosts it in a WebView and drives it with the same PairWidget API.',
+      '// The widget is a web page, so the app hosts it in a WebView and drives',
+      '// it with the same PairWidget API. There is no separate mobile SDK.',
       'val webView = findViewById<WebView>(R.id.widget)',
       'webView.settings.javaScriptEnabled = true',
-      '// The widget keeps the visitor\'s language and theme in localStorage.',
+      "// The widget keeps the visitor's language and theme in localStorage.",
       'webView.settings.domStorageEnabled = true',
       '',
       '// A page of yours that carries the install script.',
       'webView.loadUrl(HOST_PAGE_URL)',
       '',
-      '// --- Calling the widget -------------------------------------------------',
+      '// --- Calling the widget ---------------------------------------------',
       'fun setLanguage(lang: String) {',
       '    webView.evaluateJavascript("PairWidget.setLanguage(\'$lang\')", null)',
       '}',
@@ -709,7 +763,7 @@ publicRouter.get(
       '    webView.evaluateJavascript("PairWidget.updateMetadata($json)", null)',
       '}',
       '',
-      '// --- Hearing back from it -----------------------------------------------',
+      '// --- Hearing back from it -------------------------------------------',
       'class Bridge(private val onEvent: (String, String) -> Unit) {',
       '    @JavascriptInterface',
       '    fun onWidgetEvent(name: String, payload: String) = onEvent(name, payload)',
@@ -738,7 +792,7 @@ publicRouter.get(
       'let webView = WKWebView(frame: .zero, configuration: config)',
       'webView.load(URLRequest(url: hostPageURL))',
       '',
-      '// --- Calling the widget -------------------------------------------------',
+      '// --- Calling the widget ---------------------------------------------',
       'func setLanguage(_ lang: String) {',
       '    webView.evaluateJavaScript("PairWidget.setLanguage(\'\\(lang)\')")',
       '}',
@@ -747,10 +801,10 @@ publicRouter.get(
       '    webView.evaluateJavaScript("PairWidget.updateMetadata(\\(json))")',
       '}',
       '',
-      '// --- Hearing back from it -----------------------------------------------',
+      '// --- Hearing back from it -------------------------------------------',
       '// Once the page has loaded:',
       'webView.evaluateJavaScript("""',
-      '  PairWidget.on(\'*\', function (d, n) {',
+      "  PairWidget.on('*', function (d, n) {",
       '    window.webkit.messageHandlers.pairWidget.postMessage({',
       '      name: n, data: d || {}',
       '    })',
@@ -765,8 +819,8 @@ publicRouter.get(
     ].join('\n')
 
     const metadata = [
-      '// Your page supplies the values; the widget attaches them to its requests',
-      '// using the mapping saved in the design. A key you never send is left out.',
+      '// Your page supplies the values. The widget attaches them using the',
+      '// mapping saved in its design; a key you never send is left out.',
       'PairWidget.updateMetadata({',
       "  user_id: '42',",
       "  tier: 'gold',",
@@ -784,117 +838,123 @@ publicRouter.get(
 <link rel="icon" href="/pair-mark.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --pair: #4d98e2;
-    --ink: #0d1117; --body: #47505c; --muted: #6b7684;
-    --line: #e4e8ee; --line-soft: #eef1f6;
-    --page: #fbfcfd; --surface: #fff;
-    --accent: var(--pair); --deep: #2f6fac;
-    --code-bg: #0f1b2d; --code-fg: #cfdcea; --code-line: #1e3050;
-    --sidebar: 236px;
-    --radius: 12px;
+    --pair: #4d98e2; --deep: #2b6ca8; --tint: #eef5fc;
+    --ink: #0b1220; --body: #4a5568; --muted: #7b8798;
+    --line: #e6eaf0; --soft: #f1f4f8;
+    --page: #fff; --surface: #fff;
+    --code-bg: #101a2b; --code-bar: #16233a; --code-fg: #c8d5e6;
+    --rail: 244px; --col: 720px;
   }
+  :root { --t-c: #61798f; --t-s: #9bd4a0; --t-k: #7fb0f0; --t-n: #f0a878; --t-t: #f2879a; --t-o: #d9c58c; --t-p: #ffd479 }
   * { box-sizing: border-box }
-  html { scroll-behavior: smooth; scroll-padding-top: 88px }
+  html { scroll-behavior: smooth }
   body { margin: 0; background: var(--page); color: var(--body);
-    font: 400 15px/1.7 Inter, system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased }
+    font: 400 15px/1.72 Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased }
 
-  /* --- Masthead ---------------------------------------------------------- */
-  .bar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,.86);
-    backdrop-filter: saturate(160%) blur(12px); border-bottom: 1px solid var(--line) }
-  .bar-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 60px;
-    display: flex; align-items: center; gap: 14px }
-  .bar img { height: 22px }
-  .bar .tag { font-size: 12px; font-weight: 600; color: var(--muted);
-    border-inline-start: 1px solid var(--line); padding-inline-start: 14px }
-  .bar .sp { margin-inline-start: auto }
-  .idbox { display: flex; align-items: center; gap: 8px }
-  .idbox label { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap }
-  .idbox input { width: 210px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
-    padding: 7px 10px; font: 600 11.5px/1 'JetBrains Mono', monospace; color: var(--ink);
-    outline: none; transition: border-color .16s, box-shadow .16s }
-  .idbox input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,152,226,.16) }
+  /* ---- masthead ---- */
+  .bar { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.88);
+    backdrop-filter: saturate(180%) blur(14px); border-bottom: 1px solid var(--line) }
+  .bar-in { max-width: 1160px; margin: 0 auto; padding: 0 28px; height: 58px; display: flex; align-items: center; gap: 13px }
+  .bar img { height: 21px }
+  .bar .chip { font: 600 11.5px/1 Inter; color: var(--deep); background: var(--tint);
+    border-radius: 999px; padding: 6px 11px }
+  .bar .rt { margin-inline-start: auto; display: flex; align-items: center; gap: 9px }
+  .bar a.ghost { text-decoration: none; font: 600 12.5px Inter; color: var(--body);
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 13px; transition: .16s }
+  .bar a.ghost:hover { border-color: var(--pair); color: var(--deep); background: var(--tint) }
 
-  /* --- Shell ------------------------------------------------------------- */
-  .shell { max-width: 1180px; margin: 0 auto; padding: 0 24px;
-    display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); gap: 52px; align-items: start }
-  nav.side { position: sticky; top: 60px; padding: 38px 0 40px; max-height: calc(100dvh - 60px); overflow-y: auto }
-  nav.side h4 { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--muted); margin: 0 0 10px; padding-inline-start: 12px }
-  nav.side a { display: block; text-decoration: none; color: var(--body); font-size: 13.5px; font-weight: 500;
-    padding: 7px 12px; border-radius: 8px; border-inline-start: 2px solid transparent; transition: all .15s }
-  nav.side a:hover { color: var(--ink); background: var(--line-soft) }
-  nav.side a.on { color: var(--deep); font-weight: 600; background: rgba(77,152,226,.08);
-    border-inline-start-color: var(--accent) }
-  main { padding: 38px 0 120px; min-width: 0 }
+  /* ---- shell ---- */
+  .shell { max-width: 1160px; margin: 0 auto; padding: 0 28px;
+    display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 56px; align-items: start }
+  nav.rail { position: sticky; top: 58px; padding: 40px 0 48px; max-height: calc(100dvh - 58px); overflow-y: auto }
+  nav.rail p { font: 700 10px/1 Inter; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 12px; padding-inline-start: 14px }
+  nav.rail a { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--body);
+    font: 500 13.5px/1 Inter; padding: 9px 14px; border-radius: 9px; transition: .15s }
+  nav.rail a i { font: 700 10px/1 'JetBrains Mono', monospace; color: var(--muted);
+    width: 15px; flex: none; font-style: normal }
+  nav.rail a:hover { background: var(--soft); color: var(--ink) }
+  nav.rail a.on { background: var(--tint); color: var(--deep); font-weight: 650 }
+  nav.rail a.on i { color: var(--pair) }
+  main { padding: 40px 0 140px; min-width: 0; max-width: var(--col) }
 
-  /* --- Type -------------------------------------------------------------- */
-  .hero h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.025em; color: var(--ink); margin: 0 0 12px; font-weight: 700 }
-  .hero p { font-size: 16.5px; line-height: 1.65; margin: 0; max-width: 62ch }
-  section { padding-top: 56px; scroll-margin-top: 80px }
-  section > h2 { font-size: 23px; letter-spacing: -.02em; color: var(--ink); margin: 0 0 8px; font-weight: 700 }
-  section > p, section > .note { max-width: 66ch }
-  p { margin: 0 0 14px }
-  h3 { font-size: 15px; color: var(--ink); font-weight: 650; margin: 30px 0 8px; letter-spacing: -.01em }
+  /* ---- hero ---- */
+  .hero { padding-bottom: 8px }
+  .hero h1 { font: 700 33px/1.18 Inter; letter-spacing: -.03em; color: var(--ink); margin: 0 0 13px }
+  .hero .lede { font-size: 16px; line-height: 1.62; margin: 0; color: var(--body) }
+  .setup { margin-top: 26px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); padding: 15px 17px }
+  .setup label { display: block; font: 700 10px/1 Inter; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px }
+  .setup .row { display: flex; gap: 9px; align-items: center }
+  .setup input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface);
+    padding: 10px 13px; font: 500 13px/1 'JetBrains Mono', monospace; color: var(--ink); outline: none; transition: .16s }
+  .setup input:focus { border-color: var(--pair); box-shadow: 0 0 0 3px rgba(77,152,226,.15) }
+  .setup .hint { font-size: 12.5px; color: var(--muted); margin: 9px 0 0 }
+
+  /* ---- sections ---- */
+  section { padding-top: 62px; scroll-margin-top: 78px }
+  .sh { display: flex; align-items: baseline; gap: 11px; margin-bottom: 9px }
+  .sh i { font: 700 11px/1 'JetBrains Mono', monospace; color: var(--pair); font-style: normal }
+  .sh h2 { font: 700 22px/1.3 Inter; letter-spacing: -.022em; color: var(--ink); margin: 0 }
+  section > p { margin: 0 0 4px; max-width: 64ch }
+  h3 { font: 650 14.5px/1.5 Inter; color: var(--ink); margin: 28px 0 7px; letter-spacing: -.01em }
   b, strong { color: var(--ink); font-weight: 600 }
-  a { color: var(--deep) }
-  code.inl { background: var(--line-soft); border: 1px solid var(--line); border-radius: 6px;
-    padding: 1.5px 6px; font: 600 12.5px 'JetBrains Mono', monospace; color: var(--ink) }
+  code.inl { background: var(--soft); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1.5px 6px; font: 500 12.5px 'JetBrains Mono', monospace; color: var(--deep) }
 
-  /* --- Code -------------------------------------------------------------- */
-  .code { margin: 16px 0 0; border: 1px solid var(--code-line); border-radius: var(--radius); overflow: hidden;
-    background: var(--code-bg); box-shadow: 0 1px 2px rgba(13,17,23,.05), 0 14px 32px -24px rgba(13,17,23,.5) }
+  /* ---- code ---- */
+  .code { margin: 17px 0 0; border-radius: 13px; overflow: hidden; background: var(--code-bg);
+    box-shadow: 0 1px 2px rgba(11,18,32,.06), 0 18px 40px -28px rgba(11,18,32,.55) }
   .code figcaption { display: flex; align-items: center; justify-content: space-between;
-    padding: 9px 14px; border-bottom: 1px solid var(--code-line); background: rgba(255,255,255,.02) }
-  .code figcaption span { font: 600 10.5px/1 'JetBrains Mono', monospace; letter-spacing: .06em;
-    text-transform: uppercase; color: #7d93ad }
-  .code .cp { border: 1px solid var(--code-line); background: transparent; color: #9fb4cb; cursor: pointer;
-    border-radius: 7px; padding: 4px 11px; font: 600 11px Inter, sans-serif; transition: all .16s }
-  .code .cp:hover { color: #fff; border-color: #38557f; background: rgba(255,255,255,.05) }
-  .code .cp.done { color: #7fd6a0; border-color: #2c5c42 }
-  .code pre { margin: 0; padding: 15px 17px; overflow-x: auto; direction: ltr; text-align: left }
-  .code code { font: 400 12.5px/1.8 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
+    padding: 10px 15px; background: var(--code-bar) }
+  .code .lang { font: 700 10px/1 'JetBrains Mono', monospace; letter-spacing: .1em;
+    text-transform: uppercase; color: #7e93ab }
+  .code .cp { border: 1px solid #2b3c5a; background: transparent; color: #9fb4cb; cursor: pointer;
+    border-radius: 7px; padding: 5px 12px; font: 600 11px Inter; transition: .16s }
+  .code .cp:hover { color: #fff; border-color: #44618c; background: rgba(255,255,255,.06) }
+  .code .cp.done { color: #8fdca9; border-color: #2f5f44 }
+  .code pre { margin: 0; padding: 16px 18px; overflow: auto; direction: ltr; text-align: left }
 
-  /* --- Tables ------------------------------------------------------------ */
-  .tbl { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius);
-    overflow: hidden; background: var(--surface) }
+  .code code { font: 400 12.5px/1.75 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
+  .t-c { color: var(--t-c); font-style: italic } .t-s { color: var(--t-s) } .t-k { color: var(--t-k) }
+  .t-n { color: var(--t-n) } .t-t { color: var(--t-t) } .t-o { color: var(--t-o) }
+  .t-p { color: var(--t-p); background: rgba(255,212,121,.14); border-radius: 4px; padding: 0 3px }
+
+  /* ---- tables ---- */
+  .tbl { margin-top: 17px; border: 1px solid var(--line); border-radius: 13px; overflow: hidden }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px }
-  th { text-align: start; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--muted); padding: 11px 14px; background: #f7f9fb; border-bottom: 1px solid var(--line) }
-  td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; line-height: 1.6 }
+  th { text-align: start; font: 700 10px/1 Inter; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted); padding: 12px 15px; background: var(--soft); border-bottom: 1px solid var(--line) }
+  td { padding: 13px 15px; border-bottom: 1px solid var(--soft); vertical-align: top; line-height: 1.58 }
   tr:last-child td { border-bottom: 0 }
-  td code { font: 600 12px 'JetBrains Mono', monospace; color: var(--ink); word-break: break-word }
-  td code.dim { font-weight: 400; color: var(--muted) }
+  td code { font: 500 12px 'JetBrains Mono', monospace; color: var(--deep); word-break: break-word }
+  td code.dim { color: var(--muted) }
   td:first-child { white-space: nowrap }
-  @media (max-width: 720px) { td:first-child { white-space: normal } }
 
-  /* --- Tabs -------------------------------------------------------------- */
-  .tabs { display: inline-flex; gap: 2px; padding: 3px; margin-top: 18px;
-    border: 1px solid var(--line); background: var(--line-soft); border-radius: 10px }
-  .tabs button { border: 0; background: none; cursor: pointer; border-radius: 7px;
-    font: 600 12.5px Inter, sans-serif; color: var(--muted); padding: 7px 15px; transition: all .16s }
+  /* ---- tabs & note ---- */
+  .tabs { display: inline-flex; gap: 3px; padding: 3px; margin-top: 20px;
+    border: 1px solid var(--line); background: var(--soft); border-radius: 11px }
+  .tabs button { border: 0; background: none; cursor: pointer; border-radius: 8px;
+    font: 600 12.5px Inter; color: var(--muted); padding: 8px 17px; transition: .16s }
   .tabs button:hover { color: var(--ink) }
-  .tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(13,17,23,.08) }
-  .tabpane { display: none } .tabpane.on { display: block }
+  .tabs button.on { background: var(--surface); color: var(--deep); box-shadow: 0 1px 3px rgba(11,18,32,.1) }
+  .pane { display: none } .pane.on { display: block }
+  .note { border: 1px solid var(--line); border-inline-start: 3px solid var(--pair); background: var(--tint);
+    border-radius: 0 11px 11px 0; padding: 14px 17px; margin: 22px 0 0; font-size: 13.5px }
+  .note b { display: block; color: var(--ink); margin-bottom: 3px }
 
-  .note { border-inline-start: 3px solid var(--accent); background: rgba(77,152,226,.05);
-    border-radius: 0 10px 10px 0; padding: 13px 16px; margin: 20px 0 0; font-size: 13.5px }
-  [dir="rtl"] .note { border-radius: 10px 0 0 10px }
-  .note b { display: block; margin-bottom: 2px }
-
-  @media (max-width: 900px) {
+  @media (max-width: 940px) {
     .shell { grid-template-columns: 1fr; gap: 0 }
-    nav.side { position: static; max-height: none; padding: 20px 0 0;
-      display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--line) }
-    nav.side h4 { display: none }
-    nav.side a { white-space: nowrap; border-inline-start: 0; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0 }
-    nav.side a.on { border-inline-start: 0; border-bottom-color: var(--accent) }
-    main { padding-top: 24px }
-    .idbox label { display: none } .idbox input { width: 150px }
+    nav.rail { position: static; max-height: none; padding: 18px 0 0; display: flex; gap: 5px;
+      overflow-x: auto; border-bottom: 1px solid var(--line) }
+    nav.rail p { display: none }
+    nav.rail a { white-space: nowrap; border-radius: 8px 8px 0 0 } nav.rail a i { display: none }
+    main { padding-top: 26px } .bar .chip { display: none }
   }
+  @media (max-width: 620px) { td:first-child { white-space: normal } .bar a.ghost { display: none } }
 </style>
 </head>
 <body>
@@ -902,41 +962,43 @@ publicRouter.get(
 <header class="bar">
   <div class="bar-in">
     <img src="/pair-wordmark.svg" alt="Pair" />
-    <span class="tag">Widget integration</span>
-    <div class="sp idbox">
-      <label for="wid">Widget ID</label>
-      <input id="wid" value="YOUR_WIDGET_ID" spellcheck="false" aria-label="Your widget ID" />
-    </div>
+    <span class="chip">Integration guide</span>
+    <span class="rt"><a class="ghost" href="/api/public/docs#mobile">Android &amp; iOS</a></span>
   </div>
 </header>
 
 <div class="shell">
-  <nav class="side">
-    <h4>Guide</h4>
-    <a href="#install">Install</a>
-    <a href="#control">Control API</a>
-    <a href="#send">Messages you send</a>
-    <a href="#receive">Messages you receive</a>
-    <a href="#headers">Headers &amp; params</a>
-    <a href="#mobile">Android &amp; iOS</a>
+  <nav class="rail">
+    <p>On this page</p>
+    <a href="#install"><i>01</i>Install</a>
+    <a href="#control"><i>02</i>Control API</a>
+    <a href="#send"><i>03</i>Messages you send</a>
+    <a href="#receive"><i>04</i>Messages you receive</a>
+    <a href="#headers"><i>05</i>Headers &amp; params</a>
+    <a href="#mobile"><i>06</i>Android &amp; iOS</a>
   </nav>
 
   <main>
     <div class="hero">
-      <h1>Put the widget anywhere, drive it from your own code</h1>
-      <p>One script on the web, a WebView in an app, and the same control API in both. Paste your widget ID above and every snippet on this page fills itself in.</p>
+      <h1>Put the widget anywhere,<br />drive it from your own code</h1>
+      <p class="lede">One script on the web, a web view in an app, and the same control API in both.</p>
+      <div class="setup">
+        <label for="wid">Your widget ID</label>
+        <div class="row"><input id="wid" placeholder="YOUR_WIDGET_ID" spellcheck="false" aria-label="Your widget ID" /></div>
+        <p class="hint">Fills in every snippet on this page, and is remembered on this browser.</p>
+      </div>
     </div>
 
     <section id="install">
-      <h2>Install</h2>
+      <div class="sh"><i>01</i><h2>Install</h2></div>
       <p>Paste this before <code class="inl">&lt;/body&gt;</code>. It loads the SDK, which builds the launcher and the panel and exposes <code class="inl">window.PairWidget</code>.</p>
-      ${codeBlock('html', install)}
+      ${codeBlock('html', install, true)}
     </section>
 
     <section id="control">
-      <h2>Control API</h2>
-      <p><code class="inl">window.PairWidget</code> — also available as <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
-      ${codeBlock('javascript', usage)}
+      <div class="sh"><i>02</i><h2>Control API</h2></div>
+      <p><code class="inl">window.PairWidget</code> — also <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
+      ${codeBlock('javascript', usage, true)}
       <div class="tbl"><table>
         <thead><tr><th>Call</th><th>Takes</th><th>What it does</th></tr></thead>
         <tbody>${docRows(DOC_API)}</tbody>
@@ -944,7 +1006,7 @@ publicRouter.get(
     </section>
 
     <section id="send">
-      <h2>Messages you send</h2>
+      <div class="sh"><i>03</i><h2>Messages you send</h2></div>
       <p>Every call above is a <code class="inl">postMessage</code> underneath. Send one yourself with <code class="inl">PairWidget.send(type, data)</code> when you need something the API does not wrap.</p>
       <div class="tbl"><table>
         <thead><tr><th>Type</th><th>Payload</th><th>What it does</th></tr></thead>
@@ -953,7 +1015,7 @@ publicRouter.get(
     </section>
 
     <section id="receive">
-      <h2>Messages you receive</h2>
+      <div class="sh"><i>04</i><h2>Messages you receive</h2></div>
       <p>Subscribe with <code class="inl">PairWidget.on(name, fn)</code>, using the name without its <code class="inl">widget:</code> prefix. <code class="inl">'*'</code> receives every one.</p>
       <div class="tbl"><table>
         <thead><tr><th>Event</th><th>Payload</th><th>When it fires</th></tr></thead>
@@ -962,48 +1024,43 @@ publicRouter.get(
     </section>
 
     <section id="headers">
-      <h2>Headers &amp; query params</h2>
-      <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design: it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it. Your page only supplies the values.</p>
+      <div class="sh"><i>05</i><h2>Headers &amp; query params</h2></div>
+      <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design — it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it. Your page only supplies the values.</p>
       ${codeBlock('javascript', metadata)}
-      <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, then sending <code class="inl">user_id</code> fills that header — and a key you never send is simply left out of the request.</div>
+      <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, sending <code class="inl">user_id</code> fills that header — and a key you never send is left out of the request entirely.</div>
     </section>
 
     <section id="mobile">
-      <h2>Android &amp; iOS</h2>
-      <p>There is no separate mobile SDK, and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
-      <div class="tabs" id="platTabs">
+      <div class="sh"><i>06</i><h2>Android &amp; iOS</h2></div>
+      <p>There is no separate mobile SDK and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
+      <div class="tabs" id="tabs">
         <button type="button" data-p="android" class="on">Android</button>
         <button type="button" data-p="ios">iOS</button>
       </div>
-      <div class="tabpane on" data-p="android">
+      <div class="pane on" data-p="android">
         <h3>Kotlin — WebView</h3>
         <p>Two settings matter: JavaScript, and DOM storage — the widget keeps the visitor's language and theme choice in <code class="inl">localStorage</code>.</p>
-        ${codeBlock('kotlin', android)}
+        ${codeBlock('kotlin', android, true)}
       </div>
-      <div class="tabpane" data-p="ios">
+      <div class="pane" data-p="ios">
         <h3>Swift — WKWebView</h3>
         <p>The same, with events arriving through a <code class="inl">WKScriptMessageHandler</code> instead of a JavaScript interface.</p>
-        ${codeBlock('swift', ios)}
+        ${codeBlock('swift', ios, true)}
       </div>
-      <div class="note"><b>While testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
+      <div class="note"><b>Testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
     </section>
   </main>
 </div>
 
 <script>
-  /* The widget ID is one field, and it rewrites every sample on the page, so
-     nobody has to hand-edit a snippet before pasting it. */
-  var PLACEHOLDER = 'YOUR_WIDGET_ID'
+  /* The widget ID is one field that rewrites every sample. Only the highlighted
+     placeholder spans are touched, so the highlighting survives. */
   var input = document.getElementById('wid')
-  var codes = [].slice.call(document.querySelectorAll('.code code'))
-  var originals = codes.map(function (el) { return el.textContent })
-
+  var slots = [].slice.call(document.querySelectorAll('.ph'))
   function applyId() {
-    var v = (input.value || '').trim() || PLACEHOLDER
-    codes.forEach(function (el, i) {
-      el.textContent = originals[i].split(PLACEHOLDER).join(v)
-    })
-    try { localStorage.setItem('pair.docs.wid', v === PLACEHOLDER ? '' : v) } catch (e) {}
+    var v = (input.value || '').trim() || 'YOUR_WIDGET_ID'
+    slots.forEach(function (el) { el.textContent = v })
+    try { localStorage.setItem('pair.docs.wid', v === 'YOUR_WIDGET_ID' ? '' : v) } catch (e) {}
   }
   try {
     var saved = localStorage.getItem('pair.docs.wid')
@@ -1012,34 +1069,28 @@ publicRouter.get(
   input.addEventListener('input', applyId)
   input.addEventListener('focus', function () { input.select() })
 
-  /* Copy buttons */
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.cp')
     if (!btn) return
     var code = btn.closest('.code').querySelector('code')
-    var done = function () {
+    if (!navigator.clipboard) return
+    navigator.clipboard.writeText(code.textContent).then(function () {
       btn.textContent = 'Copied'
       btn.classList.add('done')
       setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done') }, 1600)
-    }
-    if (navigator.clipboard) navigator.clipboard.writeText(code.textContent).then(done, function () {})
+    }, function () {})
   })
 
-  /* Platform tabs */
-  document.getElementById('platTabs').addEventListener('click', function (e) {
+  document.getElementById('tabs').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-p]')
     if (!btn) return
     var want = btn.getAttribute('data-p')
-    ;[].forEach.call(document.querySelectorAll('#platTabs button'), function (b) {
-      b.classList.toggle('on', b === btn)
-    })
-    ;[].forEach.call(document.querySelectorAll('.tabpane'), function (p) {
-      p.classList.toggle('on', p.getAttribute('data-p') === want)
-    })
+    ;[].forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b === btn) })
+    ;[].forEach.call(document.querySelectorAll('.pane'), function (p) { p.classList.toggle('on', p.getAttribute('data-p') === want) })
   })
 
-  /* The sidebar follows the section you are reading. */
-  var links = [].slice.call(document.querySelectorAll('nav.side a'))
+  /* The rail follows the section being read. */
+  var links = [].slice.call(document.querySelectorAll('nav.rail a'))
   var byId = {}
   links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a })
   var spy = new IntersectionObserver(function (entries) {
@@ -1049,7 +1100,7 @@ publicRouter.get(
       var a = byId[en.target.id]
       if (a) a.classList.add('on')
     })
-  }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 })
+  }, { rootMargin: '-78px 0px -68% 0px' })
   ;[].forEach.call(document.querySelectorAll('section[id]'), function (s) { spy.observe(s) })
 <\/script>
 </body>
