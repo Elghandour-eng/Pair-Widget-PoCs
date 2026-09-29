@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createContext, type ReactNode, startTransition, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, type ReactNode, startTransition, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import { WidgetConfigQueryOptions } from '@/config/queries/use-widget-config-queries'
 import type { PairAiWidgetSettings, WidgetConfig } from '@/config/types/widget-config'
@@ -44,6 +44,13 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // The listener below is bound once, so it reads the live view through a ref
+  // rather than closing over a stale one.
+  const viewRef = useRef(view)
+  viewRef.current = view
+  const setViewRef = useRef(setView)
+  setViewRef.current = setView
+
   // Fetch API config
   const { data: apiConfig } = useSuspenseQuery(WidgetConfigQueryOptions(view))
 
@@ -60,6 +67,8 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
 
   // State to store dynamic metadata updates from postMessage
   const [dynamicMetadata, setDynamicMetadata] = useState<Record<string, unknown>>({})
+  const dynamicMetadataRef = useRef(dynamicMetadata)
+  dynamicMetadataRef.current = dynamicMetadata
 
   // Listen for postMessage from SDK
   useEffect(() => {
@@ -72,6 +81,43 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
             ...receivedConfig,
             _updatedAt: Date.now(),
           })
+        }
+      } else if (
+        event.data?.type === 'sdk:setView' ||
+        event.data?.type === 'sdk:setLanguage' ||
+        event.data?.type === 'sdk:setTheme'
+      ) {
+        // The host switching language/theme at runtime. The visitor's own header
+        // controls call the very same `setView`, so a host switch and a visitor
+        // switch are the same operation — no reload, no separate code path.
+        const payload = (event.data.data ?? event.data) as { lang?: unknown; theme?: unknown }
+        const lang = payload.lang === 'en' || payload.lang === 'ar' ? payload.lang : undefined
+        const theme = payload.theme === 'light' || payload.theme === 'dark' ? payload.theme : undefined
+        const current = viewRef.current
+        const next: ViewOverride =
+          event.data.type === 'sdk:setLanguage'
+            ? { ...current, lang }
+            : event.data.type === 'sdk:setTheme'
+              ? { ...current, theme }
+              : { lang, theme }
+        logger.debug('WidgetConfigProvider', 'Received a view change from the host', next)
+        setViewRef.current(next)
+      } else if (event.data?.type === 'sdk:getState') {
+        // A host that loaded after the widget can ask where things stand.
+        try {
+          window.parent?.postMessage(
+            {
+              type: 'widget:state',
+              data: {
+                lang: viewRef.current.lang ?? 'default',
+                theme: viewRef.current.theme ?? 'design',
+                metadataKeys: Object.keys(dynamicMetadataRef.current),
+              },
+            },
+            '*',
+          )
+        } catch {
+          // Cross-origin host without a listener: nothing to answer to.
         }
       } else if (event.data?.type === 'metadata:update') {
         const receivedMetadata = event.data.data || event.data.metadata

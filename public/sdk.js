@@ -427,12 +427,32 @@
     }, 100) // Half of transition duration
   }
 
+  // Host subscriptions to widget -> host messages, by event name without the
+  // `widget:` prefix ('*' receives every one).
+  var hostListeners = {}
+
+  function emitToHost(type, payload) {
+    var name = type.replace(/^widget:/, '')
+    var lists = (hostListeners[name] || []).concat(hostListeners['*'] || [])
+    for (var i = 0; i < lists.length; i++) {
+      try {
+        lists[i](payload, name)
+      } catch (err) {
+        console.error('[PairAI SDK] A host listener for "' + name + '" threw:', err)
+      }
+    }
+  }
+
   // Setup message listener
   function setupMessageListener() {
     window.addEventListener('message', function (event) {
       // Only process messages that look like widget messages
       if (!event.data || typeof event.data !== 'object') return
       if (!event.data.type || !event.data.type.startsWith('widget:')) return
+
+      // Every widget message reaches the host's own listeners, whether or not
+      // the switch below acts on it.
+      emitToHost(event.data.type, event.data.data !== undefined ? event.data.data : event.data)
 
       switch (event.data.type) {
         case 'widget:ready':
@@ -900,11 +920,87 @@
     sendMessageToWidget('metadata:update', newMetadata)
   }
 
+  var LANGS = { en: 1, ar: 1 }
+  var THEMES = { light: 1, dark: 1 }
+
+  /**
+   * Switch the widget's language and/or theme at runtime.
+   *
+   * The widget re-fetches its config from the matching `/pv/<lang>/<theme>`
+   * base, so the whole design follows — no page reload, and the same path the
+   * visitor's own header controls take.
+   */
+  function setView(next) {
+    next = next || {}
+    var view = {}
+    if (next.lang) {
+      if (!LANGS[next.lang]) return console.warn('[PairAI SDK] setView: unknown language "' + next.lang + '"')
+      view.lang = next.lang
+    }
+    if (next.theme) {
+      if (!THEMES[next.theme]) return console.warn('[PairAI SDK] setView: unknown theme "' + next.theme + '"')
+      view.theme = next.theme
+    }
+    sendMessageToWidget('sdk:setView', view)
+  }
+
+  function setLanguage(lang) {
+    if (!LANGS[lang]) return console.warn('[PairAI SDK] setLanguage: expected "en" or "ar", got "' + lang + '"')
+    sendMessageToWidget('sdk:setLanguage', { lang: lang })
+  }
+
+  function setTheme(theme) {
+    if (!THEMES[theme]) return console.warn('[PairAI SDK] setTheme: expected "light" or "dark", got "' + theme + '"')
+    sendMessageToWidget('sdk:setTheme', { theme: theme })
+  }
+
+  /** Ask the widget where things stand; the answer arrives as the `state` event. */
+  function getState() {
+    sendMessageToWidget('sdk:getState')
+  }
+
+  /**
+   * Send any message to the widget yourself, for anything this API does not
+   * cover. The widget receives `{ type, data }`, exactly as with the calls above.
+   */
+  function send(type, data) {
+    if (typeof type !== 'string' || !type) {
+      return console.warn('[PairAI SDK] send() needs a message type')
+    }
+    sendMessageToWidget(type, data)
+  }
+
+  /** Subscribe to what the widget sends back. `'*'` receives every message. */
+  function on(event, handler) {
+    if (typeof handler !== 'function') return function () {}
+    var name = String(event || '*').replace(/^widget:/, '')
+    if (!hostListeners[name]) hostListeners[name] = []
+    hostListeners[name].push(handler)
+    return function () {
+      off(name, handler)
+    }
+  }
+
+  function off(event, handler) {
+    var name = String(event || '*').replace(/^widget:/, '')
+    var list = hostListeners[name]
+    if (!list) return
+    var i = list.indexOf(handler)
+    if (i !== -1) list.splice(i, 1)
+  }
+
   // Public API
   window.PairAiWidgetSDK = {
     run: init,
     renderForm: renderForm,
     updateMetadata: updateMetadata,
+    setView: setView,
+    setLanguage: setLanguage,
+    setTheme: setTheme,
+    getState: getState,
+    send: send,
+    on: on,
+    off: off,
     toggle: function (show) {
       toggleWidget(show)
     },
@@ -920,8 +1016,9 @@
     },
   }
 
-  // Backward compatibility
+  // Backward compatibility, plus a short name for host pages.
   window.widgetSDK = window.PairAiWidgetSDK
+  window.PairWidget = window.PairAiWidgetSDK
 
   console.log('[PairAI SDK] SDK loaded successfully')
 })(window, document)
