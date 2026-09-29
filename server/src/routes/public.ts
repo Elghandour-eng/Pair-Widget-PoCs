@@ -482,7 +482,14 @@ publicRouter.get(
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
     const origin = `${req.protocol}://${req.get('host')}`
-    res.json(materializeChrome(materializeHero(absolutizeUploads(config, origin), origin, req.params.widgetId)))
+    // A stored config can drift out of step with itself — `locale` says one
+    // language while the copy is still in the other, which is how a widget ends
+    // up half English and half Arabic. Both languages are stored, so the
+    // language it claims to be in is applied on the way out and the mix cannot
+    // leave here.
+    const own = one((config as Record<string, any>).locale)
+    const settled = own && /^ar/i.test(own) ? applyWidgetLanguage(config, 'ar') : applyWidgetLanguage(config, 'en')
+    res.json(materializeChrome(materializeHero(absolutizeUploads(settled, origin), origin, req.params.widgetId)))
   }),
 )
 
@@ -1421,7 +1428,7 @@ publicRouter.get(
     /** The stock Pair embed snippet — what a customer pastes into their own site. */
     const sdkSnippet = `
 <script>
-  window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, panel: ${JSON.stringify(savedPanel)}, beBaseUrl: location.origin + ${js(beBase)} }
+  window.PairAiWidgetSettings = { position: ${js(position)}, type: ${js(type)}, launcherTitle: ${js(launcherTitle)}, panel: ${JSON.stringify(savedPanel)}, beBaseUrl: location.origin + ${js(beBase)}${(widget as { engine?: string }).engine === 'agent-engine' ? ", transport: 'sse'" : ''} }
   ;(function (d, t) {
     var BASE_URL = ${localSdk ? `location.origin + ${js(sdkBase)}` : js(sdkBase)}
     var g = d.createElement(t), s = d.getElementsByTagName(t)[0]
@@ -1444,8 +1451,32 @@ publicRouter.get(
   * { box-sizing: border-box }
   body { margin: 0; min-height: 100dvh; font-family: system-ui, sans-serif;
     background: ${wtheme === 'dark' ? 'linear-gradient(165deg, #101317 0%, #15191f 60%, #101317 100%)' : 'linear-gradient(165deg, #f4f9fe 0%, #e9f2fb 60%, #f2f8fe 100%)'} }
+  /* Inside a device frame the widget IS the screen, so it fills it.
+     The saved panel size is meant for a corner of a customer's page; left as
+     it was, a panel wider than the frame simply ran off the right edge and the
+     preview stopped being a preview. The size arrives as custom properties on
+     the holder, set inline by the loader, so these need !important to win. */
+  #pair-ai-widget-holder, #pair-ai-preview-holder {
+    --pair-panel-width: 100% !important;
+    --pair-panel-min-height: 0 !important;
+    --pair-panel-bottom: 0 !important;
+    --pair-panel-radius: 0 !important;
+    inset-inline: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
   ${inset ? `/* Keep the widget clear of the phone frame's camera cutout. */
-  #pair-ai-widget-holder, #pair-ai-preview-holder { top: ${inset}px !important; height: calc(100dvh - ${inset}px) !important; max-height: calc(100dvh - ${inset}px) !important }` : ''}
+  #pair-ai-widget-holder, #pair-ai-preview-holder {
+    top: ${inset}px !important;
+    height: calc(100dvh - ${inset}px) !important;
+    max-height: calc(100dvh - ${inset}px) !important;
+    --pair-panel-height: calc(100dvh - ${inset}px) !important;
+    --pair-panel-max-height: calc(100dvh - ${inset}px) !important;
+  }` : `#pair-ai-widget-holder, #pair-ai-preview-holder {
+    height: 100dvh !important;
+    --pair-panel-height: 100dvh !important;
+    --pair-panel-max-height: 100dvh !important;
+  }`}
   ${poweredCss}
 </style>
 </head>

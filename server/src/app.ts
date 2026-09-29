@@ -11,6 +11,7 @@ import { mongoStatus } from './lib/mongo.js'
 import { redis } from './lib/redis.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
+import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
 import { pairProxyRouter } from './routes/pairProxy.js'
 import { publicRouter, widgetLangRouter, widgetViewRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
@@ -58,6 +59,8 @@ export function createApp() {
   })
 
   app.use('/api/public/uploads', publicCors, uploadsStatic)
+  // agent-engine chat demo: isolated surface, does not touch the Pair proxy or any widget
+  app.use('/api/public/engine', cors({ origin: '*' }), engineChatRouter)
   app.use('/api/public', publicCors, publicRouter)
   // Alias with Pair's own path shape (GET /v1/widget/:id/config), so the widget's
   // beBaseUrl can point at this server and the design is served per the widget's source.
@@ -65,6 +68,8 @@ export function createApp() {
   // mount needs full CORS; whatever the studio doesn't serve itself is proxied to Pair.
   const widgetCors = cors({ origin: '*' })
   app.use('/v1', widgetCors, publicRouter)
+  // agent-engine widgets (Redis record has engine:"agent-engine") — everything else falls through to the Pair proxy
+  app.use('/v1', widgetCors, engineWidgetRouter)
   app.use('/v1', widgetCors, pairProxyRouter)
   // Language-forced variant for the test page's widget-language switch: the config
   // arrives already translated, everything else proxies to Pair as usual.
