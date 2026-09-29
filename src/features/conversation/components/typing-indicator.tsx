@@ -1,5 +1,5 @@
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { AiAssistantMessageShimmer } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message-shimmer'
+import { AiThinkingPill } from '@/features/conversation/components/ai-thinking-pill'
 
 interface TypingIndicatorProps {
   senderName?: string
@@ -14,11 +14,7 @@ export function TypingIndicator({ senderName = 'AI Assistant', senderType = 'ai'
   const aiShimmer = widgetConfig.messagesConfig?.aiMessages?.showShimmer !== false
 
   if (isAi && aiShimmer) {
-    return (
-      <div className="animate-fade-in flex w-full flex-col items-start gap-4 bg-transparent py-2 pl-4 select-none">
-        <AiAssistantMessageShimmer />
-      </div>
-    )
+    return <AiThinkingPill />
   }
 
   // Fallback for human agent typing

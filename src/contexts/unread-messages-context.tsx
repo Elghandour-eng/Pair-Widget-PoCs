@@ -6,6 +6,7 @@ import { TOKEN_CHANGED_EVENT, tokenStorage } from '@/core/token-storage'
 import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
 import { streamingStore } from '@/features/conversation/stores/streaming-store'
 import { handleIncomingPusherMessage } from '@/features/conversation/utils/handle-pusher-message'
+import { isSseTransport, sseSubscribe } from '@/core/sse-transport'
 import type {
   PusherNewMessageEventData,
   WidgetThinkingData,
@@ -232,6 +233,11 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
   // Subscribe to a single conversation
   const subscribeToConversation = useCallback(
     (conversationId: string) => {
+      if (isSseTransport()) {
+        // SSE transport: no Pusher channel — one HTTP stream per conversation feeds the same sinks
+        sseSubscribe(conversationId)
+        return
+      }
       const widgetId = getWidgetId()
       logger.debug('subscribeToConversation', 'Subscribing to new conversation', {
         conversationId,
@@ -534,6 +540,11 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
 
     if (!token) {
       logger.debug('UnreadMessagesProvider', 'No token found, skipping Pusher initialization')
+      return
+    }
+
+    if (isSseTransport()) {
+      logger.debug('UnreadMessagesProvider', 'SSE transport enabled, skipping Pusher initialization')
       return
     }
 

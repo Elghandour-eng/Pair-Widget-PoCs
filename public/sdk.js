@@ -233,6 +233,7 @@
     if (config.launcherTitle) params.push('launcherTitle=' + encodeURIComponent(config.launcherTitle))
     // Pass beBaseUrl as URL parameter so widget can set it in its window.PairAiWidgetSettings
     if (config.beBaseUrl) params.push('beBaseUrl=' + encodeURIComponent(config.beBaseUrl))
+    if (config.transport) params.push('transport=' + encodeURIComponent(config.transport))
     if (config.userId) params.push('userId=' + encodeURIComponent(config.userId))
     if (config.welcome_title_var) params.push('welcome_title_var=' + encodeURIComponent(config.welcome_title_var))
     // Pass sdkMode=true so widget knows it's embedded and doesn't render bubble
@@ -722,6 +723,7 @@
       widgetId: options.widgetId,
       baseUrl: options.baseUrl || 'https://pair-ai-widget-69d50.web.app',
       beBaseUrl: settings.beBaseUrl, // Read from parent's window.PairAiWidgetSettings
+      transport: settings.transport || options.transport,
       position: settings.position || 'right',
       type: settings.type || 'standard',
       launcherTitle: settings.launcherTitle || 'Chat with us!',

@@ -1,3 +1,4 @@
+import { AiThinkingPill } from '@/features/conversation/components/ai-thinking-pill'
 import { AiAssistantMessage } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message'
 import { AiAssistantMessageHeader } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message-header'
 import type { StreamState } from '@/features/conversation/stores/streaming-store'
@@ -187,8 +188,8 @@ export function StreamingMessage({ stream }: StreamingMessageProps) {
 
   if (!hasText) {
     return (
-      <div className="animate-fade-in flex w-full flex-col items-start gap-4 bg-transparent px-4 py-2">
-        <AiAssistantMessageHeader isPending={true} />
+      <div className="animate-fade-in flex w-full flex-col items-start gap-1 bg-transparent">
+        <AiThinkingPill />
         {hasThinking && (
           <p className="animate-pulse text-[13px] leading-[130%] font-normal text-[#757575] italic">
             {stream.thinking}

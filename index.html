@@ -26,6 +26,10 @@
       if (userId) {
         window.PairAiWidgetSettings.userId = userId
       }
+      var transport = urlParams.get('transport')
+      if (transport) {
+        window.PairAiWidgetSettings.transport = transport
+      }
       // Other settings (position, type, launcherTitle) will be set via postMessage in widget-ui-context.tsx
     </script>
     <script type="module" src="/src/main.tsx"></script>
