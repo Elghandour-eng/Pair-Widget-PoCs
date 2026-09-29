@@ -187,16 +187,7 @@ export function StreamingMessage({ stream }: StreamingMessageProps) {
   const hasThinking = stream.thinking.trim().length > 0
 
   if (!hasText) {
-    return (
-      <div className="animate-fade-in flex w-full flex-col items-start gap-1 bg-transparent">
-        <AiThinkingPill />
-        {hasThinking && (
-          <p className="animate-pulse text-[13px] leading-[130%] font-normal text-[#757575] italic">
-            {stream.thinking}
-          </p>
-        )}
-      </div>
-    )
+    return <AiThinkingPill label={stream.thinking || undefined} />
   }
 
   const message = parseStreamingMessage(stream)

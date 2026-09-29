@@ -1,49 +1,44 @@
+import { useEffect, useState } from 'react'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 /**
- * The branded "assistant is thinking" pill: avatar (or a sparkle) with a soft
- * pulse ring, the assistant's name, and three wave dots tinted with the
- * widget's primary colour. Replaces the old skeleton blocks, which read as a
- * broken layout while a reply streams in.
+ * The assistant's "working" indicator: a slowly spinning spark in the widget's
+ * colour next to a status line that narrates what is happening ("أفكر…",
+ * "أجيب بيانات السينمات…"). The label comes from the stream's thinking text;
+ * without one it gently cycles through generic phrases. Minimal on purpose —
+ * no bubble, no skeleton blocks.
  */
-export function AiThinkingPill() {
+const DEFAULT_LABELS = ['أفكر', 'أرتب لك الإجابة', 'لحظة وحدة']
+
+export function AiThinkingPill({ label }: { label?: string }) {
   const { widgetConfig } = useWidgetConfigContext()
-  const color = widgetConfig.primaryColor || '#4A5568'
-  const avatar = widgetConfig.avatarUrl || widgetConfig.messagesConfig?.aiMessages?.iconUrl
-  const name = widgetConfig.name || 'AI'
+  const color = widgetConfig.primaryColor || '#B3202C'
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    if (label) return
+    const t = setInterval(() => setTick((v) => v + 1), 2600)
+    return () => clearInterval(t)
+  }, [label])
+
+  const text = label?.trim() || DEFAULT_LABELS[tick % DEFAULT_LABELS.length]
 
   return (
-    <div className="animate-fade-in flex w-full items-start justify-start px-4 py-2 select-none">
-      <div
-        className="flex items-center gap-2.5 rounded-2xl rounded-bl-md border px-3.5 py-2.5 shadow-sm"
-        style={{ borderColor: `${color}2e`, background: `linear-gradient(135deg, ${color}14, ${color}05)` }}
+    <div className="animate-fade-in flex w-full items-center justify-start gap-2 px-4 py-2.5 select-none">
+      <span
+        className="animate-claude-spin inline-block text-[15px] leading-none"
+        style={{ color, animationDuration: '2.4s' }}
+        aria-hidden
       >
-        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
-          <span
-            className="absolute inset-0 animate-ping rounded-full opacity-20"
-            style={{ background: color, animationDuration: '1.8s' }}
-          />
-          {avatar ? (
-            <img src={avatar} alt="" className="relative h-7 w-7 rounded-full object-cover" />
-          ) : (
-            <span
-              className="relative flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold text-white"
-              style={{ background: color }}
-            >
-              {name.trim().charAt(0).toUpperCase() || '✦'}
-            </span>
-          )}
-        </span>
-        <span className="flex items-center gap-1" aria-label={`${name} is typing`}>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="h-1.5 w-1.5 animate-bounce rounded-full"
-              style={{ background: color, animationDelay: `${i * 0.15}s`, animationDuration: '1s' }}
-            />
-          ))}
-        </span>
-      </div>
+        ✳
+      </span>
+      <span
+        key={text}
+        className="animate-fade-in text-[13px] leading-none font-medium text-neutral-500 dark:text-neutral-400"
+      >
+        {text}
+        <span className="thinking-ellipsis" />
+      </span>
     </div>
   )
 }

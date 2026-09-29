@@ -8,6 +8,8 @@ import { WishlistProducts } from './wishlist-products'
 import { OffersCarousel } from './offers-carousel'
 import { ProductsCarousel } from './products-carousel'
 import { ProductSlots } from './product-slots'
+import { LocationCards } from './location-cards'
+import { PriceList } from './price-list'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -37,6 +39,10 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       )
     case 'product_slots':
       return <ProductSlots template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'location_cards':
+      return <LocationCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'price_list':
+      return <PriceList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }

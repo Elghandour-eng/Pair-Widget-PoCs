@@ -9,6 +9,7 @@ import { WidgetHeader } from '@/components/widget-header'
 import { REPLY_TIME_MAP } from '@/constants/reply-time'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { isSseTransport } from '@/core/sse-transport'
 
 interface ConversationHeaderProps {
   isHostOnline?: boolean
@@ -16,7 +17,7 @@ interface ConversationHeaderProps {
 
 function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
   const { widgetConfig } = useWidgetConfigContext()
-  const { navigateToIntro } = useWidgetNavigation()
+  const { navigateToIntro, navigateToConversation } = useWidgetNavigation()
   const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time || 'in_a_few_hours']
   const h = widgetConfig.headerConfig
 
@@ -85,6 +86,30 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
 
       {/* Right-side actions: Language/Theme → Cart → Favorites → Close */}
       <div className="flex flex-1 items-center justify-end gap-1">
+        {isSseTransport() && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="New conversation"
+            title="محادثة جديدة"
+            onClick={() => navigateToConversation(null)}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </Button>
+        )}
         <HeaderControls />
         {h?.actions?.cart && (
           <Button variant="ghost" size="icon-sm" aria-label="Cart">

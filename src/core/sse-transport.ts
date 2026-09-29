@@ -30,6 +30,7 @@ interface SseEvent {
   stream_id?: string
   delta?: string
   seq?: number
+  text?: string
   message?: unknown
 }
 
@@ -72,7 +73,7 @@ async function run(widgetId: string, conversationId: string, ctrl: AbortControll
           continue
         }
         if (e.event === 'thinking' && e.stream_id) {
-          streamingStore.handleThinking(conversationId, e.stream_id, '')
+          streamingStore.handleThinking(conversationId, e.stream_id, e.text ?? '')
         } else if (e.event === 'delta' && e.stream_id && typeof e.delta === 'string') {
           streamingStore.handleDelta(conversationId, e.stream_id, e.delta, e.seq ?? 0)
         } else if (e.event === 'complete' && e.stream_id) {

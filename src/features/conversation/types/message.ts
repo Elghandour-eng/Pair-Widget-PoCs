@@ -703,6 +703,28 @@ export interface ProductSlotsTemplate {
   }
 }
 
+export interface LocationCardData {
+  id?: string
+  name?: string
+  name_ar?: string
+  address?: string
+  address_ar?: string
+  hours?: string
+  distance_km?: number | string
+  image?: string
+  maps_url?: string
+}
+
+export interface LocationCardsTemplate {
+  type: 'location_cards'
+  content: { cards: LocationCardData[] }
+}
+
+export interface PriceListTemplate {
+  type: 'price_list'
+  content: { title?: string; currency?: string; items: Array<{ label: string; price: string }> }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -712,6 +734,8 @@ export type WidgetTemplate =
   | WishlistProductsTemplate
   | CarouselTemplate
   | ProductSlotsTemplate
+  | LocationCardsTemplate
+  | PriceListTemplate
 
 /**
  * Messages list response (matches actual API response)
