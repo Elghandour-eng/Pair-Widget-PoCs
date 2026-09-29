@@ -396,10 +396,11 @@
         var existingBadge = bubble.querySelector('.pair-ai-bubble-badge')
         var badgeHTML = existingBadge ? existingBadge.outerHTML : ''
         if (config.type === 'expanded_bubble') {
-          bubble.innerHTML = chatIcon + '<span>' + (config.launcherTitle || 'Chat with us!') + '</span>' + badgeHTML
+          bubble.innerHTML =
+            launcherIconHtml() + '<span>' + (config.launcherTitle || 'Chat with us!') + '</span>' + badgeHTML
           bubble.classList.add('pair-ai-bubble--expanded')
         } else {
-          bubble.innerHTML = chatIcon + badgeHTML
+          bubble.innerHTML = launcherIconHtml() + badgeHTML
         }
         // Re-reference badge element after innerHTML change
         badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
@@ -546,6 +547,54 @@
     widgetIframe.contentWindow.postMessage({ type: type, data: data }, '*')
   }
 
+  // The launcher icon: the studio's uploaded icon when set, else the stock glyph
+  function launcherIconHtml() {
+    var d = config.launcherDesign
+    if (d && d.iconUrl) {
+      var u = d.iconUrl
+      if (u.indexOf('http') !== 0) {
+        var base = (config.beBaseUrl || '').replace(/\/$/, '')
+        u = base + u
+      }
+      var sz = d.iconSize || 26
+      return (
+        '<img src="' +
+        u +
+        '" alt="" style="width:' +
+        sz +
+        'px;height:' +
+        sz +
+        'px;object-fit:contain;pointer-events:none" />'
+      )
+    }
+    return chatIcon
+  }
+
+  // Apply the studio launcher design to the live bubble
+  function applyLauncherDesign() {
+    if (!bubbleHolder) return
+    var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
+    var d = config.launcherDesign
+    if (!bubble || !d) return
+    if (d.size) {
+      bubble.style.width = d.size + 'px'
+      bubble.style.height = d.size + 'px'
+    }
+    if (d.radius != null) bubble.style.borderRadius = d.radius + 'px'
+    var bg = d.background
+    if (bg === '#brand' || bg === 'brand') bg = config.primaryColor
+    if (bg) bubble.style.background = bg
+    // swap the icon in place when the panel is closed
+    if (!isOpen) {
+      var badgeHTML = badgeElement && bubble.contains(badgeElement) ? badgeElement.outerHTML : ''
+      bubble.innerHTML =
+        launcherIconHtml() +
+        (config.type === 'expanded_bubble' && config.launcherTitle ? '<span>' + config.launcherTitle + '</span>' : '') +
+        badgeHTML
+      badgeElement = bubble.querySelector('.pair-ai-bubble-badge') || badgeElement
+    }
+  }
+
   // Update bubble color
   function updateBubbleColor(color) {
     var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
@@ -627,6 +676,10 @@
     if (config.type === 'none') config.openAutomatically = true
     if (newConfig.primaryColor) config.primaryColor = newConfig.primaryColor
     if (newConfig.launcherStyles) config.launcherStyles = newConfig.launcherStyles
+    if (newConfig.launcherDesign) {
+      config.launcherDesign = newConfig.launcherDesign
+      applyLauncherDesign()
+    }
     if (newConfig.showFooter !== undefined) config.showFooter = newConfig.showFooter
     if (newConfig.welcome_title_var !== undefined) config.welcome_title_var = newConfig.welcome_title_var
     // The studio's saved panel size wins over whatever the pasted snippet froze.

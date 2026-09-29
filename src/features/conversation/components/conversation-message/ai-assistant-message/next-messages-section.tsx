@@ -59,10 +59,11 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
   const brand = widgetConfig.primaryColor || '#B3202C'
   const chipStyle: React.CSSProperties = {
     background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.06)' : '#fff'),
-    borderColor: chips?.borderColor ?? (isDark ? `${brand}66` : `${brand}59`),
+    borderColor: chips?.borderColor ?? (isDark ? `${brand}8c` : `${brand}99`),
     color: chips?.textColor ?? (isDark ? 'rgba(255,255,255,0.85)' : '#3a3b40'),
     borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
     fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
+    borderWidth: '1.5px',
   }
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { conversationId } = useWidgetNavigation()

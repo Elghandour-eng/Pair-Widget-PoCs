@@ -24,6 +24,7 @@ export function WidgetColorSync() {
         launcherTitle: widgetConfig.launcherTitle,
         openAutomatically: widgetConfig.openAutomatically,
         launcherStyles: widgetConfig.launcherStyles,
+        launcherDesign: widgetConfig.launcherDesign,
         showFooter: widgetConfig.showFooter,
         // The studio's saved panel size, so the SDK sizes its holder to the
         // design even when the pasted snippet predates it.
@@ -43,6 +44,7 @@ export function WidgetColorSync() {
       widgetConfig.type,
       widgetConfig.launcherTitle,
       widgetConfig.launcherStyles,
+      widgetConfig.launcherDesign,
       widgetConfig.launcherDesign?.panel,
       widgetConfig.showFooter,
     ])

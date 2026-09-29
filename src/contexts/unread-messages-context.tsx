@@ -135,6 +135,33 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Add an unread message
+  // SSE transport bridge: incoming agent messages raise the unread badge and
+  // the closed-widget preview through the same state the Pusher path uses.
+  useEffect(() => {
+    const onSseIncoming = (ev: Event) => {
+      const d = (ev as CustomEvent).detail as
+        | {
+            conversationId?: string
+            message?: { ulid?: string; content?: string; sender_name?: string; sender_avatar?: string }
+          }
+        | undefined
+      if (!d?.conversationId || !d.message?.ulid) return
+      addUnreadMessage(d.conversationId, d.message.ulid)
+      setLastIncomingMessage({
+        messageId: d.message.ulid,
+        conversationId: d.conversationId,
+        content: d.message.content || '',
+        senderName: d.message.sender_name,
+        senderAvatar: d.message.sender_avatar,
+        timestamp: Date.now(),
+      })
+      setIsPreviewDismissed(false)
+    }
+    window.addEventListener('pair:sse-incoming', onSseIncoming)
+    return () => window.removeEventListener('pair:sse-incoming', onSseIncoming)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const addUnreadMessage = useCallback((conversationId: string, messageId: string) => {
     logger.debug('addUnreadMessage', 'Adding unread message', {
       conversationId,

@@ -567,12 +567,23 @@ export interface SuggestionChipsDto {
   fontSize?: number
 }
 
+/** Studio design for the interactive question card. */
+export interface QuestionCardDto {
+  background?: string
+  borderColor?: string
+  textColor?: string
+  /** Selected options, radio dots and check marks. */
+  accentColor?: string
+  radius?: number
+}
+
 export interface Messages {
   loadingOlder?: LoadingOlder
   feedback: Feedback
   aiMessages: AiMessages
   customerMessages: CustomerMessages
   suggestions?: SuggestionChipsDto
+  questions?: QuestionCardDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

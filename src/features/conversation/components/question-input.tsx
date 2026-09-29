@@ -111,15 +111,34 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
 
   const isFullWidth = widgetConfig.chatInput.layout === 'full_width_bar'
 
+  // Card design: studio config wins, then the brand colour and theme defaults.
+  const qd = widgetConfig.messagesConfig?.questions
+  const brand = widgetConfig.primaryColor || '#B3202C'
+  const accent = qd?.accentColor ?? brand
+  const cardBg = qd?.background ?? '#fff'
+  const cardBorder = qd?.borderColor ?? `${brand}40`
+  const cardText = qd?.textColor ?? '#1A1A1A'
+  const cardRadius = qd?.radius != null ? `${qd.radius}px` : '18px'
+
   return (
     <div className={isFullWidth ? 'w-full p-4' : 'w-full px-4 pt-4 pb-6'}>
       {/* Outer Card Container */}
       <div
         dir={isArabicQ ? 'rtl' : 'ltr'}
-        className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#CAC8C6] bg-white shadow-[0_-4px_18.4px_0_rgba(173,147,50,0.06)] select-none"
+        className="flex w-full flex-col overflow-hidden border shadow-lg select-none"
+        style={{
+          background: cardBg,
+          borderColor: cardBorder,
+          borderRadius: cardRadius,
+          color: cardText,
+          boxShadow: `0 8px 28px ${accent}14`,
+        }}
       >
         {/* Header Block */}
-        <div className="flex flex-col items-start gap-2 self-stretch border-b border-[#E5E4E1] bg-white px-4 pt-4 pb-2">
+        <div
+          className="flex flex-col items-start gap-2 self-stretch border-b px-4 pt-4 pb-2"
+          style={{ borderColor: `${accent}1f` }}
+        >
           {/* Navigation & Dismiss controls */}
           <div className="flex w-full items-center justify-between">
             <div className={totalQuestions > 1 ? 'flex items-center gap-1.5' : 'hidden'}>
@@ -156,7 +175,11 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
           </div>
 
           {/* Question Title */}
-          <h3 className="font-(family-name:--Font-primary,'DM_Sans') text-base leading-[150%] font-semibold text-[#1A1A1A]">
+          <h3
+            className="font-(family-name:--Font-primary,'DM_Sans') text-base leading-[150%] font-semibold"
+            dir="auto"
+            style={{ color: cardText }}
+          >
             {question.question}
           </h3>
         </div>
@@ -173,26 +196,32 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
                   key={option}
                   type="button"
                   onClick={() => toggleAnswer(question.question, option, 'single')}
-                  className="flex w-full items-center gap-2 border-b border-[#E5E4E1] bg-white p-4 text-start font-(family-name:--Font-primary,'DM_Sans') text-sm text-[#1A1A1A] transition-colors last:border-b-0 hover:bg-[#F9F9FB]"
+                  dir={isArabicQ ? 'rtl' : 'ltr'}
+                  className="flex w-full items-center gap-2.5 border-b p-4 text-start font-(family-name:--Font-primary,'DM_Sans') text-sm transition-colors last:border-b-0"
+                  style={{
+                    borderColor: `${accent}14`,
+                    color: cardText,
+                    background: isSelected ? `${accent}0d` : 'transparent',
+                  }}
                 >
                   {/* Radio Indicator */}
                   <div
-                    className={cn(
-                      'flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-all duration-200',
-                      isSelected ? 'border-[#1B160E]' : 'border-[#E5E4E1]',
-                    )}
+                    className="flex size-4.5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200"
+                    style={{ borderColor: isSelected ? accent : `${accent}45` }}
                   >
-                    {isSelected && <div className="animate-scale-up size-2.5 rounded-full bg-[#1B160E]" />}
+                    {isSelected && (
+                      <div className="animate-scale-up size-2.5 rounded-full" style={{ background: accent }} />
+                    )}
                   </div>
 
-                  <span>{option}</span>
+                  <span dir="auto">{option}</span>
                 </button>
               )
             })}
           </div>
         ) : (
           /* Multi Select Stack */
-          <div className="flex flex-col items-start gap-2.5 self-stretch bg-white p-4">
+          <div className="flex flex-col items-start gap-2.5 self-stretch p-4">
             {/* Guide Text */}
             <span className="font-(family-name:--Font-primary,'DM_Sans') text-xs leading-[130%] font-normal text-[#616161]">
               {isArabicQ ? 'اختار كل اللي يناسبك' : 'Choose all that apply'}
@@ -208,13 +237,16 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
                     key={option}
                     type="button"
                     onClick={() => toggleAnswer(question.question, option, 'multi')}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full border border-[#E5E4E1] px-3 py-2 font-(family-name:--Font-primary,'DM_Sans') text-sm leading-[130%] font-normal transition-all duration-200",
-                      isSelected ? 'bg-(--Surface-Tertiary,#EEECE1)' : 'bg-(--Surface-Base,#FFF)',
-                    )}
+                    dir="auto"
+                    className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-(family-name:--Font-primary,'DM_Sans') text-sm leading-[130%] font-normal shadow-sm transition-all duration-200"
+                    style={{
+                      borderColor: isSelected ? accent : `${accent}40`,
+                      background: isSelected ? `${accent}12` : cardBg,
+                      color: cardText,
+                    }}
                   >
-                    {isSelected && <Check className="size-3.5 stroke-[2.5px] text-[#1A1A1A]" />}
-                    <span className="text-[#1A1A1A]">{option}</span>
+                    {isSelected && <Check className="size-3.5 stroke-[2.5px]" style={{ color: accent }} />}
+                    <span>{option}</span>
                   </button>
                 )
               })}
@@ -223,7 +255,10 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
         )}
 
         {/* Footer Block */}
-        <div className="flex w-full flex-col items-end gap-2 border-t border-[#E5E4E1] bg-white px-4 pt-3 pb-4">
+        <div
+          className="flex w-full flex-col items-end gap-2 border-t px-4 pt-3 pb-4"
+          style={{ borderColor: `${accent}1f` }}
+        >
           {/* Submit / Next Button aligned to right */}
           <button
             type="button"

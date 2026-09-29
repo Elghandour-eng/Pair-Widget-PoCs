@@ -106,6 +106,13 @@ async function run(widgetId: string, conversationId: string, ctrl: AbortControll
           // the cache writer expects the Pusher envelope shape: { message, conversationUlid }
           handleIncomingPusherMessage(conversationId, { message: e.message, conversationUlid: conversationId })
           streamingStore.removeStreamsForConversation(conversationId)
+          // closed-widget preview + unread badge ride the same path Pusher used
+          const sender = (e.message as { sender_type?: string }).sender_type
+          if (sender && sender !== 'contact' && sender !== 'system') {
+            window.dispatchEvent(
+              new CustomEvent('pair:sse-incoming', { detail: { conversationId, message: e.message } }),
+            )
+          }
         }
       }
     }

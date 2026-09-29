@@ -749,6 +749,11 @@ export interface ExperiencesListTemplate {
   }
 }
 
+export interface AppLinksTemplate {
+  type: 'app_links'
+  content: { lang?: 'ar' | 'en'; ios?: string; android?: string }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -761,6 +766,7 @@ export type WidgetTemplate =
   | LocationCardsTemplate
   | PriceListTemplate
   | ExperiencesListTemplate
+  | AppLinksTemplate
 
 /**
  * Messages list response (matches actual API response)

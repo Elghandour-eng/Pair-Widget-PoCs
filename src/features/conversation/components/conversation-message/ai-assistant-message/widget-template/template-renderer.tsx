@@ -11,6 +11,7 @@ import { ProductSlots } from './product-slots'
 import { LocationCards } from './location-cards'
 import { PriceList } from './price-list'
 import { ExperiencesList } from './experiences-list'
+import { AppLinks } from './app-links'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -46,6 +47,8 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <PriceList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'experiences_list':
       return <ExperiencesList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'app_links':
+      return <AppLinks template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }
