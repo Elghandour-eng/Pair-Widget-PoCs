@@ -479,6 +479,19 @@ interface WidgetMessage {
   sender_name?: string
   next_messages?: unknown[]
   suggestions?: { type: 'suggestions'; options: string[] }
+  widget_template?: Record<string, unknown>
+}
+
+/** Builds the SDK's native widget_template from hydrated components (cards beat the price list). */
+function componentsToTemplate(comps: Array<Record<string, unknown>>): Record<string, unknown> | undefined {
+  const cards = comps
+    .filter((c) => c.type === 'template' && c.template === 'location_card')
+    .map((c) => c.data as Record<string, unknown>)
+    .filter((d) => d && d.name)
+  if (cards.length > 0) return { type: 'location_cards', content: { cards } }
+  const price = comps.find((c) => c.type === 'template' && c.template === 'price_list')
+  if (price) return { type: 'price_list', content: price.data as Record<string, unknown> }
+  return undefined
 }
 
 interface EngineConv {
@@ -563,8 +576,9 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   let finalText = ''
   let comps: Array<Record<string, unknown>> = []
   const convId = () => conv.engineConv
-  // instant feedback: the widget shows its thinking pill from this moment until the first delta
-  broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId })
+  // narrated status: the widget's thinking line follows what the engine is actually doing
+  const think = (text: string) => broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text })
+  think('أفكر')
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
@@ -595,9 +609,15 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           onConvId?.(e.conversation_id)
           onConvId = undefined
         }
-        if (e.event === 'message' && typeof e.answer === 'string') {
+        if (e.event === 'route') {
+          think('أجهّز لك الإجابة')
+        } else if (e.event === 'agent_thought') {
+          const tool = String((e as { tool?: unknown }).tool ?? '')
+          if (tool === 'cinescape_locations') think('أجيب لك بيانات السينمات 📍')
+          else if (tool && !tool.startsWith('route_to_')) think('أراجع المعلومات')
+        } else if (e.event === 'message' && typeof e.answer === 'string') {
           buf += e.answer
-          broadcast(conv, { event: 'delta', conversation_id: convId, stream_id: streamId, delta: e.answer, seq: seq++ })
+          broadcast(conv, { event: 'delta', conversation_id: convId(), stream_id: streamId, delta: e.answer, seq: seq++ })
         } else if (e.event === 'message_replace' && typeof e.answer === 'string') {
           buf = e.answer
         } else if (e.event === 'components') {
@@ -613,8 +633,8 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
   }
-  const md = cardsToMarkdown(comps)
-  const content = [finalText || buf, md].filter(Boolean).join('\n\n')
+  const template = componentsToTemplate(comps)
+  const content = template ? finalText || buf : [finalText || buf, cardsToMarkdown(comps)].filter(Boolean).join('\n\n')
   const message: WidgetMessage = {
     ulid: botUlid,
     type: 'message',
@@ -625,6 +645,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
     sent_at: new Date().toISOString(),
     status: 'sent',
     ...componentsToWidgetFields(comps),
+    ...(template ? { widget_template: template } : {}),
   }
   conv.history.push(message)
   broadcast(conv, { event: 'complete', conversation_id: convId(), stream_id: streamId })
@@ -654,17 +675,18 @@ async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
             /* plain text fallback */
           }
         }
-        const md = cardsToMarkdown(comps)
+        const template = componentsToTemplate(comps)
         history.push({
           ulid: m.id.replace(/-/g, '').slice(0, 26).toUpperCase(),
           type: 'message',
-          content: [text, md].filter(Boolean).join('\n\n'),
+          content: template ? text : [text, cardsToMarkdown(comps)].filter(Boolean).join('\n\n'),
           message_type: 'widget_message',
           sender_type: 'ai_agent',
           sender_name: 'Cine',
           sent_at: sentAt,
           status: 'sent',
           ...componentsToWidgetFields(comps),
+          ...(template ? { widget_template: template } : {}),
         })
       }
     }
