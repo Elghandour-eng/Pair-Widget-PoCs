@@ -722,7 +722,29 @@ export interface LocationCardsTemplate {
 
 export interface PriceListTemplate {
   type: 'price_list'
-  content: { title?: string; currency?: string; items: Array<{ label: string; price: string }> }
+  content: {
+    title?: string
+    title_en?: string
+    currency?: string
+    currency_en?: string
+    items: Array<{ label: string; label_en?: string; price: string }>
+  }
+}
+
+export interface ExperiencesListTemplate {
+  type: 'experiences_list'
+  content: {
+    title?: string
+    title_en?: string
+    items: Array<{
+      name: string
+      cinemas_ar: string
+      cinemas_en?: string
+      price?: string
+      note_ar?: string
+      note_en?: string
+    }>
+  }
 }
 
 export type WidgetTemplate =
@@ -736,6 +758,7 @@ export type WidgetTemplate =
   | ProductSlotsTemplate
   | LocationCardsTemplate
   | PriceListTemplate
+  | ExperiencesListTemplate
 
 /**
  * Messages list response (matches actual API response)

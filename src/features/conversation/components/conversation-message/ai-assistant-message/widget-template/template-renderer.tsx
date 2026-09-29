@@ -10,6 +10,7 @@ import { ProductsCarousel } from './products-carousel'
 import { ProductSlots } from './product-slots'
 import { LocationCards } from './location-cards'
 import { PriceList } from './price-list'
+import { ExperiencesList } from './experiences-list'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -43,6 +44,8 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <LocationCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'price_list':
       return <PriceList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'experiences_list':
+      return <ExperiencesList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }

@@ -2,7 +2,7 @@ import type { Message, ProductCardSet, NextMessageItem } from '@/features/conver
 import { isPendingMessage } from '@/features/conversation/utils/message-utils'
 import { AiAssistantMessageBody } from './ai-assistant-message-body'
 import { AiAssistantMessageHeader } from './ai-assistant-message-header'
-import { AiAssistantMessageShimmer } from './ai-assistant-message-shimmer'
+import { AiThinkingPill } from '@/features/conversation/components/ai-thinking-pill'
 import { FeedbackSection } from './feedback-section'
 import { ProductSection } from './product-section'
 import { NextMessagesSection } from './next-messages-section'
@@ -44,15 +44,8 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
     : undefined
 
   if (isPending) {
-    // With the shimmer off (AI-bot channels), the pending reply shows only its
-    // header — the streamed text takes over the moment it starts.
-    const aiShimmer = widgetConfig.messagesConfig?.aiMessages?.showShimmer !== false
-    return (
-      <div className="flex w-full flex-col items-start gap-4 bg-transparent px-4 py-2">
-        <AiAssistantMessageHeader isPending={true} />
-        {aiShimmer && <AiAssistantMessageShimmer cardStyles={cardStyles} />}
-      </div>
-    )
+    // A pending reply shows the thinking line, never skeleton blocks.
+    return <AiThinkingPill />
   }
 
   return (

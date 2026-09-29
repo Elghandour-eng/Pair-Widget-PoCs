@@ -1,4 +1,6 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { isDarkBackground } from '@/lib/utils'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import type {
@@ -50,6 +52,8 @@ interface InteractiveButtonProps {
 }
 
 export function InteractiveButton({ option, sourceMessageUlid, messageContent }: InteractiveButtonProps) {
+  const { widgetConfig, view } = useWidgetConfigContext()
+  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { conversationId } = useWidgetNavigation()
   const { mutateAsync: dispatchActionMutation } = useDispatchAction()
@@ -133,6 +137,15 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
       type="button"
       onClick={handleClick}
       className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-(--Strokes-Primary,#E5E4E1) bg-(--Surface-Base,#FFF) p-2 text-left font-(family-name:--Font-primary,'DM_Sans') text-[14px] leading-[130%] font-normal text-(--Text-Dark-Secondary,#616161) transition-colors hover:bg-gray-50 focus:outline-none"
+      style={
+        isDark
+          ? {
+              background: 'rgba(255,255,255,0.06)',
+              borderColor: 'rgba(255,255,255,0.16)',
+              color: 'rgba(255,255,255,0.85)',
+            }
+          : undefined
+      }
     >
       {iconUrl && <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />}
       <span>{label}</span>
