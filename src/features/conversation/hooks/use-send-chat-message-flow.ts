@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
@@ -21,14 +22,26 @@ export function useSendChatMessageFlow() {
     conversationId: currentConversationId,
   } = useWidgetNavigation()
   const { mutateAsync: preChatMutation, isPending: isPreChatPending } = usePreChat()
+  const [isFlowBusy, setIsFlowBusy] = useState(false)
   const sendMessageMutation = useSendMessage()
   const { subscribeToConversation } = useUnreadMessages()
   const { widgetConfig } = useWidgetConfigContext()
 
-  const isPending = isPreChatPending || sendMessageMutation.isPending
+  // busy covers the WHOLE flow (register → send → navigate), so the send button
+  // shows only the spinner for its full duration
+  const isPending = isFlowBusy || isPreChatPending || sendMessageMutation.isPending
   const isSuccess = sendMessageMutation.isSuccess
 
   const sendMessageFlow = async (content: string, conversationId?: string | null) => {
+    setIsFlowBusy(true)
+    try {
+      return await runSendMessageFlow(content, conversationId)
+    } finally {
+      setIsFlowBusy(false)
+    }
+  }
+
+  const runSendMessageFlow = async (content: string, conversationId?: string | null) => {
     const messageContent = content.trim()
     if (!messageContent) return
 
