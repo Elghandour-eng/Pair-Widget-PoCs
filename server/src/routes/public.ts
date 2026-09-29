@@ -678,7 +678,11 @@ function highlight(lang: string, code: string): string {
     out += esc(code.slice(last, m.index))
     const [full, htmlComment, comment, str, tag, num, word] = m
     if (htmlComment || comment) out += `<span class="t-c">${esc(full)}</span>`
-    else if (str) out += `<span class="t-s">${esc(full)}</span>`
+    else if (str)
+      // The widget-id placeholder sits inside quoted strings, and strings win
+      // the tokenizer — so the live-rewritten slot is carved out of the token,
+      // or the id field up top would have nothing to fill.
+      out += `<span class="t-s">${esc(full).replace(/YOUR_WIDGET_ID/g, '<span class="t-p ph">YOUR_WIDGET_ID</span>')}</span>`
     else if (tag) out += `<span class="t-t">${esc(full)}</span>`
     else if (num) out += `<span class="t-n">${esc(full)}</span>`
     else if (word) {
