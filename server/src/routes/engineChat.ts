@@ -4,6 +4,7 @@ import { ulid } from 'ulid'
 import { env } from '../config/env.js'
 import { logger } from '../lib/logger.js'
 import { redis } from '../lib/redis.js'
+import { MENU_ITEMS } from './cinescapeMenu.js'
 
 /**
  * Agent-engine chat: an isolated demo surface that connects a widget experience
@@ -83,6 +84,25 @@ function hydrateComponents(list: unknown): unknown {
     if (comp.template === 'experiences_list') {
       const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : EXPERIENCE_ITEMS
       return { ...comp, data: { title: 'تجاربنا السينمائية ✨', title_en: 'Our cinema experiences ✨', items } }
+    }
+    if (comp.template === 'menu_list') {
+      let items = Array.isArray(data.items) && data.items.length > 0 ? (data.items as Array<Record<string, unknown>>) : []
+      let title = data.title as string | undefined
+      let title_en = data.title_en as string | undefined
+      const cat = String(data.category ?? '').trim()
+      if (items.length === 0 && cat) {
+        const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase())
+        items = matched.map((m) => ({ name: m.name, name_ar: m.name_ar, price: m.price }))
+        title = title ?? matched[0]?.category_ar
+        title_en = title_en ?? matched[0]?.category
+      } else if (items.length > 0) {
+        // fill missing prices/arabic names from the dataset by name
+        items = items.map((it) => {
+          const m = MENU_ITEMS.find((x) => x.name.toLowerCase() === String(it.name ?? '').toLowerCase() || x.name_ar === it.name_ar)
+          return m ? { name: m.name, name_ar: m.name_ar, price: m.price, ...it } : it
+        })
+      }
+      return { ...comp, data: { title: title ?? 'المنيو 🍿', title_en: title_en ?? 'Menu 🍿', currency: 'د.ك', currency_en: 'KD', items } }
     }
     if (comp.template === 'app_links') {
       return {
@@ -647,6 +667,8 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: 
   if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
   const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
   if (app) return { type: 'app_links', content: { lang, ...(app.data as Record<string, unknown>) } }
+  const menu = comps.find((c) => c.type === 'template' && c.template === 'menu_list')
+  if (menu) return { type: 'price_list', content: { lang, ...(menu.data as Record<string, unknown>) } }
   return undefined
 }
 
