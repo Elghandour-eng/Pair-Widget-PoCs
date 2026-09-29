@@ -287,6 +287,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const rawMessages = apiResponse.widget_v2_config?.messages
   const messagesConfig: MessagesConfig = {
     loadingOlder: rawMessages?.loadingOlder,
+    suggestions: rawMessages?.suggestions,
     feedback: rawMessages?.feedback
       ? {
           showFeedbackButtons: rawMessages.feedback.showFeedbackButtons ?? true,

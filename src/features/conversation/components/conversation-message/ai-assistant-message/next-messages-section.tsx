@@ -55,6 +55,14 @@ interface InteractiveButtonProps {
 export function InteractiveButton({ option, sourceMessageUlid, messageContent }: InteractiveButtonProps) {
   const { widgetConfig, view } = useWidgetConfigContext()
   const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
+  const chips = widgetConfig.messagesConfig?.suggestions
+  const chipStyle: React.CSSProperties = {
+    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.06)' : '#fff'),
+    borderColor: chips?.borderColor ?? (isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)'),
+    color: chips?.textColor ?? (isDark ? 'rgba(255,255,255,0.85)' : '#3a3b40'),
+    borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
+    fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
+  }
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { conversationId } = useWidgetNavigation()
   const { mutateAsync: dispatchActionMutation } = useDispatchAction()
@@ -175,14 +183,20 @@ interface SuggestionsSectionProps {
 }
 
 export function SuggestionsSection({ suggestions, sourceMessageUlid, messageContent }: SuggestionsSectionProps) {
+  const { widgetConfig } = useWidgetConfigContext()
+  const design = widgetConfig.messagesConfig?.suggestions
+  const align = design?.align ?? 'center'
+  const justify = align === 'start' ? 'justify-start' : align === 'end' ? 'justify-end' : 'justify-center'
   if (!suggestions.options || suggestions.options.length === 0) return null
 
   return (
     <div className="flex w-full flex-col gap-2.5">
       {suggestions.text && (
-        <p className="text-left text-[14px] leading-[130%] font-normal text-[#1A1A1A]">{suggestions.text}</p>
+        <p className="text-start text-[14px] leading-[130%] font-normal text-[#1A1A1A]" dir="auto">
+          {suggestions.text}
+        </p>
       )}
-      <div className="flex w-full flex-wrap justify-start gap-2">
+      <div className={`flex w-full flex-wrap gap-2 ${justify}`}>
         {suggestions.options.map((option, idx) => (
           <InteractiveButton
             key={idx}

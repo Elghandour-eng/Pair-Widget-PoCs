@@ -198,13 +198,6 @@ export function StreamingMessage({ stream }: StreamingMessageProps) {
       className={`animate-fade-in streaming-live flex w-full flex-col items-start gap-1 bg-transparent${stream.completeSeen ? 'stream-done' : ''}`}
     >
       <AiAssistantMessage message={message} isLastMessage={true} />
-      {stream.completeSeen && (
-        <span className="finalizing-dots flex items-center gap-1 px-4 pb-1" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </span>
-      )}
     </div>
   )
 }

@@ -376,34 +376,7 @@ button.epr-btn.epr-emoji {
   }
 }
 
-/* Animated caret at the end of a streaming reply (CSS-only — no glyph, no tofu) */
-.streaming-live .ai-md-body > *:last-child::after {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 1em;
-  margin-inline-start: 5px;
-  border-radius: 3px;
-  background: currentColor;
-  vertical-align: text-bottom;
-  animation: caret-breathe 0.9s ease-in-out infinite;
-}
-@keyframes caret-breathe {
-  0%,
-  100% {
-    opacity: 0.15;
-    transform: scaleY(0.65);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scaleY(1);
-  }
-}
-
-/* Streamed text is done, components are finalizing: hide the caret, show soft dots */
-.stream-done .ai-md-body > *:last-child::after {
-  display: none;
-}
+/* Soft dots while a reply streams and finalizes */
 .finalizing-dots i {
   width: 5px;
   height: 5px;
@@ -429,4 +402,16 @@ button.epr-btn.epr-emoji {
     opacity: 0.9;
     transform: translateY(-3px);
   }
+}
+
+/* While a reply streams: animated ellipsis rides inline at the end of the text,
+   and the feedback row stays hidden until the message is final. */
+.streaming-live .ai-md-body > *:last-child::after {
+  content: '';
+  display: inline;
+  opacity: 0.6;
+  animation: thinking-dots 1.2s steps(4, end) infinite;
+}
+.streaming-live .ai-feedback-row {
+  display: none;
 }

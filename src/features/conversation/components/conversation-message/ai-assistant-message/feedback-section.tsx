@@ -79,7 +79,7 @@ export function FeedbackSection({ messageId, initialFeedback = null }: FeedbackS
   }
 
   return (
-    <div className="mt-1 flex items-center justify-start gap-3 select-none">
+    <div className="ai-feedback-row mt-1 flex items-center justify-start gap-3 select-none">
       <button
         onClick={() => handleFeedback('liked')}
         className="cursor-pointer rounded p-1 transition-colors hover:bg-black/5 focus:outline-none"

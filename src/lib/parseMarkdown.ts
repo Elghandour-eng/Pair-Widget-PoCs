@@ -11,6 +11,14 @@ export function parseMarkdown(text: string): ReactNode[] {
 
   let keyCounter = 0
 
+  // Direction by character majority: an Arabic line that OPENS with a Latin
+  // brand name ("- IMAX: أكبر شاشة...") must still lay out RTL.
+  const dirOf = (t: string): 'rtl' | 'ltr' => {
+    const ar = (t.match(/[\u0600-\u06FF]/g) || []).length
+    const lat = (t.match(/[A-Za-z]/g) || []).length
+    return ar >= lat && ar > 0 ? 'rtl' : 'ltr'
+  }
+
   // Split text into lines to handle block-level elements (lists)
   const lines = text.split('\n')
 
@@ -260,7 +268,7 @@ export function parseMarkdown(text: string): ReactNode[] {
         const currentBulletMatch = currentLine.match(/^(\s*)\*\s+(.+)$/)
         if (currentBulletMatch && currentBulletMatch[1] === indent) {
           const content = processInlineMarkdown(currentBulletMatch[2])
-          listItems.push(createElement('li', { key: `bullet-${keyCounter++}`, dir: 'auto' }, ...content))
+          listItems.push(createElement('li', { key: `bullet-${keyCounter++}`, dir: dirOf(currentLine) }, ...content))
           i++
         } else {
           break
@@ -295,7 +303,7 @@ export function parseMarkdown(text: string): ReactNode[] {
         const currentNumberedMatch = currentLine.match(/^(\s*)(\d+)\.\s+(.+)$/)
         if (currentNumberedMatch && currentNumberedMatch[1] === indent) {
           const content = processInlineMarkdown(currentNumberedMatch[3])
-          listItems.push(createElement('li', { key: `numbered-${keyCounter++}`, dir: 'auto' }, ...content))
+          listItems.push(createElement('li', { key: `numbered-${keyCounter++}`, dir: dirOf(currentLine) }, ...content))
           i++
         } else {
           break
@@ -313,7 +321,7 @@ export function parseMarkdown(text: string): ReactNode[] {
     // Regular line - process inline markdown
     if (line.trim()) {
       const processed = processInlineMarkdown(line)
-      processedLines.push(createElement('div', { key: `line-${keyCounter++}`, dir: 'auto' }, ...processed))
+      processedLines.push(createElement('div', { key: `line-${keyCounter++}`, dir: dirOf(line) }, ...processed))
     } else {
       // Empty lines are rendered with vertical spacing (h-4) to simulate paragraph breaks
       processedLines.push(createElement('div', { key: `line-${keyCounter++}`, className: 'h-5' }))

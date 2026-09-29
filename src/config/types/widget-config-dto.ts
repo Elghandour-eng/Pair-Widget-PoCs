@@ -557,11 +557,22 @@ export interface CustomerMessages {
   useBrandColor: boolean
 }
 
+/** Studio design for the next-message suggestion chips. */
+export interface SuggestionChipsDto {
+  align?: 'start' | 'center' | 'end'
+  background?: string
+  textColor?: string
+  borderColor?: string
+  radius?: number
+  fontSize?: number
+}
+
 export interface Messages {
   loadingOlder?: LoadingOlder
   feedback: Feedback
   aiMessages: AiMessages
   customerMessages: CustomerMessages
+  suggestions?: SuggestionChipsDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

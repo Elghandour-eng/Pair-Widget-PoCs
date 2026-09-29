@@ -260,6 +260,7 @@ export interface ChatInputConfig {
 
 // TODO: Start consuming this configuration in the message and feedback UI components
 export interface MessagesConfig {
+  suggestions?: import('./widget-config-dto').SuggestionChipsDto
   loadingOlder?: {
     text?: string
     textColor?: string
