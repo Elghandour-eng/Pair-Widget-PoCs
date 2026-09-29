@@ -764,6 +764,23 @@ export interface MenuCardsTemplate {
   }
 }
 
+export interface MovieCardsTemplate {
+  type: 'movie_cards'
+  content: {
+    lang?: 'ar' | 'en'
+    title?: string
+    title_en?: string
+    items: Array<{
+      title: string
+      title_ar?: string
+      image?: string
+      rating?: string
+      genre?: string
+      duration?: string
+    }>
+  }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -778,6 +795,7 @@ export type WidgetTemplate =
   | ExperiencesListTemplate
   | AppLinksTemplate
   | MenuCardsTemplate
+  | MovieCardsTemplate
 
 /**
  * Messages list response (matches actual API response)

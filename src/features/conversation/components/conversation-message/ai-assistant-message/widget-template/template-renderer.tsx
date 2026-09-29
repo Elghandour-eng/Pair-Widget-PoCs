@@ -13,6 +13,7 @@ import { PriceList } from './price-list'
 import { ExperiencesList } from './experiences-list'
 import { AppLinks } from './app-links'
 import { MenuCards } from './menu-cards'
+import { MovieCards } from './movie-cards'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -52,6 +53,8 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <AppLinks template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'menu_cards':
       return <MenuCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'movie_cards':
+      return <MovieCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }
