@@ -43,7 +43,7 @@ export function MenuCards({ template }: { template: MenuCardsTemplate; sourceMes
                 <img
                   src={img}
                   alt={it.label_en ?? it.label}
-                  className="h-[96px] w-full bg-white object-contain p-1.5"
+                  className="h-[96px] w-full object-cover"
                   loading="lazy"
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).style.display = 'none'
