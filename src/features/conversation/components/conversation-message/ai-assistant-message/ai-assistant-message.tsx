@@ -7,7 +7,6 @@ import { FeedbackSection } from './feedback-section'
 import { ProductSection } from './product-section'
 import { NextMessagesSection } from './next-messages-section'
 import { TemplateRenderer } from './widget-template/template-renderer'
-import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 
 interface AiAssistantMessageProps {
   message: Message
@@ -16,11 +15,6 @@ interface AiAssistantMessageProps {
 
 export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessageProps) {
   const isPending = isPendingMessage(message)
-
-  const { widgetConfig } = useWidgetConfigContext()
-  const aiConfig = widgetConfig.messagesConfig?.aiMessages
-  const isCard = aiConfig?.messageStyle === 'card'
-  const cardStyles = isCard ? aiConfig?.CardStyles : undefined
 
   // Extract next_messages list from all possible sources while preserving order
   const nextMessagesList: NextMessageItem[] =

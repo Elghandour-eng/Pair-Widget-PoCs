@@ -1,6 +1,5 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { isDarkBackground } from '@/lib/utils'
 import { LocationRequestButton } from './location-request-button'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
@@ -59,7 +58,7 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
   const isDark = view.theme === 'dark'
   const chips = widgetConfig.messagesConfig?.suggestions
   const brand = widgetConfig.primaryColor || '#B3202C'
-  const chipStyle: React.CSSProperties & Record<string, string> = {
+  const chipStyle = {
     background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.08)' : '#f4f4f6'),
     border: chips?.borderColor ? `1px solid ${chips.borderColor}` : 'none',
     color: chips?.textColor ?? (isDark ? '#e8eaf0' : '#3c3d42'),
@@ -68,7 +67,7 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
     fontWeight: 500,
     padding: '9px 16px',
     '--chip-brand': brand,
-  }
+  } as React.CSSProperties
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { conversationId } = useWidgetNavigation()
   const { mutateAsync: dispatchActionMutation } = useDispatchAction()

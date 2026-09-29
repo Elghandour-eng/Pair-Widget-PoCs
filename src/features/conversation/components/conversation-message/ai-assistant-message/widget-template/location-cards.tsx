@@ -1,3 +1,4 @@
+import { CardImage } from './card-image'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { isDarkBackground } from '@/lib/utils'
 import type { LocationCardsTemplate } from '@/features/conversation/types/message'
@@ -40,19 +41,22 @@ export function LocationCards({ template }: { template: LocationCardsTemplate; s
         return (
           <div
             key={c.id ?? i}
-            className={`flex flex-col overflow-hidden rounded-2xl shadow-sm ${single ? 'w-full max-w-[320px]' : 'w-[240px] shrink-0 snap-start self-stretch'}`}
+            className={`flex flex-col overflow-hidden rounded-2xl ${single ? 'w-full max-w-[320px]' : 'w-[240px] shrink-0 snap-start self-stretch'}`}
             style={cardStyle}
           >
-            {c.image && (
-              <img
-                src={c.image}
-                alt={title ?? ''}
-                className={`w-full object-cover ${single ? 'h-[140px]' : 'h-[110px]'}`}
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
-            )}
+            <CardImage
+              src={c.image}
+              alt={title ?? ''}
+              className={`w-full object-cover ${single ? 'h-[140px]' : 'h-[110px]'}`}
+              fallback={
+                <div
+                  className={`flex w-full items-center justify-center text-[30px] ${single ? 'h-[140px]' : 'h-[110px]'}`}
+                  style={{ background: `linear-gradient(160deg, ${color}26, ${color}0a)` }}
+                >
+                  📍
+                </div>
+              }
+            />
             <div className="flex flex-1 flex-col gap-1.5 p-3.5">
               <p className="text-[14px] leading-tight font-bold" style={{ color: nameColor }}>
                 {title}

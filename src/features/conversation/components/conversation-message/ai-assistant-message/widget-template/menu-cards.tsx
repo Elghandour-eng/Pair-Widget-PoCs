@@ -1,3 +1,4 @@
+import { CardImage } from './card-image'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { isDarkBackground } from '@/lib/utils'
 import { env } from '@/core/env'
@@ -39,24 +40,19 @@ export function MenuCards({ template }: { template: MenuCardsTemplate; sourceMes
               className="flex w-[132px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl"
               style={cardStyle}
             >
-              {img ? (
-                <img
-                  src={img}
-                  alt={it.label_en ?? it.label}
-                  className="h-[96px] w-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }}
-                />
-              ) : (
-                <div
-                  className="flex h-[96px] w-full items-center justify-center text-[26px]"
-                  style={{ background: `${brand}0d` }}
-                >
-                  🍿
-                </div>
-              )}
+              <CardImage
+                src={img}
+                alt={it.label_en ?? it.label}
+                className="h-[96px] w-full object-cover"
+                fallback={
+                  <div
+                    className="flex h-[96px] w-full items-center justify-center text-[26px]"
+                    style={{ background: `${brand}0d` }}
+                  >
+                    🍿
+                  </div>
+                }
+              />
               <div className="flex flex-1 flex-col gap-1 p-2.5">
                 <span
                   className="line-clamp-2 text-[11.5px] leading-snug font-semibold"

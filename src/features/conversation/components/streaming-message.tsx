@@ -1,6 +1,5 @@
 import { AiThinkingPill } from '@/features/conversation/components/ai-thinking-pill'
 import { AiAssistantMessage } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message'
-import { AiAssistantMessageHeader } from '@/features/conversation/components/conversation-message/ai-assistant-message/ai-assistant-message-header'
 import type { StreamState } from '@/features/conversation/stores/streaming-store'
 import type { Message, NextMessageItem, WidgetTemplate } from '@/features/conversation/types/message'
 
@@ -185,7 +184,6 @@ export function parseStreamingMessage(stream: StreamState): Message {
  */
 export function StreamingMessage({ stream }: StreamingMessageProps) {
   const hasText = stream.text.trim().length > 0
-  const hasThinking = stream.thinking.trim().length > 0
 
   if (!hasText) {
     return <AiThinkingPill label={stream.thinking || undefined} />

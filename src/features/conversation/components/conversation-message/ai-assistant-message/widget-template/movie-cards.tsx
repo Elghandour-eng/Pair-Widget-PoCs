@@ -1,3 +1,4 @@
+import { CardImage } from './card-image'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { isDarkBackground } from '@/lib/utils'
 import type { MovieCardsTemplate } from '@/features/conversation/types/message'
@@ -36,24 +37,22 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
             style={cardStyle}
           >
             <div className="relative">
-              {it.image ? (
-                <img
-                  src={it.image}
-                  alt={it.title}
-                  className="h-[168px] w-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }}
-                />
-              ) : (
-                <div
-                  className="flex h-[168px] w-full items-center justify-center text-[28px]"
-                  style={{ background: `${brand}0d` }}
-                >
-                  🎬
-                </div>
-              )}
+              <CardImage
+                src={it.image}
+                alt={it.title}
+                className="h-[168px] w-full object-cover"
+                fallback={
+                  <div
+                    className="flex h-[168px] w-full flex-col items-center justify-center gap-2 px-2 text-center"
+                    style={{ background: `linear-gradient(160deg, ${brand}26, ${brand}0a)` }}
+                  >
+                    <span className="text-[30px]">🎬</span>
+                    <span className="line-clamp-3 text-[11px] font-semibold" style={{ color: brand }}>
+                      {isArabic ? (it.title_ar ?? it.title) : it.title}
+                    </span>
+                  </div>
+                }
+              />
               {it.rating && (
                 <span
                   className="absolute top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white"
