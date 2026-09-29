@@ -260,7 +260,7 @@ export function parseMarkdown(text: string): ReactNode[] {
         const currentBulletMatch = currentLine.match(/^(\s*)\*\s+(.+)$/)
         if (currentBulletMatch && currentBulletMatch[1] === indent) {
           const content = processInlineMarkdown(currentBulletMatch[2])
-          listItems.push(createElement('li', { key: `bullet-${keyCounter++}` }, ...content))
+          listItems.push(createElement('li', { key: `bullet-${keyCounter++}`, dir: 'auto' }, ...content))
           i++
         } else {
           break
@@ -295,7 +295,7 @@ export function parseMarkdown(text: string): ReactNode[] {
         const currentNumberedMatch = currentLine.match(/^(\s*)(\d+)\.\s+(.+)$/)
         if (currentNumberedMatch && currentNumberedMatch[1] === indent) {
           const content = processInlineMarkdown(currentNumberedMatch[3])
-          listItems.push(createElement('li', { key: `numbered-${keyCounter++}` }, ...content))
+          listItems.push(createElement('li', { key: `numbered-${keyCounter++}`, dir: 'auto' }, ...content))
           i++
         } else {
           break
@@ -313,7 +313,7 @@ export function parseMarkdown(text: string): ReactNode[] {
     // Regular line - process inline markdown
     if (line.trim()) {
       const processed = processInlineMarkdown(line)
-      processedLines.push(createElement('div', { key: `line-${keyCounter++}` }, ...processed))
+      processedLines.push(createElement('div', { key: `line-${keyCounter++}`, dir: 'auto' }, ...processed))
     } else {
       // Empty lines are rendered with vertical spacing (h-4) to simulate paragraph breaks
       processedLines.push(createElement('div', { key: `line-${keyCounter++}`, className: 'h-5' }))
