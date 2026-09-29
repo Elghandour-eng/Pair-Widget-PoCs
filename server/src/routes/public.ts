@@ -577,6 +577,486 @@ publicRouter.post(
  * site. Language and theme are served already rewritten from /pv/:lng/:theme, the
  * same switch the builder pushes, so the real SDK renders them with no local tricks.
  */
+/* --------------------------------- docs page -------------------------------- */
+
+/** One row of a reference table. */
+interface DocRow {
+  name: string
+  takes: string
+  what: string
+}
+
+const DOC_API: DocRow[] = [
+  { name: 'setLanguage(lang)', takes: '"en" | "ar"', what: 'Switches the language live. The whole design follows — copy, direction, fonts.' },
+  { name: 'setTheme(theme)', takes: '"light" | "dark"', what: 'Switches the theme live.' },
+  { name: 'setView(view)', takes: '{ lang?, theme? }', what: 'Both at once, in one re-fetch.' },
+  { name: 'updateMetadata(obj)', takes: '{ [key]: value }', what: 'Sets the values that fill your mapped headers and query params.' },
+  { name: 'getState()', takes: '—', what: 'Asks for the current view. The answer arrives as the state event.' },
+  { name: 'send(type, data)', takes: 'string, any', what: 'Sends any message yourself, for anything this API does not wrap.' },
+  { name: 'on(event, fn)', takes: 'string, function', what: 'Subscribes to what the widget sends back. Returns an unsubscribe function.' },
+  { name: 'off(event, fn)', takes: 'string, function', what: 'Removes a subscription.' },
+  { name: 'show() / hide()', takes: '—', what: 'Opens or closes the panel.' },
+  { name: 'toggle(show?)', takes: 'boolean?', what: 'Flips the panel, or forces a state.' },
+  { name: 'isOpen()', takes: '—', what: 'Whether the panel is open right now.' },
+  { name: 'setUser(user)', takes: 'object', what: 'Identifies the visitor.' },
+]
+
+const DOC_SEND: DocRow[] = [
+  { name: 'sdk:setView', takes: '{ lang?, theme? }', what: 'Re-fetches the config from the matching view. No reload.' },
+  { name: 'sdk:setLanguage', takes: '{ lang }', what: 'Language only, theme untouched.' },
+  { name: 'sdk:setTheme', takes: '{ theme }', what: 'Theme only, language untouched.' },
+  { name: 'sdk:getState', takes: '—', what: 'Answered with widget:state.' },
+  { name: 'metadata:update', takes: '{ [key]: value }', what: 'Merges into visitor metadata — this is what fills mapped headers and params.' },
+  { name: 'sdk:config', takes: '{ ...settings }', what: 'Merges host settings: position, launcher title, panel size.' },
+  { name: 'sdk:toggle', takes: '{ show? }', what: 'Opens or closes the panel.' },
+  { name: 'sdk:opened / sdk:closed', takes: '—', what: 'Tells the widget the host opened or closed it.' },
+  { name: 'sdk:dismissPreview', takes: '—', what: 'Dismisses the unread preview bubble.' },
+]
+
+const DOC_RECEIVE: DocRow[] = [
+  { name: 'ready', takes: '—', what: 'Mounted and configured. Wait for this before changing the view.' },
+  { name: 'state', takes: '{ lang, theme, metadataKeys }', what: 'The answer to getState(). "default" and "design" mean the saved design is in use.' },
+  { name: 'viewChanged', takes: '{ lang, theme }', what: 'The view changed — by your call, or by the visitor using the header controls.' },
+  { name: 'configUpdated', takes: '{ config }', what: 'The design was re-fetched; carries the resolved config.' },
+  { name: 'close', takes: '—', what: 'The visitor pressed close inside the widget. Hide your container.' },
+  { name: 'setColor', takes: '{ color }', what: 'The brand colour, so a launcher outside the iframe can match it.' },
+  { name: 'requestTokenRefresh', takes: '—', what: 'The visitor credential expired. Issue a new one and send it back.' },
+]
+
+const docRows = (rows: DocRow[]) =>
+  rows
+    .map((r) => `<tr><td><code>${esc(r.name)}</code></td><td><code class="dim">${r.takes}</code></td><td>${r.what}</td></tr>`)
+    .join('')
+
+/** A code block with its language chip and a copy button. */
+const codeBlock = (lang: string, body: string) =>
+  `<figure class="code"><figcaption><span>${esc(lang)}</span><button type="button" class="cp" aria-label="Copy">Copy</button></figcaption><pre><code>${esc(body)}</code></pre></figure>`
+
+/**
+ * The integration reference: the script, the control API, every message in both
+ * directions, how headers and params are filled, and the Android and iOS
+ * equivalents.
+ *
+ * Deliberately not tied to one widget — it is the doc you hand to whoever is
+ * integrating, on any widget. The id is a field at the top that rewrites every
+ * snippet on the page, so nobody has to hand-edit the samples.
+ */
+publicRouter.get(
+  '/docs',
+  asyncHandler(async (req, res) => {
+    const origin = `${req.protocol}://${req.get('host')}`
+    const sdkBase = sdkBaseUrl()
+    const base = sdkBase.startsWith('/') ? origin + sdkBase : sdkBase
+
+    const install = [
+      '<script>',
+      '  window.PairAiWidgetSettings = {',
+      `    beBaseUrl: '${origin}',`,
+      '  }',
+      "  ;(function (d, t) {",
+      `    var BASE_URL = '${base}'`,
+      '    var g = d.createElement(t), s = d.getElementsByTagName(t)[0]',
+      "    g.src = BASE_URL + '/sdk.js'",
+      '    g.async = true',
+      '    s.parentNode.insertBefore(g, s)',
+      '    g.onload = function () {',
+      '      window.PairAiWidgetSDK.run({',
+      "        widgetId: 'YOUR_WIDGET_ID',",
+      '        baseUrl: BASE_URL,',
+      '      })',
+      '    }',
+      "  })(document, 'script')",
+      '<\/script>',
+    ].join('\n')
+
+    const usage = [
+      '// Wait until the widget is ready, then drive it.',
+      "PairWidget.on('ready', function () {",
+      "  PairWidget.setLanguage('ar')",
+      "  PairWidget.setTheme('dark')",
+      "  PairWidget.updateMetadata({ user_id: '42', tier: 'gold' })",
+      '})',
+      '',
+      '// Listen to what the widget sends back.',
+      "PairWidget.on('viewChanged', function (d) {",
+      "  console.log('now', d.lang, d.theme)",
+      '})',
+      '',
+      "// '*' receives every message.",
+      "PairWidget.on('*', function (data, name) { console.log(name, data) })",
+      '',
+      '// Anything the API does not wrap:',
+      "PairWidget.send('sdk:setView', { lang: 'en', theme: 'light' })",
+    ].join('\n')
+
+    const android = [
+      '// There is no separate mobile SDK: the widget is a web page, so the app',
+      '// hosts it in a WebView and drives it with the same PairWidget API.',
+      'val webView = findViewById<WebView>(R.id.widget)',
+      'webView.settings.javaScriptEnabled = true',
+      '// The widget keeps the visitor\'s language and theme in localStorage.',
+      'webView.settings.domStorageEnabled = true',
+      '',
+      '// A page of yours that carries the install script.',
+      'webView.loadUrl(HOST_PAGE_URL)',
+      '',
+      '// --- Calling the widget -------------------------------------------------',
+      'fun setLanguage(lang: String) {',
+      '    webView.evaluateJavascript("PairWidget.setLanguage(\'$lang\')", null)',
+      '}',
+      '',
+      'fun setMetadata(json: String) {',
+      '    webView.evaluateJavascript("PairWidget.updateMetadata($json)", null)',
+      '}',
+      '',
+      '// --- Hearing back from it -----------------------------------------------',
+      'class Bridge(private val onEvent: (String, String) -> Unit) {',
+      '    @JavascriptInterface',
+      '    fun onWidgetEvent(name: String, payload: String) = onEvent(name, payload)',
+      '}',
+      '',
+      'webView.addJavascriptInterface(Bridge { name, payload ->',
+      '    Log.d("PairWidget", "$name -> $payload")',
+      '}, "Android")',
+      '',
+      '// Then, once onPageFinished has fired:',
+      'webView.evaluateJavascript(',
+      '    "PairWidget.on(\'*\', function (d, n) {" +',
+      '    "  Android.onWidgetEvent(n, JSON.stringify(d || {}))" +',
+      '    "})", null',
+      ')',
+    ].join('\n')
+
+    const ios = [
+      '// The same page and the same API, through WKWebView.',
+      'import WebKit',
+      '',
+      'let config = WKWebViewConfiguration()',
+      '// Swift receives the widget events here.',
+      'config.userContentController.add(self, name: "pairWidget")',
+      '',
+      'let webView = WKWebView(frame: .zero, configuration: config)',
+      'webView.load(URLRequest(url: hostPageURL))',
+      '',
+      '// --- Calling the widget -------------------------------------------------',
+      'func setLanguage(_ lang: String) {',
+      '    webView.evaluateJavaScript("PairWidget.setLanguage(\'\\(lang)\')")',
+      '}',
+      '',
+      'func setMetadata(_ json: String) {',
+      '    webView.evaluateJavaScript("PairWidget.updateMetadata(\\(json))")',
+      '}',
+      '',
+      '// --- Hearing back from it -----------------------------------------------',
+      '// Once the page has loaded:',
+      'webView.evaluateJavaScript("""',
+      '  PairWidget.on(\'*\', function (d, n) {',
+      '    window.webkit.messageHandlers.pairWidget.postMessage({',
+      '      name: n, data: d || {}',
+      '    })',
+      '  })',
+      '""")',
+      '',
+      'func userContentController(_ c: WKUserContentController,',
+      '                           didReceive message: WKScriptMessage) {',
+      '    guard message.name == "pairWidget" else { return }',
+      '    print("PairWidget event:", message.body)',
+      '}',
+    ].join('\n')
+
+    const metadata = [
+      '// Your page supplies the values; the widget attaches them to its requests',
+      '// using the mapping saved in the design. A key you never send is left out.',
+      'PairWidget.updateMetadata({',
+      "  user_id: '42',",
+      "  tier: 'gold',",
+      '})',
+    ].join('\n')
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'public, max-age=300')
+    res.send(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pair widget — integration guide</title>
+<link rel="icon" href="/pair-mark.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --pair: #4d98e2;
+    --ink: #0d1117; --body: #47505c; --muted: #6b7684;
+    --line: #e4e8ee; --line-soft: #eef1f6;
+    --page: #fbfcfd; --surface: #fff;
+    --accent: var(--pair); --deep: #2f6fac;
+    --code-bg: #0f1b2d; --code-fg: #cfdcea; --code-line: #1e3050;
+    --sidebar: 236px;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px }
+  body { margin: 0; background: var(--page); color: var(--body);
+    font: 400 15px/1.7 Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased }
+
+  /* --- Masthead ---------------------------------------------------------- */
+  .bar { position: sticky; top: 0; z-index: 30; background: rgba(255,255,255,.86);
+    backdrop-filter: saturate(160%) blur(12px); border-bottom: 1px solid var(--line) }
+  .bar-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 60px;
+    display: flex; align-items: center; gap: 14px }
+  .bar img { height: 22px }
+  .bar .tag { font-size: 12px; font-weight: 600; color: var(--muted);
+    border-inline-start: 1px solid var(--line); padding-inline-start: 14px }
+  .bar .sp { margin-inline-start: auto }
+  .idbox { display: flex; align-items: center; gap: 8px }
+  .idbox label { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap }
+  .idbox input { width: 210px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+    padding: 7px 10px; font: 600 11.5px/1 'JetBrains Mono', monospace; color: var(--ink);
+    outline: none; transition: border-color .16s, box-shadow .16s }
+  .idbox input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,152,226,.16) }
+
+  /* --- Shell ------------------------------------------------------------- */
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 24px;
+    display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); gap: 52px; align-items: start }
+  nav.side { position: sticky; top: 60px; padding: 38px 0 40px; max-height: calc(100dvh - 60px); overflow-y: auto }
+  nav.side h4 { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px; padding-inline-start: 12px }
+  nav.side a { display: block; text-decoration: none; color: var(--body); font-size: 13.5px; font-weight: 500;
+    padding: 7px 12px; border-radius: 8px; border-inline-start: 2px solid transparent; transition: all .15s }
+  nav.side a:hover { color: var(--ink); background: var(--line-soft) }
+  nav.side a.on { color: var(--deep); font-weight: 600; background: rgba(77,152,226,.08);
+    border-inline-start-color: var(--accent) }
+  main { padding: 38px 0 120px; min-width: 0 }
+
+  /* --- Type -------------------------------------------------------------- */
+  .hero h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.025em; color: var(--ink); margin: 0 0 12px; font-weight: 700 }
+  .hero p { font-size: 16.5px; line-height: 1.65; margin: 0; max-width: 62ch }
+  section { padding-top: 56px; scroll-margin-top: 80px }
+  section > h2 { font-size: 23px; letter-spacing: -.02em; color: var(--ink); margin: 0 0 8px; font-weight: 700 }
+  section > p, section > .note { max-width: 66ch }
+  p { margin: 0 0 14px }
+  h3 { font-size: 15px; color: var(--ink); font-weight: 650; margin: 30px 0 8px; letter-spacing: -.01em }
+  b, strong { color: var(--ink); font-weight: 600 }
+  a { color: var(--deep) }
+  code.inl { background: var(--line-soft); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1.5px 6px; font: 600 12.5px 'JetBrains Mono', monospace; color: var(--ink) }
+
+  /* --- Code -------------------------------------------------------------- */
+  .code { margin: 16px 0 0; border: 1px solid var(--code-line); border-radius: var(--radius); overflow: hidden;
+    background: var(--code-bg); box-shadow: 0 1px 2px rgba(13,17,23,.05), 0 14px 32px -24px rgba(13,17,23,.5) }
+  .code figcaption { display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 14px; border-bottom: 1px solid var(--code-line); background: rgba(255,255,255,.02) }
+  .code figcaption span { font: 600 10.5px/1 'JetBrains Mono', monospace; letter-spacing: .06em;
+    text-transform: uppercase; color: #7d93ad }
+  .code .cp { border: 1px solid var(--code-line); background: transparent; color: #9fb4cb; cursor: pointer;
+    border-radius: 7px; padding: 4px 11px; font: 600 11px Inter, sans-serif; transition: all .16s }
+  .code .cp:hover { color: #fff; border-color: #38557f; background: rgba(255,255,255,.05) }
+  .code .cp.done { color: #7fd6a0; border-color: #2c5c42 }
+  .code pre { margin: 0; padding: 15px 17px; overflow-x: auto; direction: ltr; text-align: left }
+  .code code { font: 400 12.5px/1.8 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
+
+  /* --- Tables ------------------------------------------------------------ */
+  .tbl { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; background: var(--surface) }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px }
+  th { text-align: start; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); padding: 11px 14px; background: #f7f9fb; border-bottom: 1px solid var(--line) }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; line-height: 1.6 }
+  tr:last-child td { border-bottom: 0 }
+  td code { font: 600 12px 'JetBrains Mono', monospace; color: var(--ink); word-break: break-word }
+  td code.dim { font-weight: 400; color: var(--muted) }
+  td:first-child { white-space: nowrap }
+  @media (max-width: 720px) { td:first-child { white-space: normal } }
+
+  /* --- Tabs -------------------------------------------------------------- */
+  .tabs { display: inline-flex; gap: 2px; padding: 3px; margin-top: 18px;
+    border: 1px solid var(--line); background: var(--line-soft); border-radius: 10px }
+  .tabs button { border: 0; background: none; cursor: pointer; border-radius: 7px;
+    font: 600 12.5px Inter, sans-serif; color: var(--muted); padding: 7px 15px; transition: all .16s }
+  .tabs button:hover { color: var(--ink) }
+  .tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(13,17,23,.08) }
+  .tabpane { display: none } .tabpane.on { display: block }
+
+  .note { border-inline-start: 3px solid var(--accent); background: rgba(77,152,226,.05);
+    border-radius: 0 10px 10px 0; padding: 13px 16px; margin: 20px 0 0; font-size: 13.5px }
+  [dir="rtl"] .note { border-radius: 10px 0 0 10px }
+  .note b { display: block; margin-bottom: 2px }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0 }
+    nav.side { position: static; max-height: none; padding: 20px 0 0;
+      display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--line) }
+    nav.side h4 { display: none }
+    nav.side a { white-space: nowrap; border-inline-start: 0; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0 }
+    nav.side a.on { border-inline-start: 0; border-bottom-color: var(--accent) }
+    main { padding-top: 24px }
+    .idbox label { display: none } .idbox input { width: 150px }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <img src="/pair-wordmark.svg" alt="Pair" />
+    <span class="tag">Widget integration</span>
+    <div class="sp idbox">
+      <label for="wid">Widget ID</label>
+      <input id="wid" value="YOUR_WIDGET_ID" spellcheck="false" aria-label="Your widget ID" />
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="side">
+    <h4>Guide</h4>
+    <a href="#install">Install</a>
+    <a href="#control">Control API</a>
+    <a href="#send">Messages you send</a>
+    <a href="#receive">Messages you receive</a>
+    <a href="#headers">Headers &amp; params</a>
+    <a href="#mobile">Android &amp; iOS</a>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h1>Put the widget anywhere, drive it from your own code</h1>
+      <p>One script on the web, a WebView in an app, and the same control API in both. Paste your widget ID above and every snippet on this page fills itself in.</p>
+    </div>
+
+    <section id="install">
+      <h2>Install</h2>
+      <p>Paste this before <code class="inl">&lt;/body&gt;</code>. It loads the SDK, which builds the launcher and the panel and exposes <code class="inl">window.PairWidget</code>.</p>
+      ${codeBlock('html', install)}
+    </section>
+
+    <section id="control">
+      <h2>Control API</h2>
+      <p><code class="inl">window.PairWidget</code> — also available as <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
+      ${codeBlock('javascript', usage)}
+      <div class="tbl"><table>
+        <thead><tr><th>Call</th><th>Takes</th><th>What it does</th></tr></thead>
+        <tbody>${docRows(DOC_API)}</tbody>
+      </table></div>
+    </section>
+
+    <section id="send">
+      <h2>Messages you send</h2>
+      <p>Every call above is a <code class="inl">postMessage</code> underneath. Send one yourself with <code class="inl">PairWidget.send(type, data)</code> when you need something the API does not wrap.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Type</th><th>Payload</th><th>What it does</th></tr></thead>
+        <tbody>${docRows(DOC_SEND)}</tbody>
+      </table></div>
+    </section>
+
+    <section id="receive">
+      <h2>Messages you receive</h2>
+      <p>Subscribe with <code class="inl">PairWidget.on(name, fn)</code>, using the name without its <code class="inl">widget:</code> prefix. <code class="inl">'*'</code> receives every one.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Event</th><th>Payload</th><th>When it fires</th></tr></thead>
+        <tbody>${docRows(DOC_RECEIVE)}</tbody>
+      </table></div>
+    </section>
+
+    <section id="headers">
+      <h2>Headers &amp; query params</h2>
+      <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design: it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it. Your page only supplies the values.</p>
+      ${codeBlock('javascript', metadata)}
+      <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, then sending <code class="inl">user_id</code> fills that header — and a key you never send is simply left out of the request.</div>
+    </section>
+
+    <section id="mobile">
+      <h2>Android &amp; iOS</h2>
+      <p>There is no separate mobile SDK, and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
+      <div class="tabs" id="platTabs">
+        <button type="button" data-p="android" class="on">Android</button>
+        <button type="button" data-p="ios">iOS</button>
+      </div>
+      <div class="tabpane on" data-p="android">
+        <h3>Kotlin — WebView</h3>
+        <p>Two settings matter: JavaScript, and DOM storage — the widget keeps the visitor's language and theme choice in <code class="inl">localStorage</code>.</p>
+        ${codeBlock('kotlin', android)}
+      </div>
+      <div class="tabpane" data-p="ios">
+        <h3>Swift — WKWebView</h3>
+        <p>The same, with events arriving through a <code class="inl">WKScriptMessageHandler</code> instead of a JavaScript interface.</p>
+        ${codeBlock('swift', ios)}
+      </div>
+      <div class="note"><b>While testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
+    </section>
+  </main>
+</div>
+
+<script>
+  /* The widget ID is one field, and it rewrites every sample on the page, so
+     nobody has to hand-edit a snippet before pasting it. */
+  var PLACEHOLDER = 'YOUR_WIDGET_ID'
+  var input = document.getElementById('wid')
+  var codes = [].slice.call(document.querySelectorAll('.code code'))
+  var originals = codes.map(function (el) { return el.textContent })
+
+  function applyId() {
+    var v = (input.value || '').trim() || PLACEHOLDER
+    codes.forEach(function (el, i) {
+      el.textContent = originals[i].split(PLACEHOLDER).join(v)
+    })
+    try { localStorage.setItem('pair.docs.wid', v === PLACEHOLDER ? '' : v) } catch (e) {}
+  }
+  try {
+    var saved = localStorage.getItem('pair.docs.wid')
+    if (saved) { input.value = saved; applyId() }
+  } catch (e) {}
+  input.addEventListener('input', applyId)
+  input.addEventListener('focus', function () { input.select() })
+
+  /* Copy buttons */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.cp')
+    if (!btn) return
+    var code = btn.closest('.code').querySelector('code')
+    var done = function () {
+      btn.textContent = 'Copied'
+      btn.classList.add('done')
+      setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done') }, 1600)
+    }
+    if (navigator.clipboard) navigator.clipboard.writeText(code.textContent).then(done, function () {})
+  })
+
+  /* Platform tabs */
+  document.getElementById('platTabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-p]')
+    if (!btn) return
+    var want = btn.getAttribute('data-p')
+    ;[].forEach.call(document.querySelectorAll('#platTabs button'), function (b) {
+      b.classList.toggle('on', b === btn)
+    })
+    ;[].forEach.call(document.querySelectorAll('.tabpane'), function (p) {
+      p.classList.toggle('on', p.getAttribute('data-p') === want)
+    })
+  })
+
+  /* The sidebar follows the section you are reading. */
+  var links = [].slice.call(document.querySelectorAll('nav.side a'))
+  var byId = {}
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a })
+  var spy = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return
+      links.forEach(function (a) { a.classList.remove('on') })
+      var a = byId[en.target.id]
+      if (a) a.classList.add('on')
+    })
+  }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 })
+  ;[].forEach.call(document.querySelectorAll('section[id]'), function (s) { spy.observe(s) })
+<\/script>
+</body>
+</html>`)
+  }),
+)
+
 publicRouter.get(
   '/widget/:widgetId/embed',
   asyncHandler(async (req, res) => {
@@ -980,6 +1460,8 @@ ${sdkSnippet}
   .roles label:hover span { border-color: var(--accent); color: var(--deep) }
   .roles input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff }
   .roles input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+  .role-other { margin-top: 6px }
+  .role-other.hidden { display: none }
 
   /* --- On-page panels: notes and developer, always visible on the test page --- */
   .panel { display: flex; flex-direction: column; min-height: 0; padding: 16px;
@@ -1096,6 +1578,21 @@ ${sdkSnippet}
     scrollbar-width: thin; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) }
   #devCode .k { color: #8fb8f0 } #devCode .s { color: #a3d99a } #devCode .hl { color: #fff; background: color-mix(in srgb, var(--pair) 55%, transparent); border-radius: 4px; padding: 0 3px }
   .dev-row { display: flex; gap: 8px; margin-top: 10px }
+
+  /* The console's sending half: the API as buttons, and a composer for anything else. */
+  .dev-send { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 10px; margin-bottom: 10px }
+  .dev-send > label { display: block; font-size: 9.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); margin: 9px 0 5px }
+  .dev-send > label:first-child { margin-top: 0 }
+  .dev-quick { display: flex; flex-wrap: wrap; gap: 5px }
+  .dev-quick button { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; cursor: pointer;
+    font: 700 10.5px/1 Menlo, monospace; padding: 6px 9px; transition: all .16s }
+  .dev-quick button:hover { border-color: var(--accent); color: var(--deep); background: var(--a50) }
+  .dev-quick button:active { transform: scale(.96) }
+  .dev-send .field, .dev-send textarea { width: 100%; direction: ltr; text-align: left;
+    font: 500 10.5px/1.7 Menlo, Consolas, monospace }
+  .dev-send textarea { min-height: 62px; resize: vertical }
+  .dev-send .bad { border-color: var(--alert) }
   .dev-row .btn { flex: 1 }
   /* Hard viewport-derived cap: however the surrounding layout flows, the log
      never grows the page — past this height it scrolls internally. */
@@ -1329,9 +1826,43 @@ ${sdkSnippet}
       <pre id="devCode" dir="ltr"></pre>
       <div class="dev-row">
         <button class="btn btn-sm" id="devCopy" type="button" data-i18n="dev.copy">Copy script</button>
+        <a class="btn btn-ghost btn-sm" id="devDocs" href="/api/public/docs" target="_blank" rel="noopener" data-i18n="dev.docs">Integration docs →</a>
       </div>
     </div>
     <div class="dev-pane" id="devPaneEvents">
+      <div class="dev-send">
+        <label data-i18n="dev.callApi">Call the API</label>
+        <div class="dev-quick" id="devQuick">
+          <button type="button" data-call="setLanguage" data-arg="en">setLanguage('en')</button>
+          <button type="button" data-call="setLanguage" data-arg="ar">setLanguage('ar')</button>
+          <button type="button" data-call="setTheme" data-arg="light">setTheme('light')</button>
+          <button type="button" data-call="setTheme" data-arg="dark">setTheme('dark')</button>
+          <button type="button" data-call="show">show()</button>
+          <button type="button" data-call="hide">hide()</button>
+          <button type="button" data-call="toggle">toggle()</button>
+          <button type="button" data-call="getState">getState()</button>
+        </div>
+
+        <label for="mdBody" data-i18n="dev.metadata">Metadata — feeds the mapped headers &amp; params</label>
+        <textarea id="mdBody" class="field" spellcheck="false" dir="ltr">{ "user_id": "42" }</textarea>
+        <div class="dev-row"><button class="btn btn-ghost btn-sm" id="mdSend" type="button" data-i18n="dev.mdSend">updateMetadata()</button></div>
+
+        <label for="msgType" data-i18n="dev.custom">Send any message yourself</label>
+        <input id="msgType" class="field" list="msgTypes" spellcheck="false" dir="ltr" value="sdk:setView" />
+        <datalist id="msgTypes">
+          <option value="sdk:setView"></option>
+          <option value="sdk:setLanguage"></option>
+          <option value="sdk:setTheme"></option>
+          <option value="sdk:getState"></option>
+          <option value="sdk:config"></option>
+          <option value="sdk:toggle"></option>
+          <option value="sdk:dismissPreview"></option>
+          <option value="metadata:update"></option>
+        </datalist>
+        <textarea id="msgBody" class="field" spellcheck="false" dir="ltr">{ "lang": "ar", "theme": "dark" }</textarea>
+        <div class="dev-row"><button class="btn btn-sm" id="msgSend" type="button" data-i18n="dev.send">Send</button></div>
+      </div>
+
       <div class="knob" style="margin-bottom:10px">
         <span class="evt-live" data-i18n="dev.live">Live</span>
         <button class="btn btn-ghost btn-sm" id="evtClear" type="button" data-i18n="dev.clear">Clear</button>
@@ -1476,7 +2007,9 @@ ${sdkSnippet}
           <label><input type="radio" name="tRole" value="Developer" /><span data-i18n="role.developer">Developer</span></label>
           <label><input type="radio" name="tRole" value="Product" /><span data-i18n="role.product">Product</span></label>
           <label><input type="radio" name="tRole" value="QA" /><span data-i18n="role.qa">QA</span></label>
+          <label><input type="radio" name="tRole" value="Other" /><span data-i18n="role.other">Other</span></label>
         </div>
+        <input id="tRoleOther" class="field role-other hidden" maxlength="40" data-i18n-ph="role.otherPh" placeholder="Your title" aria-label="Your title" />
       </div>
       <button class="btn" type="submit" data-i18n="gate.start">Start →</button>
     </div>
@@ -1563,6 +2096,13 @@ ${sdkSnippet}
       'h.tip2': 'Flip language and theme from the top bar',
       'h.tip3': 'Spot something off? Leave a note',
       'dev.title': 'Developer', 'dev.script': 'Install script', 'dev.events': 'postMessages',
+      'dev.docs': 'Integration docs \u2192',
+      'dev.callApi': 'Call the API', 'dev.metadata': 'Metadata — feeds the mapped headers & params',
+      'dev.mdSend': 'updateMetadata()', 'dev.custom': 'Send any message yourself', 'dev.send': 'Send',
+      'dev.noSdk': 'The widget has not loaded yet', 'dev.badJson': 'That is not valid JSON',
+      'dev.needType': 'Give the message a type', 'dev.sent': 'Sent {t}', 'dev.mdSent': 'Metadata updated',
+      'dev.noFn': '{f}() is not in this SDK build', 'dev.oldSdk': 'This SDK build has no send() — rebuild it',
+      'role.other': 'Other', 'role.otherPh': 'Your title', 't.roleReq': 'Add your title',
       'dev.lang': 'Language', 'dev.theme': 'Theme', 'dev.thDefault': 'Design', 'dev.thLight': 'Light', 'dev.thDark': 'Dark',
       'dev.pos': 'Position', 'dev.posR': 'Right', 'dev.posL': 'Left',
       'dev.launcher': 'Launcher', 'dev.tyStd': 'Bubble', 'dev.tyExp': 'Label', 'dev.tyIcon': 'Icon',
@@ -1614,6 +2154,13 @@ ${sdkSnippet}
       'h.tip2': 'بدّل اللغة والثيم من الشريط العلوي',
       'h.tip3': 'لاحظت شيئًا؟ اترك ملاحظة',
       'dev.title': 'المطوّر', 'dev.script': 'سكربت التركيب', 'dev.events': 'postMessages',
+      'dev.docs': 'دليل الربط \u2190',
+      'dev.callApi': 'نادِ الـ API', 'dev.metadata': 'الـ Metadata — بتغذّي الهيدرز والباراميترز المربوطة',
+      'dev.mdSend': 'updateMetadata()', 'dev.custom': 'ابعت أي رسالة بنفسك', 'dev.send': 'إرسال',
+      'dev.noSdk': 'الودجت لسه ما حمّلش', 'dev.badJson': 'الـ JSON ده مش صالح',
+      'dev.needType': 'اكتب نوع الرسالة', 'dev.sent': 'اتبعت {t}', 'dev.mdSent': 'الـ Metadata اتحدّثت',
+      'dev.noFn': '{f}() مش موجودة في نسخة الـ SDK دي', 'dev.oldSdk': 'نسخة الـ SDK دي مفيهاش send() — اعمل build',
+      'role.other': 'أخرى', 'role.otherPh': 'مسمّاك الوظيفي', 't.roleReq': 'اكتب مسمّاك الوظيفي',
       'dev.lang': 'اللغة', 'dev.theme': 'الثيم', 'dev.thDefault': 'التصميم', 'dev.thLight': 'فاتح', 'dev.thDark': 'داكن',
       'dev.pos': 'المكان', 'dev.posR': 'يمين', 'dev.posL': 'يسار',
       'dev.launcher': 'المُشغّل', 'dev.tyStd': 'فقاعة', 'dev.tyExp': 'بعنوان', 'dev.tyIcon': 'أيقونة',
@@ -1986,15 +2533,32 @@ ${sdkSnippet}
     $('whoRole').textContent = t.role || ''
     $('whoAv').textContent = (t.name || '?').trim().charAt(0).toUpperCase()
   }
+  var PRESET_ROLES = { Designer: 1, Developer: 1, Product: 1, QA: 1 }
+  function syncRoleOther() {
+    var picked = (document.querySelector('input[name="tRole"]:checked') || {}).value
+    $('tRoleOther').classList.toggle('hidden', picked !== 'Other')
+  }
   function showGate(prefill) {
     if (prefill) {
       $('tName').value = prefill.name || ''
-      var radio = document.querySelector('input[name="tRole"][value="' + (prefill.role || 'Designer') + '"]')
+      // A saved role that is not one of the presets was typed in, so it comes
+      // back in the free-text field with "Other" selected.
+      var saved = prefill.role || 'Designer'
+      var isPreset = !!PRESET_ROLES[saved]
+      var radio = document.querySelector('input[name="tRole"][value="' + (isPreset ? saved : 'Other') + '"]')
       if (radio) radio.checked = true
+      $('tRoleOther').value = isPreset ? '' : saved
     }
+    syncRoleOther()
     $('gate').classList.remove('hidden')
     setTimeout(function () { $('tName').focus() }, 60)
   }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="tRole"]'), function (r) {
+    r.addEventListener('change', function () {
+      syncRoleOther()
+      if (r.value === 'Other') $('tRoleOther').focus()
+    })
+  })
   $('gateForm').addEventListener('submit', function (e) {
     e.preventDefault()
     var name = $('tName').value.trim()
@@ -2003,6 +2567,14 @@ ${sdkSnippet}
       toast(tr('t.nameReq'), 'err'); $('tName').focus(); return
     }
     var role = (document.querySelector('input[name="tRole"]:checked') || {}).value || 'Other'
+    if (role === 'Other') {
+      var typed = $('tRoleOther').value.trim()
+      if (!typed) {
+        e.target.classList.remove('shake'); void e.target.offsetWidth; e.target.classList.add('shake')
+        toast(tr('t.roleReq'), 'err'); $('tRoleOther').focus(); return
+      }
+      role = typed.slice(0, 40)
+    }
     var tester = { name: name.slice(0, 60), role: role }
     store(TESTER_KEY, tester)
     syncWho(tester)
@@ -2205,6 +2777,61 @@ ${sdkSnippet}
     if (body.length > 4000) body = body.slice(0, 4000) + ' …'
     evtPush({ at: Date.now(), dir: isW ? 'w' : 's', type: d.type, body: body })
   }
+  /* The sending half of the console. Everything here goes through the very same
+     window.PairWidget API a host page has, so what works in this panel is
+     exactly what works in a customer's own script. */
+  function needSdk() {
+    var s = sdk()
+    if (!s) toast(tr('dev.noSdk'), 'err')
+    return s
+  }
+  function readJson(el) {
+    var raw = el.value.trim()
+    if (!raw) return {}
+    try {
+      var parsed = JSON.parse(raw)
+      el.classList.remove('bad')
+      return parsed
+    } catch (err) {
+      el.classList.add('bad')
+      toast(tr('dev.badJson'), 'err')
+      return null
+    }
+  }
+  $('devQuick').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-call]')
+    if (!btn) return
+    var s = needSdk()
+    if (!s) return
+    var fn = btn.getAttribute('data-call')
+    var arg = btn.getAttribute('data-arg')
+    if (typeof s[fn] !== 'function') return toast(tr('dev.noFn').replace('{f}', fn), 'err')
+    try {
+      arg === null ? s[fn]() : s[fn](arg)
+    } catch (err) {
+      toast(String(err && err.message || err), 'err')
+    }
+  })
+  $('mdSend').addEventListener('click', function () {
+    var s = needSdk()
+    if (!s) return
+    var body = readJson($('mdBody'))
+    if (body === null) return
+    s.updateMetadata(body)
+    toast(tr('dev.mdSent'))
+  })
+  $('msgSend').addEventListener('click', function () {
+    var s = needSdk()
+    if (!s) return
+    var type = $('msgType').value.trim()
+    if (!type) return toast(tr('dev.needType'), 'err')
+    var body = readJson($('msgBody'))
+    if (body === null) return
+    if (typeof s.send === 'function') s.send(type, body)
+    else return toast(tr('dev.oldSdk'), 'err')
+    toast(tr('dev.sent').replace('{t}', type))
+  })
+
   // The log lives across reloads: replay it (oldest first, so newest ends on top).
   evtStore().slice().reverse().forEach(evtRow)
   $('evtClear').addEventListener('click', function () {
