@@ -13,6 +13,7 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const LO = 'widget_v2_config.messages.loadingOlder'
   const CU = 'widget_v2_config.messages.customerMessages'
   const FB = 'widget_v2_config.messages.feedback'
+  const SG = 'widget_v2_config.messages.suggestions'
   return (
     <div className="space-y-7">
       <section>
@@ -56,6 +57,17 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
           <ColorField label={t('builder.msgs.loadMoreBg')} path={`${LO}.background`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.text')} path={`${LO}.textColor`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.loadMoreSpinner')} path={`${LO}.spinnerColor`} get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.msgs.chipsHead')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.msgs.chipsAlign')} path={`${SG}.align`} options={['start', 'center', 'end']} keyPrefix="builder.msgs.chipsAlign" fallback="center" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.chipsRadius')} path={`${SG}.radius`} min={0} max={40} step={1} fallback={999} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.chipsBg')} path={`${SG}.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.chipsText')} path={`${SG}.textColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.chipsBorder')} path={`${SG}.borderColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.chipsSize')} path={`${SG}.fontSize`} min={10} max={18} step={0.5} fallback={13.5} unit="px" get={get} set={set} disabled={disabled} />
         </div>
       </section>
       <section>
