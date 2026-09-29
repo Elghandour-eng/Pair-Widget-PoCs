@@ -789,6 +789,16 @@ publicRouter.get(
       '})',
     ].join('\n')
 
+    const androidPerms = [
+      '<!-- AndroidManifest.xml — INTERNET is required; the',
+      '     rest only if the widget uses voice messages or',
+      '     lets the visitor attach a photo. -->',
+      '<uses-permission android:name="android.permission.INTERNET" />',
+      '<uses-permission android:name="android.permission.RECORD_AUDIO" />',
+      '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
+      '<uses-permission android:name="android.permission.CAMERA" />',
+    ].join('\n')
+
     const android = [
       '// The widget is a web page, so the app hosts it in',
       '// a WebView and drives it with the same API.',
@@ -796,6 +806,15 @@ publicRouter.get(
       'webView.settings.javaScriptEnabled = true',
       '// The view choice lives in localStorage.',
       'webView.settings.domStorageEnabled = true',
+      'webView.settings.mediaPlaybackRequiresUserGesture = false',
+      '',
+      '// Voice messages: pass the page\'s mic request through',
+      '// (ask for RECORD_AUDIO at runtime before this fires).',
+      'webView.webChromeClient = object : WebChromeClient() {',
+      '    override fun onPermissionRequest(request: PermissionRequest) {',
+      '        request.grant(request.resources)',
+      '    }',
+      '}',
       'webView.loadUrl(HOST_PAGE_URL)',
       '',
       '// --- Calling the widget ---------------------------',
@@ -823,6 +842,18 @@ publicRouter.get(
       ')',
     ].join('\n')
 
+    const iosPerms = [
+      '<!-- Info.plist — only if the widget uses voice',
+      '     messages or photo attachments. Without the key,',
+      '     iOS kills the app on first use. -->',
+      '<key>NSMicrophoneUsageDescription</key>',
+      '<string>Voice messages in support chat</string>',
+      '<key>NSPhotoLibraryUsageDescription</key>',
+      '<string>Attach a photo to a support chat</string>',
+      '<key>NSCameraUsageDescription</key>',
+      '<string>Attach a photo to a support chat</string>',
+    ].join('\n')
+
     const ios = [
       '// The same page and the same API, via WKWebView.',
       'import WebKit',
@@ -830,9 +861,22 @@ publicRouter.get(
       'let config = WKWebViewConfiguration()',
       '// Swift receives the widget events here.',
       'config.userContentController.add(self, name: "pairWidget")',
+      '// Let the widget play audio without a tap first.',
+      'config.allowsInlineMediaPlayback = true',
+      'config.mediaTypesRequiringUserActionForPlayback = []',
       '',
       'let webView = WKWebView(frame: .zero, configuration: config)',
+      'webView.uiDelegate = self',
       'webView.load(URLRequest(url: hostPageURL))',
+      '',
+      '// Voice messages (iOS 15+): grant the page\'s mic',
+      '// request; iOS still shows its own prompt once.',
+      'func webView(_ webView: WKWebView,',
+      '             decideMediaCapturePermissionsFor origin: WKSecurityOrigin,',
+      '             initiatedBy frame: WKFrameInfo,',
+      '             type: WKMediaCaptureType) async -> WKPermissionDecision {',
+      '    return .grant',
+      '}',
       '',
       '// --- Calling the widget ---------------------------',
       'func setLanguage(_ lang: String) {',
@@ -1153,6 +1197,11 @@ publicRouter.get(
         <div class="sh"><i>${ico('mobile')}06</i><h2>Android &amp; iOS</h2></div>
         <p>There is no separate mobile SDK and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
         <p>Two settings matter on Android — JavaScript, and DOM storage, where the widget keeps the visitor's language and theme choice.</p>
+        <ul class="bul">
+          <li><b>Internet</b> is the only permission every install needs (Android; iOS apps have it by default).</li>
+          <li><b>Microphone</b> — manifest / plist entry plus the grant handler below — only if the widget offers voice messages.</li>
+          <li><b>Camera &amp; photos</b> only if the widget lets the visitor attach an image.</li>
+        </ul>
         <div class="note"><b>Testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
       </div>
       <div class="aside">
@@ -1160,8 +1209,8 @@ publicRouter.get(
           <button type="button" data-p="android" class="on">Android</button>
           <button type="button" data-p="ios">iOS</button>
         </div>
-        <div class="pane on" data-p="android">${codeBlock('kotlin', android)}</div>
-        <div class="pane" data-p="ios">${codeBlock('swift', ios)}</div>
+        <div class="pane on" data-p="android">${codeBlock('xml', androidPerms)}${codeBlock('kotlin', android)}</div>
+        <div class="pane" data-p="ios">${codeBlock('xml', iosPerms)}${codeBlock('swift', ios)}</div>
       </div>
     </section>
   </main>
