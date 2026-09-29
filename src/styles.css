@@ -415,3 +415,16 @@ button.epr-btn.epr-emoji {
 .streaming-live .ai-feedback-row {
   display: none;
 }
+
+/* Suggestion chips: quiet neutral pills; the brand appears on hover only */
+.pair-chip {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+.pair-chip:hover {
+  background: color-mix(in srgb, var(--chip-brand, #b3202c) 12%, transparent) !important;
+  color: var(--chip-brand, #b3202c) !important;
+  transform: translateY(-1px);
+}
