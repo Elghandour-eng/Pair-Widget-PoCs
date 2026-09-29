@@ -84,6 +84,15 @@ function hydrateComponents(list: unknown): unknown {
       const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : EXPERIENCE_ITEMS
       return { ...comp, data: { title: 'تجاربنا السينمائية ✨', title_en: 'Our cinema experiences ✨', items } }
     }
+    if (comp.template === 'app_links') {
+      return {
+        ...comp,
+        data: {
+          ios: 'https://apps.apple.com/in/app/cinescape-kncc/id443396586',
+          android: 'https://play.google.com/store/apps/details?id=com.cinescape&hl=en_IN',
+        },
+      }
+    }
     return comp
   })
 }
@@ -499,29 +508,71 @@ interface WidgetMessage {
   widget_template?: Record<string, unknown>
 }
 
-/** Stage-by-stage thinking phrases, per language — one is picked at random each time. */
-const THINK_PHRASES: Record<string, { ar: string[]; en: string[] }> = {
+/**
+ * Context-aware thinking narration. The opener is derived from what the
+ * customer actually asked; tool stages surface what is really being looked
+ * up, so the line reads like genuine work, not filler.
+ */
+const THINK_TOPICS: Array<{ re: RegExp; ar: string[]; en: string[] }> = [
+  { re: /سعر|اسعار|أسعار|بكم|price|cost|how much/i,
+    ar: ['أطلع لك الأسعار المعتمدة عندنا', 'أتأكد لك من أسعار التذاكر بالضبط'],
+    en: ['Pulling up our current ticket prices', 'Checking the exact prices for you'] },
+  { re: /دوام|مفتوح|يسكر|ساعات|hours|open|close/i,
+    ar: ['أشيك على الدوام الحين', 'أتأكد من ساعات العمل لهاليوم'],
+    en: ['Checking the opening hours right now', "Verifying today's working hours"] },
+  { re: /وين|أقرب|اقرب|موقع|لوكيشن|فرع|where|near|location/i,
+    ar: ['أحدد لك أقرب خيار مناسب', 'أطابق المواقع وأشوف الأنسب لك'],
+    en: ['Working out your best nearby option', 'Matching locations to find the closest'] },
+  { re: /تجارب|تجربة|فرق|قارن|imax|dolby|4dx|screenx|vip|skyline|experience|difference|compare/i,
+    ar: ['أقارن لك التجارب وأطلع الزبدة', 'أراجع مميزات كل تجربة عشان أنصحك صح'],
+    en: ['Comparing the experiences for you', 'Weighing up each format to advise you right'] },
+  { re: /حجز|احجز|أحجز|تذكرة|تذاكر|book|ticket/i,
+    ar: ['أشوف لك أسهل طريقة تحجز فيها', 'أجهز لك خطوات الحجز'],
+    en: ['Finding you the easiest way to book', 'Lining up the booking steps'] },
+]
+const THINK_GENERIC = {
   start: {
-    ar: ['قاعد أفكر شلون أساعدك 🍿', 'خلني أشوف لك أحسن جواب', 'ثواني وحدة معاك', 'يالله، خلني أفكر لك'],
-    en: ['Thinking how best to help 🍿', 'Give me a second', 'Looking into that for you'],
+    ar: ['خلني أفهم طلبك عدل', 'أرتب أفكاري وأرد عليك', 'لحظة، أفكر بأفضل جواب لك'],
+    en: ['Let me get this right', 'Gathering my thoughts', 'Thinking through the best answer'],
   },
   route: {
-    ar: ['ثواني، قاعد أجهّز لك الجواب', 'قاعد أوصلك بالمعلومة الصح', 'أرتب لك الرد الحين'],
-    en: ['Getting your answer ready', 'Putting it together for you'],
+    ar: ['عرفت وين ألقى جوابك، جاري التجهيز', 'حددت المعلومة اللي تحتاجها، ثواني'],
+    en: ['Found where your answer lives, one sec', 'Zeroed in on what you need'],
   },
   locations: {
-    ar: ['قاعد أجيب لك بيانات السينمات من النظام 📍', 'أسحب لك مواقع السينمات الحين 📍', 'أدور لك على السينما المناسبة 📍'],
-    en: ['Fetching our cinema locations 📍', 'Pulling up the cinemas for you 📍'],
+    ar: ['أفتح خريطة سينماتنا وأطابق المواقع', 'أراجع عناوين ودوام كل سينما'],
+    en: ['Opening our cinema map and matching locations', 'Going through every cinema address and hours'],
   },
   knowledge: {
-    ar: ['قاعد أراجع معلوماتنا الرسمية عشان أتأكد لك', 'أتأكد لك من التفاصيل بالضبط', 'أقلب في المعلومات وأجيب لك الزبدة'],
-    en: ['Checking our official info for you', 'Double-checking the details'],
+    ar: ['أقلب في معلوماتنا الرسمية وأتحقق منها', 'أراجع التفاصيل من المصدر قبل ما أجاوبك'],
+    en: ['Digging through our official info', 'Verifying the details at the source before answering'],
   },
 }
 
-function pickThink(stage: keyof typeof THINK_PHRASES, lang: 'ar' | 'en'): string {
-  const pool = THINK_PHRASES[stage][lang]
-  return pool[Math.floor(Math.random() * pool.length)]
+function pickFrom(pool: string[], avoid?: string): string {
+  const options = pool.filter((x) => x !== avoid)
+  const list = options.length > 0 ? options : pool
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+/** The opening line reflects the topic of the customer's own message. */
+function thinkOpener(query: string, lang: 'ar' | 'en', avoid?: string): string {
+  for (const t of THINK_TOPICS) {
+    if (t.re.test(query)) return pickFrom(t[lang], avoid)
+  }
+  return pickFrom(THINK_GENERIC.start[lang], avoid)
+}
+
+/** A knowledge lookup names what it is actually searching for. */
+function thinkKnowledge(toolInput: string, lang: 'ar' | 'en', avoid?: string): string {
+  try {
+    const parsed = JSON.parse(toolInput) as Record<string, unknown>
+    const q = String(parsed.query ?? parsed.q ?? parsed.question ?? '').trim()
+    if (q && q.length <= 60) return lang === 'ar' ? `أبحث في معلوماتنا عن «${q}»` : `Searching our info for “${q}”`
+  } catch {
+    /* fall through to the generic line */
+  }
+  return pickFrom(THINK_GENERIC.knowledge[lang], avoid)
 }
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
@@ -546,10 +597,9 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
 }
 
 /**
- * A widget location share ("📍 موقعي: 29.3, 47.9") becomes the full machine
- * message the agent expects: coordinates, reverse-geocoded address, exact
- * distances, and a far-outside-Kuwait note when applicable. The customer's
- * bubble keeps the short text; only the engine sees this.
+ * A widget location share becomes the full machine message the agent expects:
+ * coordinates, reverse-geocoded address, exact distances, and a far-outside-
+ * Kuwait note. The customer's bubble keeps the short text.
  */
 async function enrichLocationMessage(content: string, meta?: unknown): Promise<string | null> {
   let lat = NaN, lng = NaN
@@ -577,6 +627,8 @@ async function enrichLocationMessage(content: string, meta?: unknown): Promise<s
 
 const hasArabic = (t: string) => /[\u0600-\u06FF]/.test(t)
 const hasLetters = (t: string) => /[a-zA-Z\u0600-\u06FF]/.test(t)
+// Switching to English needs a real typed sentence — a tapped chip like "IMAX" or "VIP 360" must not flip an Arabic conversation.
+const isEnglishSentence = (t: string) => !hasArabic(t) && /[a-z]{2,}\s+[a-z]{2,}/i.test(t) && t.trim().length > 8
 
 /**
  * Builds the SDK's native widget_template from hydrated components (cards beat the price list).
@@ -593,6 +645,8 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: 
   if (price) return { type: 'price_list', content: { lang, ...(price.data as Record<string, unknown>) } }
   const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
   if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
+  const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
+  if (app) return { type: 'app_links', content: { lang, ...(app.data as Record<string, unknown>) } }
   return undefined
 }
 
@@ -684,9 +738,13 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   let comps: Array<Record<string, unknown>> = []
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
-  const think = (stage: keyof typeof THINK_PHRASES) =>
-    broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text: pickThink(stage, conv.lang) })
-  think('start')
+  let lastThink = ''
+  const say = (text: string) => {
+    if (!text || text === lastThink) return
+    lastThink = text
+    broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text })
+  }
+  say(thinkOpener(query, conv.lang))
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
@@ -718,11 +776,11 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           onConvId = undefined
         }
         if (e.event === 'route') {
-          think('route')
+          say(pickFrom(THINK_GENERIC.route[conv.lang], lastThink))
         } else if (e.event === 'agent_thought') {
           const tool = String((e as { tool?: unknown }).tool ?? '')
-          if (tool === 'cinescape_locations') think('locations')
-          else if (tool && !tool.startsWith('route_to_')) think('knowledge')
+          if (tool === 'cinescape_locations') say(pickFrom(THINK_GENERIC.locations[conv.lang], lastThink))
+          else if (tool && !tool.startsWith('route_to_')) say(thinkKnowledge(String((e as { tool_input?: unknown }).tool_input ?? ''), conv.lang, lastThink))
         } else if (e.event === 'message' && typeof e.answer === 'string') {
           buf += e.answer
           broadcast(conv, { event: 'delta', conversation_id: convId(), stream_id: streamId, delta: e.answer, seq: seq++ })
@@ -911,7 +969,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
       (await getOrRestoreConv(requestedConv)) ??
       ({ engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}`, lang: 'ar' } as EngineConv)
     convs.set(requestedConv, conv)
-    if (!isMachineMsg && hasLetters(content)) conv.lang = hasArabic(content) ? 'ar' : 'en'
+    if (!isMachineMsg && hasLetters(content)) conv.lang = hasArabic(content) ? 'ar' : isEnglishSentence(content) ? 'en' : conv.lang
     conv.history.push(userMsg)
     broadcast(conv, { event: 'message', conversation_id: requestedConv, message: userMsg })
     void rememberConv(sub, requestedConv)
@@ -926,7 +984,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
     history: [userMsg],
     clients: new Set(),
     user: `widget-${msgUlid}`,
-    lang: !isMachineMsg && hasLetters(content) && !hasArabic(content) ? 'en' : 'ar',
+    lang: !isMachineMsg && isEnglishSentence(content) ? 'en' : 'ar',
   }
   let responded = false
   const timer = setTimeout(() => {

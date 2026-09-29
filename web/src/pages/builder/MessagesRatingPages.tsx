@@ -14,6 +14,7 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const CU = 'widget_v2_config.messages.customerMessages'
   const FB = 'widget_v2_config.messages.feedback'
   const SG = 'widget_v2_config.messages.suggestions'
+  const QC = 'widget_v2_config.messages.questions'
   return (
     <div className="space-y-7">
       <section>
@@ -57,6 +58,16 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
           <ColorField label={t('builder.msgs.loadMoreBg')} path={`${LO}.background`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.text')} path={`${LO}.textColor`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.loadMoreSpinner')} path={`${LO}.spinnerColor`} get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.msgs.qcardHead')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label={t('builder.msgs.qcardAccent')} path={`${QC}.accentColor`} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.qcardRadius')} path={`${QC}.radius`} min={0} max={32} step={1} fallback={18} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.qcardBg')} path={`${QC}.background`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.qcardText')} path={`${QC}.textColor`} get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.qcardBorder')} path={`${QC}.borderColor`} get={get} set={set} disabled={disabled} />
         </div>
       </section>
       <section>
