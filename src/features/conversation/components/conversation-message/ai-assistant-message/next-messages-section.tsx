@@ -60,12 +60,14 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
   const chips = widgetConfig.messagesConfig?.suggestions
   const brand = widgetConfig.primaryColor || '#B3202C'
   const chipStyle: React.CSSProperties = {
-    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.07)' : '#ffffff'),
-    borderColor: chips?.borderColor ?? (isDark ? `${brand}8c` : `${brand}99`),
-    color: chips?.textColor ?? (isDark ? 'rgba(255,255,255,0.88)' : '#2c2d33'),
+    background: chips?.background ?? (isDark ? `${brand}26` : `${brand}0f`),
+    borderColor: chips?.borderColor ?? (isDark ? `${brand}59` : `${brand}38`),
+    color: chips?.textColor ?? (isDark ? '#ff8f96' : brand),
     borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
     fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
-    borderWidth: '1.5px',
+    borderWidth: '1px',
+    fontWeight: 500,
+    padding: '8px 14px',
   }
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { conversationId } = useWidgetNavigation()
@@ -150,7 +152,7 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
       type="button"
       onClick={handleClick}
       dir="auto"
-      className="flex cursor-pointer items-center gap-1.5 border px-3.5 py-2 text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal shadow-sm transition-all hover:-translate-y-px hover:shadow focus:outline-none active:translate-y-0"
+      className="flex cursor-pointer items-center gap-1.5 border text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal shadow-sm transition-all hover:-translate-y-px hover:shadow focus:outline-none active:translate-y-0"
       style={chipStyle}
     >
       {iconUrl && <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />}
