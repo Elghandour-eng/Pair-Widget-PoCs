@@ -10,7 +10,9 @@ export function LocationCards({ template }: { template: LocationCardsTemplate; s
   const { widgetConfig, view } = useWidgetConfigContext()
   const color = widgetConfig.primaryColor || '#B3202C'
   const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  const isArabic = /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  // the reply's own language (set server-side from the message text) wins over the view setting
+  const replyLang = (template.content as { lang?: string } | undefined)?.lang
+  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
   const cards = template.content?.cards ?? []
   if (cards.length === 0) return null
   const single = cards.length === 1

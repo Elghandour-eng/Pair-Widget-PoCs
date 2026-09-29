@@ -717,12 +717,13 @@ export interface LocationCardData {
 
 export interface LocationCardsTemplate {
   type: 'location_cards'
-  content: { cards: LocationCardData[] }
+  content: { lang?: 'ar' | 'en'; cards: LocationCardData[] }
 }
 
 export interface PriceListTemplate {
   type: 'price_list'
   content: {
+    lang?: 'ar' | 'en'
     title?: string
     title_en?: string
     currency?: string
@@ -734,6 +735,7 @@ export interface PriceListTemplate {
 export interface ExperiencesListTemplate {
   type: 'experiences_list'
   content: {
+    lang?: 'ar' | 'en'
     title?: string
     title_en?: string
     items: Array<{

@@ -158,8 +158,9 @@ export function parseStreamingMessage(stream: StreamState): Message {
     }
   }
 
-  const showCursor = !stream.completeSeen
-  const finalContent = showCursor && content ? `${content} ▎` : content
+  // No trailing caret glyph: it renders as a black tofu box with Arabic fonts,
+  // and the growing text plus the thinking line already read as "typing".
+  const finalContent = content
 
   return {
     ulid: `provisional-${stream.streamId}`,
