@@ -270,12 +270,19 @@
   }
 
   // Pin the preview to the same corner as the live launcher, right above it
-  function anchorPreviewToBubble() {
+  function anchorPreviewToBubble(retry) {
     if (!previewHolder) return
     var bubble = bubbleHolder ? bubbleHolder.querySelector('.pair-ai-bubble') : null
-    if (!bubble) return
-    var r = bubble.getBoundingClientRect()
-    if (!r.width) return
+    var r = bubble ? bubble.getBoundingClientRect() : null
+    if ((!r || !r.width) && bubbleHolder) r = bubbleHolder.getBoundingClientRect()
+    if (!r || !r.width) {
+      // the launcher may still be mid-animation right after the panel closes
+      if (!retry)
+        setTimeout(function () {
+          anchorPreviewToBubble(true)
+        }, 350)
+      return
+    }
     var onRight = window.innerWidth - r.right <= r.left
     if (onRight) {
       previewHolder.style.right = Math.max(12, window.innerWidth - r.right) + 'px'
