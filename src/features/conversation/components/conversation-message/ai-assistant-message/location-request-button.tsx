@@ -80,7 +80,7 @@ export function LocationRequestButton({ text }: { text?: string }) {
           type="button"
           onClick={handleClick}
           disabled={busy}
-          className="flex w-fit items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+          className="flex w-fit items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
         >
           {busy && (

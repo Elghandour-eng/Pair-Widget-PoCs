@@ -125,7 +125,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
       {/* Outer Card Container */}
       <div
         dir={isArabicQ ? 'rtl' : 'ltr'}
-        className="flex w-full flex-col overflow-hidden border shadow-lg select-none"
+        className="flex w-full flex-col overflow-hidden border select-none"
         style={{
           background: cardBg,
           borderColor: cardBorder,
@@ -238,7 +238,7 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
                     type="button"
                     onClick={() => toggleAnswer(question.question, option, 'multi')}
                     dir="auto"
-                    className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-(family-name:--Font-primary,'DM_Sans') text-sm leading-[130%] font-normal shadow-sm transition-all duration-200"
+                    className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-(family-name:--Font-primary,'DM_Sans') text-sm leading-[130%] font-normal transition-all duration-200"
                     style={{
                       borderColor: isSelected ? accent : `${accent}40`,
                       background: isSelected ? `${accent}12` : cardBg,

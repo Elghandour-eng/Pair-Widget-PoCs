@@ -152,7 +152,7 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
       type="button"
       onClick={handleClick}
       dir="auto"
-      className="flex cursor-pointer items-center gap-1.5 border text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal shadow-sm transition-all hover:-translate-y-px hover:shadow focus:outline-none active:translate-y-0"
+      className="flex cursor-pointer items-center gap-1.5 border text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal transition-all hover:-translate-y-px focus:outline-none active:translate-y-0"
       style={chipStyle}
     >
       {iconUrl && <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />}
