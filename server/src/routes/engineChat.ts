@@ -499,6 +499,85 @@ interface WidgetMessage {
   widget_template?: Record<string, unknown>
 }
 
+/** Stage-by-stage thinking phrases, per language — one is picked at random each time. */
+const THINK_PHRASES: Record<string, { ar: string[]; en: string[] }> = {
+  start: {
+    ar: ['قاعد أفكر شلون أساعدك 🍿', 'خلني أشوف لك أحسن جواب', 'ثواني وحدة معاك', 'يالله، خلني أفكر لك'],
+    en: ['Thinking how best to help 🍿', 'Give me a second', 'Looking into that for you'],
+  },
+  route: {
+    ar: ['ثواني، قاعد أجهّز لك الجواب', 'قاعد أوصلك بالمعلومة الصح', 'أرتب لك الرد الحين'],
+    en: ['Getting your answer ready', 'Putting it together for you'],
+  },
+  locations: {
+    ar: ['قاعد أجيب لك بيانات السينمات من النظام 📍', 'أسحب لك مواقع السينمات الحين 📍', 'أدور لك على السينما المناسبة 📍'],
+    en: ['Fetching our cinema locations 📍', 'Pulling up the cinemas for you 📍'],
+  },
+  knowledge: {
+    ar: ['قاعد أراجع معلوماتنا الرسمية عشان أتأكد لك', 'أتأكد لك من التفاصيل بالضبط', 'أقلب في المعلومات وأجيب لك الزبدة'],
+    en: ['Checking our official info for you', 'Double-checking the details'],
+  },
+}
+
+function pickThink(stage: keyof typeof THINK_PHRASES, lang: 'ar' | 'en'): string {
+  const pool = THINK_PHRASES[stage][lang]
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ar&zoom=14`,
+      { headers: { 'User-Agent': 'pair-widget-pocs/1.0 (cinescape widget)' }, signal: AbortSignal.timeout(6000) },
+    )
+    const j = (await r.json()) as { display_name?: string; address?: Record<string, string> }
+    const a = j.address ?? {}
+    return [a.suburb || a.neighbourhood || a.quarter, a.city || a.town || a.state, a.country].filter(Boolean).join('، ') || j.display_name || ''
+  } catch {
+    return ''
+  }
+}
+
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371, rad = Math.PI / 180
+  const dLat = (bLat - aLat) * rad, dLng = (bLng - aLng) * rad
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(h))
+}
+
+/**
+ * A widget location share ("📍 موقعي: 29.3, 47.9") becomes the full machine
+ * message the agent expects: coordinates, reverse-geocoded address, exact
+ * distances, and a far-outside-Kuwait note when applicable. The customer's
+ * bubble keeps the short text; only the engine sees this.
+ */
+async function enrichLocationMessage(content: string, meta?: unknown): Promise<string | null> {
+  let lat = NaN, lng = NaN
+  const shared = (meta as { shared_location?: { lat?: unknown; lng?: unknown } } | undefined)?.shared_location
+  if (shared) {
+    lat = Number(shared.lat)
+    lng = Number(shared.lng)
+  } else {
+    const m = content.match(/📍[^:]*:\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
+    if (!m) return null
+    lat = Number(m[1])
+    lng = Number(m[2])
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  const dists = Object.values(CINEMA_DATA)
+    .map((c) => ({ name: String(c.name), km: haversineKm(lat, lng, Number(c.lat), Number(c.lng)) }))
+    .sort((a, b) => a.km - b.km)
+  const addr = await reverseGeocode(lat, lng)
+  const lines = [`📍 shared my location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`]
+  if (addr) lines.push(`my address: ${addr}`)
+  if (dists[0].km > 100) lines.push(`NOTE: customer is far outside Kuwait — nearest cinema is ${dists[0].km.toFixed(0)} km away. Do NOT send a location card.`)
+  lines.push('exact distances (computed, ground truth): ' + dists.slice(0, 4).map((d) => `${d.name} = ${d.km.toFixed(1)} km`).join(' · '))
+  return lines.join('\n')
+}
+
+const hasArabic = (t: string) => /[\u0600-\u06FF]/.test(t)
+const hasLetters = (t: string) => /[a-zA-Z\u0600-\u06FF]/.test(t)
+
 /**
  * Builds the SDK's native widget_template from hydrated components (cards beat the price list).
  * `replyText` decides the template's language: cards follow the reply, not the widget's view setting.
@@ -522,6 +601,8 @@ interface EngineConv {
   history: WidgetMessage[]
   clients: Set<Response>
   user: string
+  /** the customer's language, updated from every worded message they type */
+  lang: 'ar' | 'en'
 }
 
 const convs = new Map<string, EngineConv>()
@@ -573,6 +654,9 @@ function cardsToMarkdown(comps: Array<Record<string, unknown>>): string {
 function componentsToWidgetFields(comps: Array<Record<string, unknown>>): Pick<WidgetMessage, 'next_messages' | 'suggestions'> {
   const out: Pick<WidgetMessage, 'next_messages' | 'suggestions'> = {}
   for (const c of comps) {
+    if (c.type === 'location_request') {
+      out.next_messages = [...(out.next_messages ?? []), { type: 'location_request', text: c.text ?? '' }]
+    }
     if (c.type === 'question') {
       const opts = (Array.isArray(c.options) ? c.options : []) as Array<Record<string, unknown>>
       out.next_messages = [
@@ -600,8 +684,9 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   let comps: Array<Record<string, unknown>> = []
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
-  const think = (text: string) => broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text })
-  think('قاعد أفكر شلون أساعدك 🍿')
+  const think = (stage: keyof typeof THINK_PHRASES) =>
+    broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text: pickThink(stage, conv.lang) })
+  think('start')
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
@@ -633,11 +718,11 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           onConvId = undefined
         }
         if (e.event === 'route') {
-          think('ثواني وحدة، قاعد أجهّز لك الجواب')
+          think('route')
         } else if (e.event === 'agent_thought') {
           const tool = String((e as { tool?: unknown }).tool ?? '')
-          if (tool === 'cinescape_locations') think('قاعد أجيب لك بيانات السينمات من النظام 📍')
-          else if (tool && !tool.startsWith('route_to_')) think('قاعد أراجع معلوماتنا الرسمية عشان أتأكد لك')
+          if (tool === 'cinescape_locations') think('locations')
+          else if (tool && !tool.startsWith('route_to_')) think('knowledge')
         } else if (e.event === 'message' && typeof e.answer === 'string') {
           buf += e.answer
           broadcast(conv, { event: 'delta', conversation_id: convId(), stream_id: streamId, delta: e.answer, seq: seq++ })
@@ -655,6 +740,13 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
+  }
+  if (!comps.some((c) => c.type === 'suggestions')) {
+    const arReply = /[\u0600-\u06FF]/.test(finalText || buf)
+    comps.push({
+      type: 'suggestions',
+      items: arReply ? ['كل السينمات 📍', 'أسعار التذاكر', 'شنو التجارب عندكم؟'] : ['All cinemas 📍', 'Ticket prices', 'Your experiences?'],
+    })
   }
   const template = componentsToTemplate(comps, finalText || buf)
   const content = template ? finalText || buf : [finalText || buf, cardsToMarkdown(comps)].filter(Boolean).join('\n\n')
@@ -713,7 +805,11 @@ async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
         })
       }
     }
-    return { engineConv: doc.id, history, clients: new Set(), user: doc.user || `widget-${convId}` }
+    let lang: 'ar' | 'en' = 'ar'
+    for (const m of doc.messages ?? []) {
+      if (m.role === 'user' && !m.text.startsWith('📍 shared my location') && hasLetters(m.text)) lang = hasArabic(m.text) ? 'ar' : 'en'
+    }
+    return { engineConv: doc.id, history, clients: new Set(), user: doc.user || `widget-${convId}`, lang }
   } catch {
     return null
   }
@@ -807,20 +903,31 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
   const userMsg: WidgetMessage = { ulid: msgUlid, type: 'message', content, message_type: 'text', sender_type: 'contact', sent_at: new Date().toISOString(), status: 'sent' }
 
   const sub = contactSub(req)
+  const enrichedLocation = await enrichLocationMessage(content, (req.body as { metadata?: unknown })?.metadata)
+  const isMachineMsg = content.startsWith('📍 shared my location') || enrichedLocation !== null
   if (requestedConv) {
     // existing conversation: the widget's id IS the engine's persistent conversation id
-    const conv = (await getOrRestoreConv(requestedConv)) ?? { engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}` }
+    const conv =
+      (await getOrRestoreConv(requestedConv)) ??
+      ({ engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}`, lang: 'ar' } as EngineConv)
     convs.set(requestedConv, conv)
+    if (!isMachineMsg && hasLetters(content)) conv.lang = hasArabic(content) ? 'ar' : 'en'
     conv.history.push(userMsg)
     broadcast(conv, { event: 'message', conversation_id: requestedConv, message: userMsg })
     void rememberConv(sub, requestedConv)
-    void runEngineTurn(conv, content)
+    void runEngineTurn(conv, enrichedLocation ?? content)
     res.json({ message_id: msgUlid, conversation_id: requestedConv, status: 'sent', sent_at: userMsg.sent_at })
     return
   }
 
   // new conversation: wait for the engine to assign its id (first SSE event), then answer with it
-  const conv: EngineConv = { engineConv: '', history: [userMsg], clients: new Set(), user: `widget-${msgUlid}` }
+  const conv: EngineConv = {
+    engineConv: '',
+    history: [userMsg],
+    clients: new Set(),
+    user: `widget-${msgUlid}`,
+    lang: !isMachineMsg && hasLetters(content) && !hasArabic(content) ? 'en' : 'ar',
+  }
   let responded = false
   const timer = setTimeout(() => {
     if (!responded) {
@@ -828,7 +935,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
       res.status(504).json({ error: { code: 'engine_timeout', message: 'agent-engine did not answer in time' } })
     }
   }, 15000)
-  void runEngineTurn(conv, content, (engineId) => {
+  void runEngineTurn(conv, enrichedLocation ?? content, (engineId) => {
     convs.set(engineId, conv)
     void rememberConv(sub, engineId)
     if (!responded) {
