@@ -377,8 +377,7 @@ button.epr-btn.epr-emoji {
 }
 
 /* Animated caret at the end of a streaming reply (CSS-only — no glyph, no tofu) */
-.streaming-live p:last-of-type::after,
-.streaming-live li:last-of-type:last-child::after {
+.streaming-live .ai-md-body > *:last-child::after {
   content: '';
   display: inline-block;
   width: 7px;
@@ -398,5 +397,36 @@ button.epr-btn.epr-emoji {
   50% {
     opacity: 0.85;
     transform: scaleY(1);
+  }
+}
+
+/* Streamed text is done, components are finalizing: hide the caret, show soft dots */
+.stream-done .ai-md-body > *:last-child::after {
+  display: none;
+}
+.finalizing-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: tp-dot 1.2s ease-in-out infinite;
+}
+.finalizing-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.finalizing-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes tp-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-3px);
   }
 }

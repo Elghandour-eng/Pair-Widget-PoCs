@@ -1,6 +1,7 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { isDarkBackground } from '@/lib/utils'
+import { LocationRequestButton } from './location-request-button'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import type {
@@ -218,6 +219,10 @@ export function NextMessagesSection({
       {items.map((item, idx) => {
         if (!item || typeof item !== 'object') return null
         const obj = item as Record<string, unknown>
+
+        if (obj.type === 'location_request') {
+          return <LocationRequestButton key={`loc-${idx}`} text={typeof obj.text === 'string' ? obj.text : undefined} />
+        }
 
         if (obj.type === 'product_card_set') {
           return (

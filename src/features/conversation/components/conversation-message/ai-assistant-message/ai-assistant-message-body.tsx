@@ -18,7 +18,7 @@ export function AiAssistantMessageBody({ content }: AiAssistantMessageBodyProps)
   return (
     <div
       className={cn(
-        'w-full text-left text-sm leading-relaxed font-normal text-[#1A1A1A]',
+        'ai-md-body w-full text-left text-sm leading-relaxed font-normal text-[#1A1A1A]',
         hasCardStyles && 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
       )}
       style={{

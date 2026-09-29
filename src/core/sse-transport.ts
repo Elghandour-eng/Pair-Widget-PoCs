@@ -6,6 +6,7 @@
  * writer for final messages — so the whole conversation UI works unchanged.
  */
 import { env } from '@/core/env'
+import { queryClient } from '@/queryClient'
 import { tokenStorage } from '@/core/token-storage'
 import { streamingStore } from '@/features/conversation/stores/streaming-store'
 import { handleIncomingPusherMessage } from '@/features/conversation/utils/handle-pusher-message'
@@ -47,6 +48,25 @@ export function sseSubscribe(conversationId: string): void {
 
 async function run(widgetId: string, conversationId: string, ctrl: AbortController, attempt = 0): Promise<void> {
   const url = `${env.baseURL}/v1/widget/${widgetId}/conversations/${conversationId}/stream`
+  // Watchdog: a turn whose final message never lands (server restart, dropped
+  // turn) must not leave the provisional bubble spinning forever — clear the
+  // stream and refetch the persisted messages instead.
+  let watchdog: ReturnType<typeof setTimeout> | undefined
+  const disarm = () => {
+    if (watchdog) clearTimeout(watchdog)
+    watchdog = undefined
+  }
+  const arm = () => {
+    disarm()
+    watchdog = setTimeout(() => {
+      logger.debug('sseSubscribe', 'stream stalled — clearing and refetching', { conversationId })
+      streamingStore.removeStreamsForConversation(conversationId)
+      void queryClient.invalidateQueries({
+        queryKey: ['conversations', widgetId, conversationId, 'messages'],
+        exact: false,
+      })
+    }, 45000)
+  }
   try {
     const token = tokenStorage.get(widgetId)
     const res = await fetch(url, {
@@ -73,12 +93,16 @@ async function run(widgetId: string, conversationId: string, ctrl: AbortControll
           continue
         }
         if (e.event === 'thinking' && e.stream_id) {
+          arm()
           streamingStore.handleThinking(conversationId, e.stream_id, e.text ?? '')
         } else if (e.event === 'delta' && e.stream_id && typeof e.delta === 'string') {
+          arm()
           streamingStore.handleDelta(conversationId, e.stream_id, e.delta, e.seq ?? 0)
         } else if (e.event === 'complete' && e.stream_id) {
+          arm()
           streamingStore.handleComplete(conversationId, e.stream_id)
         } else if (e.event === 'message' && e.message) {
+          disarm()
           // the cache writer expects the Pusher envelope shape: { message, conversationUlid }
           handleIncomingPusherMessage(conversationId, { message: e.message, conversationUlid: conversationId })
           streamingStore.removeStreamsForConversation(conversationId)
@@ -86,9 +110,13 @@ async function run(widgetId: string, conversationId: string, ctrl: AbortControll
       }
     }
   } catch (err) {
-    if (ctrl.signal.aborted) return
+    if (ctrl.signal.aborted) {
+      disarm()
+      return
+    }
     logger.debug('sseSubscribe', 'stream dropped, retrying', { conversationId, attempt, err: (err as Error).message })
   }
+  disarm()
   if (!ctrl.signal.aborted) {
     // the server keeps the stream open; reaching here means it dropped — back off and reconnect
     await new Promise((r) => setTimeout(r, Math.min(15000, 1000 * 2 ** attempt)))

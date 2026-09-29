@@ -31,11 +31,38 @@ export function parseMarkdown(text: string): ReactNode[] {
     const inlineParts: ReactNode[] = []
     let remaining = lineText
 
-    // Helper to add plain text
+    // Helper to add plain text, auto-linking bare URLs and phone numbers
     const addText = (str: string) => {
-      if (str) {
-        inlineParts.push(str)
+      if (!str) return
+      // URLs (with or without protocol) and phone numbers (7+ digits, optional +country)
+      const linkable =
+        /(https?:\/\/[^\s<>()]+|(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}(?:\/[^\s<>()]*)?|[a-z0-9-]+\.(?:com|net|org|kw|io|ai|app)(?:\.[a-z]{2})?(?:\/[^\s<>()]*)?|\+?\d[\d\s-]{5,}\d)/gi
+      let last = 0
+      for (const m of str.matchAll(linkable)) {
+        const idx = m.index ?? 0
+        const token = m[0]
+        const digits = token.replace(/[\s-]/g, '')
+        const isPhone = /^\+?\d{7,15}$/.test(digits)
+        const isUrl = !isPhone && /[a-z]/i.test(token)
+        if (!isPhone && !isUrl) continue
+        if (idx > last) inlineParts.push(str.slice(last, idx))
+        const href = isPhone ? `tel:${digits}` : /^https?:\/\//i.test(token) ? token : `https://${token}`
+        inlineParts.push(
+          createElement(
+            'a',
+            {
+              key: `auto-${keyCounter++}`,
+              href,
+              ...(isPhone ? {} : { target: '_blank', rel: 'noopener noreferrer' }),
+              className: 'underline underline-offset-2 hover:opacity-80',
+              dir: 'ltr',
+            },
+            token,
+          ),
+        )
+        last = idx + token.length
       }
+      if (last < str.length) inlineParts.push(str.slice(last))
     }
 
     interface MatchType {
