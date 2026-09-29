@@ -672,6 +672,8 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: 
   if (price) return { type: 'price_list', content: { lang, ...(price.data as Record<string, unknown>) } }
   const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
   if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
+  const movies = comps.find((c) => c.type === 'template' && c.template === 'movie_cards')
+  if (movies) return { type: 'movie_cards', content: { lang, ...(movies.data as Record<string, unknown>) } }
   const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
   if (app) return { type: 'app_links', content: { lang, ...(app.data as Record<string, unknown>) } }
   const menu = comps.find((c) => c.type === 'template' && c.template === 'menu_list')
