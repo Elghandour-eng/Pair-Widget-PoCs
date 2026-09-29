@@ -696,8 +696,23 @@ function highlight(lang: string, code: string): string {
 /** A code block: language chip, copy button, highlighted body. */
 const codeBlock = (lang: string, body: string, tall = false) =>
   `<figure class="code${tall ? ' tall' : ''}"><figcaption><span class="lang">${esc(lang)}</span>` +
-  `<button type="button" class="cp">Copy</button></figcaption>` +
+  `<button type="button" class="cp">${ico('copy')}<span>Copy</span></button></figcaption>` +
   `<pre><code>${highlight(lang, body)}</code></pre></figure>`
+
+/** Small stroke icons (Feather-style), inlined so the page needs no icon font. */
+const DOC_ICONS: Record<string, string> = {
+  install: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  control: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  receive: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  headers: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  mobile: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+}
+
+function ico(name: keyof typeof DOC_ICONS): string {
+  return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${DOC_ICONS[name]}</svg>`
+}
 
 /**
  * The integration reference: the script, the control API, every message in both
@@ -840,6 +855,21 @@ publicRouter.get(
       '}',
     ].join('\n')
 
+    // The app-wide policy (script-src 'self', no inline) blocks this page's
+    // inline script — the id field, copy buttons and the Android/iOS tabs all
+    // stop working. The page is static reference HTML we render ourselves, so
+    // it carries its own policy, the same way the test page does.
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+      ].join('; '),
+    )
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.setHeader('Cache-Control', 'public, max-age=300')
     res.send(`<!doctype html>
@@ -887,10 +917,16 @@ publicRouter.get(
   nav.rail { position: sticky; top: 54px; padding: 32px 0 60px; max-height: calc(100dvh - 54px); overflow-y: auto }
   nav.rail p { font: 600 10.5px/1 Inter; letter-spacing: .1em; text-transform: uppercase;
     color: var(--faint); margin: 0 0 9px; padding-inline-start: 11px }
-  nav.rail a { display: block; text-decoration: none; color: var(--muted); font: 450 13px/1 Inter;
+  nav.rail a { display: flex; align-items: center; gap: 8px; text-decoration: none;
+    color: var(--muted); font: 450 13px/1 Inter;
     padding: 7.5px 11px; border-radius: 7px; transition: .14s }
   nav.rail a:hover { color: var(--ink); background: var(--soft) }
   nav.rail a.on { color: var(--blue-d); background: var(--blue-t); font-weight: 600 }
+  .ic { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
+  nav.rail a .ic { width: 13.5px; height: 13.5px; color: var(--faint); transition: color .15s, transform .2s }
+  nav.rail a:hover .ic { color: var(--ink); transform: translateX(1px) }
+  nav.rail a.on .ic { color: var(--blue-d) }
   main { padding: 32px 0 120px; min-width: 0 }
 
   /* ---------- hero ---------- */
@@ -913,8 +949,12 @@ publicRouter.get(
   section.wide { grid-template-columns: minmax(0, 1fr) }
   section:last-child { border-bottom: 0 }
   .sh { display: flex; align-items: center; gap: 9px; margin-bottom: 7px }
-  .sh i { font: 600 10.5px/1 'JetBrains Mono', monospace; color: var(--blue); font-style: normal;
+  .sh i { display: inline-flex; align-items: center; gap: 5px;
+    font: 600 10.5px/1 'JetBrains Mono', monospace; color: var(--blue); font-style: normal;
     background: var(--blue-t); border-radius: 5px; padding: 3px 6px }
+  .sh i .ic { width: 12px; height: 12px; stroke-width: 2.2;
+    transition: transform .35s cubic-bezier(.22,1,.36,1) }
+  section:hover .sh i .ic { transform: scale(1.12) }
   .sh h2 { font: 650 19px/1.35 Inter; letter-spacing: -.021em; color: var(--ink); margin: 0 }
   .prose p { margin: 0 0 10px; max-width: 54ch }
   .prose p:last-child { margin-bottom: 0 }
@@ -933,9 +973,12 @@ publicRouter.get(
     padding: 8px 13px; background: var(--code-bar); border-bottom: 1px solid #1a2740 }
   .code .lang { font: 600 9.5px/1 'JetBrains Mono', monospace; letter-spacing: .11em;
     text-transform: uppercase; color: #6f869f }
-  .code .cp { border: 0; background: transparent; color: #7f95ae; cursor: pointer;
+  .code .cp { display: inline-flex; align-items: center; gap: 5px;
+    border: 0; background: transparent; color: #7f95ae; cursor: pointer;
     border-radius: 6px; padding: 4px 8px; font: 500 11px Inter; transition: .15s }
+  .code .cp .ic { width: 11.5px; height: 11.5px }
   .code .cp:hover { color: #fff; background: rgba(255,255,255,.07) }
+  .code .cp:active .ic { transform: scale(.88) }
   .code .cp.done { color: #8fdca9 }
   .code pre { margin: 0; padding: 13px 15px; overflow-x: auto; direction: ltr; text-align: left }
   .code code { font: 400 12px/1.7 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
@@ -1032,12 +1075,12 @@ publicRouter.get(
 <div class="shell">
   <nav class="rail">
     <p>Guide</p>
-    <a href="#install">Install</a>
-    <a href="#control">Control API</a>
-    <a href="#send">Messages you send</a>
-    <a href="#receive">Messages you receive</a>
-    <a href="#headers">Headers &amp; params</a>
-    <a href="#mobile">Android &amp; iOS</a>
+    <a href="#install">${ico('install')}Install</a>
+    <a href="#control">${ico('control')}Control API</a>
+    <a href="#send">${ico('send')}Messages you send</a>
+    <a href="#receive">${ico('receive')}Messages you receive</a>
+    <a href="#headers">${ico('headers')}Headers &amp; params</a>
+    <a href="#mobile">${ico('mobile')}Android &amp; iOS</a>
   </nav>
 
   <main>
@@ -1054,7 +1097,7 @@ publicRouter.get(
 
     <section id="install">
       <div class="prose">
-        <div class="sh"><i>01</i><h2>Install</h2></div>
+        <div class="sh"><i>${ico('install')}01</i><h2>Install</h2></div>
         <p>Paste this before <code class="inl">&lt;/body&gt;</code>. It loads the SDK, which builds the launcher and the panel and exposes <code class="inl">window.PairWidget</code>.</p>
         <p>Nothing else is required — the design, the copy and the language all come from the widget's own config.</p>
         <ul class="bul">
@@ -1068,7 +1111,7 @@ publicRouter.get(
 
     <section id="control">
       <div class="prose">
-        <div class="sh"><i>02</i><h2>Control API</h2></div>
+        <div class="sh"><i>${ico('control')}02</i><h2>Control API</h2></div>
         <p><code class="inl">window.PairWidget</code> — also <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
         <p>Every call is a <code class="inl">postMessage</code> underneath, so nothing here is privileged: you can send the same messages yourself.</p>
       </div>
@@ -1082,7 +1125,7 @@ publicRouter.get(
 
     <section id="send" class="wide">
       <div class="prose">
-        <div class="sh"><i>03</i><h2>Messages you send</h2></div>
+        <div class="sh"><i>${ico('send')}03</i><h2>Messages you send</h2></div>
         <p>Use <code class="inl">PairWidget.send(type, data)</code> when you need something the API does not wrap.</p>
       </div>
       ${docRows(DOC_SEND)}
@@ -1090,7 +1133,7 @@ publicRouter.get(
 
     <section id="receive" class="wide">
       <div class="prose">
-        <div class="sh"><i>04</i><h2>Messages you receive</h2></div>
+        <div class="sh"><i>${ico('receive')}04</i><h2>Messages you receive</h2></div>
         <p>Subscribe with <code class="inl">PairWidget.on(name, fn)</code>, using the name without its <code class="inl">widget:</code> prefix. <code class="inl">'*'</code> receives every one.</p>
       </div>
       ${docRows(DOC_RECEIVE)}
@@ -1098,7 +1141,7 @@ publicRouter.get(
 
     <section id="headers">
       <div class="prose">
-        <div class="sh"><i>05</i><h2>Headers &amp; query params</h2></div>
+        <div class="sh"><i>${ico('headers')}05</i><h2>Headers &amp; query params</h2></div>
         <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design — it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it.</p>
         <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, sending <code class="inl">user_id</code> fills it — and a key you never send is left out entirely.</div>
       </div>
@@ -1107,7 +1150,7 @@ publicRouter.get(
 
     <section id="mobile">
       <div class="prose">
-        <div class="sh"><i>06</i><h2>Android &amp; iOS</h2></div>
+        <div class="sh"><i>${ico('mobile')}06</i><h2>Android &amp; iOS</h2></div>
         <p>There is no separate mobile SDK and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
         <p>Two settings matter on Android — JavaScript, and DOM storage, where the widget keeps the visitor's language and theme choice.</p>
         <div class="note"><b>Testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
@@ -1143,10 +1186,11 @@ publicRouter.get(
     var btn = e.target.closest('.cp')
     if (!btn || !navigator.clipboard) return
     var code = btn.closest('.code').querySelector('code')
+    var label = btn.querySelector('span')
     navigator.clipboard.writeText(code.textContent).then(function () {
-      btn.textContent = 'Copied'
+      label.textContent = 'Copied'
       btn.classList.add('done')
-      setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done') }, 1500)
+      setTimeout(function () { label.textContent = 'Copy'; btn.classList.remove('done') }, 1500)
     }, function () {})
   })
 
