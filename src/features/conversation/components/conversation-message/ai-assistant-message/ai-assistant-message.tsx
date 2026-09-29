@@ -59,12 +59,19 @@ export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessag
 
       {productSetOutside && <ProductSection productSet={productSetOutside} sourceMessageUlid={message.ulid} />}
 
-      {isLastMessage && (
-        <NextMessagesSection
-          nextMessages={nextMessagesList}
-          sourceMessageUlid={message.ulid}
-          messageContent={message.content}
-        />
+      {nextMessagesList.length > 0 && (
+        // Older messages keep their interactive blocks visible for context,
+        // but dimmed and inert — only the latest message is tappable.
+        <div
+          className={isLastMessage ? undefined : 'pointer-events-none opacity-45 select-none'}
+          aria-disabled={!isLastMessage}
+        >
+          <NextMessagesSection
+            nextMessages={nextMessagesList}
+            sourceMessageUlid={message.ulid}
+            messageContent={message.content}
+          />
+        </div>
       )}
 
       <FeedbackSection messageId={message.ulid} initialFeedback={message.ai_feedback as 'liked' | 'disliked' | null} />
