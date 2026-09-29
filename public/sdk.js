@@ -268,9 +268,29 @@
     document.body.appendChild(previewHolder)
   }
 
+  // Pin the preview to the same corner as the live launcher, right above it
+  function anchorPreviewToBubble() {
+    if (!previewHolder) return
+    var bubble = bubbleHolder ? bubbleHolder.querySelector('.pair-ai-bubble') : null
+    if (!bubble) return
+    var r = bubble.getBoundingClientRect()
+    if (!r.width) return
+    var onRight = window.innerWidth - r.right <= r.left
+    if (onRight) {
+      previewHolder.style.right = Math.max(12, window.innerWidth - r.right) + 'px'
+      previewHolder.style.left = 'auto'
+    } else {
+      previewHolder.style.left = Math.max(12, r.left) + 'px'
+      previewHolder.style.right = 'auto'
+    }
+    var offset = (config.toastDesign && config.toastDesign.offset) || 12
+    previewHolder.style.bottom = Math.max(20, window.innerHeight - r.top + offset) + 'px'
+  }
+
   // Show preview card
   function showPreview(data) {
     if (!previewHolder || !data || !data.message) return
+    anchorPreviewToBubble()
 
     var position = config.position || 'right'
     var cornerClass = position === 'right' ? 'pair-ai-preview-card--right' : 'pair-ai-preview-card--left'
@@ -331,6 +351,24 @@
       })
     }
 
+    // Builder toast design: colours, radius and fonts land on the card itself
+    var td = config.toastDesign || {}
+    var card = previewHolder.querySelector('.pair-ai-preview-card')
+    if (card && td.styles) {
+      for (var k in td.styles) {
+        try {
+          card.style[k] = td.styles[k]
+        } catch (e) {}
+      }
+    }
+    if (td.showIcon === false) {
+      var av = previewHolder.querySelector('.pair-ai-preview-header-fallback, .pair-ai-preview-card img')
+      if (av) av.style.display = 'none'
+    }
+    if (td.iconColor) {
+      var fb = previewHolder.querySelector('.pair-ai-preview-header-fallback svg')
+      if (fb) fb.style.fill = td.iconColor
+    }
     previewHolder.classList.add('pair-ai-preview--visible')
   }
 
@@ -680,6 +718,7 @@
       config.launcherDesign = newConfig.launcherDesign
       applyLauncherDesign()
     }
+    if (newConfig.toastDesign) config.toastDesign = newConfig.toastDesign
     if (newConfig.showFooter !== undefined) config.showFooter = newConfig.showFooter
     if (newConfig.welcome_title_var !== undefined) config.welcome_title_var = newConfig.welcome_title_var
     // The studio's saved panel size wins over whatever the pasted snippet froze.
