@@ -303,7 +303,7 @@
     var position = config.position || 'right'
     var cornerClass = position === 'right' ? 'pair-ai-preview-card--right' : 'pair-ai-preview-card--left'
     var senderName = data.message.senderName || config.widgetName || 'Agent'
-    var content = data.message.content || ''
+    var content = (data.message.content || '').replace(/\*\*|__|`/g, '')
 
     // Avatar HTML — 24px with 5.76px border radius
     var avatarHtml = false

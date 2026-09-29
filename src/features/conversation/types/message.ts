@@ -754,6 +754,16 @@ export interface AppLinksTemplate {
   content: { lang?: 'ar' | 'en'; ios?: string; android?: string }
 }
 
+export interface MenuCardsTemplate {
+  type: 'menu_cards'
+  content: {
+    lang?: 'ar' | 'en'
+    title?: string
+    title_en?: string
+    items: Array<{ label: string; label_en?: string; price: string; image?: string }>
+  }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -767,6 +777,7 @@ export type WidgetTemplate =
   | PriceListTemplate
   | ExperiencesListTemplate
   | AppLinksTemplate
+  | MenuCardsTemplate
 
 /**
  * Messages list response (matches actual API response)
