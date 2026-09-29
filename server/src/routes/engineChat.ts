@@ -499,17 +499,21 @@ interface WidgetMessage {
   widget_template?: Record<string, unknown>
 }
 
-/** Builds the SDK's native widget_template from hydrated components (cards beat the price list). */
-function componentsToTemplate(comps: Array<Record<string, unknown>>): Record<string, unknown> | undefined {
+/**
+ * Builds the SDK's native widget_template from hydrated components (cards beat the price list).
+ * `replyText` decides the template's language: cards follow the reply, not the widget's view setting.
+ */
+function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: string): Record<string, unknown> | undefined {
+  const lang = /[\u0600-\u06FF]/.test(replyText) ? 'ar' : 'en'
   const cards = comps
     .filter((c) => c.type === 'template' && c.template === 'location_card')
     .map((c) => c.data as Record<string, unknown>)
     .filter((d) => d && d.name)
-  if (cards.length > 0) return { type: 'location_cards', content: { cards } }
+  if (cards.length > 0) return { type: 'location_cards', content: { lang, cards } }
   const price = comps.find((c) => c.type === 'template' && c.template === 'price_list')
-  if (price) return { type: 'price_list', content: price.data as Record<string, unknown> }
+  if (price) return { type: 'price_list', content: { lang, ...(price.data as Record<string, unknown>) } }
   const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
-  if (exp) return { type: 'experiences_list', content: exp.data as Record<string, unknown> }
+  if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
   return undefined
 }
 
@@ -652,7 +656,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
   }
-  const template = componentsToTemplate(comps)
+  const template = componentsToTemplate(comps, finalText || buf)
   const content = template ? finalText || buf : [finalText || buf, cardsToMarkdown(comps)].filter(Boolean).join('\n\n')
   const message: WidgetMessage = {
     ulid: botUlid,
@@ -694,7 +698,7 @@ async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
             /* plain text fallback */
           }
         }
-        const template = componentsToTemplate(comps)
+        const template = componentsToTemplate(comps, text)
         history.push({
           ulid: m.id.replace(/-/g, '').slice(0, 26).toUpperCase(),
           type: 'message',
