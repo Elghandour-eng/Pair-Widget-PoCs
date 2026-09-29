@@ -623,10 +623,23 @@ const DOC_RECEIVE: DocRow[] = [
   { name: 'requestTokenRefresh', takes: '—', what: 'The visitor credential expired. Issue a new one and send it back.' },
 ]
 
+/**
+ * The reference entries.
+ *
+ * A three-column table wrapped every signature onto two lines and left a lot of
+ * dead height; a definition list keeps the signature on one line with its
+ * argument beside it and the sentence underneath, which is how these are
+ * actually read.
+ */
 const docRows = (rows: DocRow[]) =>
+  `<dl class="ref">` +
   rows
-    .map((r) => `<tr><td><code>${esc(r.name)}</code></td><td><code class="dim">${r.takes}</code></td><td>${r.what}</td></tr>`)
-    .join('')
+    .map(
+      (r) =>
+        `<div><dt><code>${esc(r.name)}</code>${r.takes === '—' ? '' : `<span>${r.takes}</span>`}</dt><dd>${r.what}</dd></div>`,
+    )
+    .join('') +
+  `</dl>`
 
 /* --------------------------- syntax highlighting --------------------------- */
 
@@ -709,7 +722,8 @@ publicRouter.get(
       '  }',
       '  ;(function (d, t) {',
       `    var BASE_URL = '${base}'`,
-      '    var g = d.createElement(t), s = d.getElementsByTagName(t)[0]',
+      '    var g = d.createElement(t)',
+      '    var s = d.getElementsByTagName(t)[0]',
       "    g.src = BASE_URL + '/sdk.js'",
       '    g.async = true',
       '    s.parentNode.insertBefore(g, s)',
@@ -728,52 +742,65 @@ publicRouter.get(
       "PairWidget.on('ready', function () {",
       "  PairWidget.setLanguage('ar')",
       "  PairWidget.setTheme('dark')",
-      "  PairWidget.updateMetadata({ user_id: '42', tier: 'gold' })",
+      "  PairWidget.updateMetadata({ user_id: '42' })",
       '})',
       '',
-      '// Listen to what the widget sends back.',
+      '// Listen to what it sends back.',
       "PairWidget.on('viewChanged', function (d) {",
       "  console.log('now', d.lang, d.theme)",
       '})',
       '',
       "// '*' receives every message.",
-      "PairWidget.on('*', function (data, name) { console.log(name, data) })",
-      '',
+      "PairWidget.on('*', function (data, name) {",
+      '  console.log(name, data)',
+      '})',
+    ].join('\n')
+
+    const custom = [
       '// Anything the API does not wrap:',
-      "PairWidget.send('sdk:setView', { lang: 'en', theme: 'light' })",
+      "PairWidget.send('sdk:setView', {",
+      "  lang: 'en',",
+      "  theme: 'light',",
+      '})',
+    ].join('\n')
+
+    const metadata = [
+      '// Your page supplies the values. The widget',
+      '// attaches them using the mapping in its design;',
+      '// a key you never send is left out.',
+      'PairWidget.updateMetadata({',
+      "  user_id: '42',",
+      "  tier: 'gold',",
+      '})',
     ].join('\n')
 
     const android = [
-      '// The widget is a web page, so the app hosts it in a WebView and drives',
-      '// it with the same PairWidget API. There is no separate mobile SDK.',
+      '// The widget is a web page, so the app hosts it in',
+      '// a WebView and drives it with the same API.',
       'val webView = findViewById<WebView>(R.id.widget)',
       'webView.settings.javaScriptEnabled = true',
-      "// The widget keeps the visitor's language and theme in localStorage.",
+      '// The view choice lives in localStorage.',
       'webView.settings.domStorageEnabled = true',
-      '',
-      '// A page of yours that carries the install script.',
       'webView.loadUrl(HOST_PAGE_URL)',
       '',
-      '// --- Calling the widget ---------------------------------------------',
+      '// --- Calling the widget ---------------------------',
       'fun setLanguage(lang: String) {',
-      '    webView.evaluateJavascript("PairWidget.setLanguage(\'$lang\')", null)',
+      '    webView.evaluateJavascript(',
+      '        "PairWidget.setLanguage(\'$lang\')", null)',
       '}',
       '',
-      'fun setMetadata(json: String) {',
-      '    webView.evaluateJavascript("PairWidget.updateMetadata($json)", null)',
-      '}',
-      '',
-      '// --- Hearing back from it -------------------------------------------',
+      '// --- Hearing back from it -------------------------',
       'class Bridge(private val onEvent: (String, String) -> Unit) {',
       '    @JavascriptInterface',
-      '    fun onWidgetEvent(name: String, payload: String) = onEvent(name, payload)',
+      '    fun onWidgetEvent(name: String, payload: String) =',
+      '        onEvent(name, payload)',
       '}',
       '',
       'webView.addJavascriptInterface(Bridge { name, payload ->',
       '    Log.d("PairWidget", "$name -> $payload")',
       '}, "Android")',
       '',
-      '// Then, once onPageFinished has fired:',
+      '// Once onPageFinished has fired:',
       'webView.evaluateJavascript(',
       '    "PairWidget.on(\'*\', function (d, n) {" +',
       '    "  Android.onWidgetEvent(n, JSON.stringify(d || {}))" +',
@@ -782,7 +809,7 @@ publicRouter.get(
     ].join('\n')
 
     const ios = [
-      '// The same page and the same API, through WKWebView.',
+      '// The same page and the same API, via WKWebView.',
       'import WebKit',
       '',
       'let config = WKWebViewConfiguration()',
@@ -792,39 +819,25 @@ publicRouter.get(
       'let webView = WKWebView(frame: .zero, configuration: config)',
       'webView.load(URLRequest(url: hostPageURL))',
       '',
-      '// --- Calling the widget ---------------------------------------------',
+      '// --- Calling the widget ---------------------------',
       'func setLanguage(_ lang: String) {',
-      '    webView.evaluateJavaScript("PairWidget.setLanguage(\'\\(lang)\')")',
+      '    webView.evaluateJavaScript(',
+      '        "PairWidget.setLanguage(\'\\(lang)\')")',
       '}',
       '',
-      'func setMetadata(_ json: String) {',
-      '    webView.evaluateJavaScript("PairWidget.updateMetadata(\\(json))")',
-      '}',
-      '',
-      '// --- Hearing back from it -------------------------------------------',
-      '// Once the page has loaded:',
+      '// --- Hearing back from it -------------------------',
       'webView.evaluateJavaScript("""',
       "  PairWidget.on('*', function (d, n) {",
-      '    window.webkit.messageHandlers.pairWidget.postMessage({',
-      '      name: n, data: d || {}',
-      '    })',
+      '    window.webkit.messageHandlers.pairWidget',
+      '      .postMessage({ name: n, data: d || {} })',
       '  })',
       '""")',
       '',
       'func userContentController(_ c: WKUserContentController,',
-      '                           didReceive message: WKScriptMessage) {',
-      '    guard message.name == "pairWidget" else { return }',
-      '    print("PairWidget event:", message.body)',
+      '                           didReceive m: WKScriptMessage) {',
+      '    guard m.name == "pairWidget" else { return }',
+      '    print("PairWidget event:", m.body)',
       '}',
-    ].join('\n')
-
-    const metadata = [
-      '// Your page supplies the values. The widget attaches them using the',
-      '// mapping saved in its design; a key you never send is left out.',
-      'PairWidget.updateMetadata({',
-      "  user_id: '42',",
-      "  tier: 'gold',",
-      '})',
     ].join('\n')
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
@@ -834,127 +847,175 @@ publicRouter.get(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pair widget — integration guide</title>
+<title>Pair widget — integration</title>
 <link rel="icon" href="/pair-mark.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --pair: #4d98e2; --deep: #2b6ca8; --tint: #eef5fc;
-    --ink: #0b1220; --body: #4a5568; --muted: #7b8798;
-    --line: #e6eaf0; --soft: #f1f4f8;
-    --page: #fff; --surface: #fff;
-    --code-bg: #101a2b; --code-bar: #16233a; --code-fg: #c8d5e6;
-    --rail: 244px; --col: 720px;
+    --blue: #4d98e2; --blue-d: #1f6fb2; --blue-t: #eaf3fc;
+    --ink: #0a0e14; --body: #3f4855; --muted: #6a7482; --faint: #9aa3b0;
+    --line: #e4e9ef; --hair: #eef1f5; --soft: #f7f9fb; --bg: #fff;
+    --code-bg: #0b1220; --code-bar: #121c2e; --code-fg: #c5d3e6;
+    --c-com: #5a7690; --c-str: #93d6a4; --c-key: #79aef5; --c-num: #f2a97e;
+    --c-tag: #f4879c; --c-obj: #e0c98d; --c-ph: #ffd479;
+    --rail: 200px; --aside: 524px;
   }
-  :root { --t-c: #61798f; --t-s: #9bd4a0; --t-k: #7fb0f0; --t-n: #f0a878; --t-t: #f2879a; --t-o: #d9c58c; --t-p: #ffd479 }
   * { box-sizing: border-box }
-  html { scroll-behavior: smooth }
-  body { margin: 0; background: var(--page); color: var(--body);
-    font: 400 15px/1.72 Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100% }
+  body { margin: 0; background: var(--bg); color: var(--body);
+    font: 400 14px/1.65 Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale }
+  ::selection { background: var(--blue-t); color: var(--ink) }
 
-  /* ---- masthead ---- */
-  .bar { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.88);
-    backdrop-filter: saturate(180%) blur(14px); border-bottom: 1px solid var(--line) }
-  .bar-in { max-width: 1160px; margin: 0 auto; padding: 0 28px; height: 58px; display: flex; align-items: center; gap: 13px }
-  .bar img { height: 21px }
-  .bar .chip { font: 600 11.5px/1 Inter; color: var(--deep); background: var(--tint);
-    border-radius: 999px; padding: 6px 11px }
-  .bar .rt { margin-inline-start: auto; display: flex; align-items: center; gap: 9px }
-  .bar a.ghost { text-decoration: none; font: 600 12.5px Inter; color: var(--body);
-    border: 1px solid var(--line); border-radius: 9px; padding: 7px 13px; transition: .16s }
-  .bar a.ghost:hover { border-color: var(--pair); color: var(--deep); background: var(--tint) }
+  /* ---------- masthead ---------- */
+  .bar { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.9);
+    backdrop-filter: saturate(180%) blur(16px); border-bottom: 1px solid var(--line) }
+  .bar-in { max-width: 1460px; margin: 0 auto; padding: 0 32px; height: 54px; display: flex; align-items: center; gap: 12px }
+  .bar img { height: 20px }
+  .bar .div { width: 1px; height: 17px; background: var(--line) }
+  .bar .name { font: 600 13px/1 Inter; color: var(--ink) }
+  .bar .rt { margin-inline-start: auto; display: flex; align-items: center; gap: 7px }
+  .bar a.gh { text-decoration: none; font: 500 12.5px/1 Inter; color: var(--muted);
+    border-radius: 7px; padding: 7px 10px; transition: .15s }
+  .bar a.gh:hover { color: var(--ink); background: var(--soft) }
 
-  /* ---- shell ---- */
-  .shell { max-width: 1160px; margin: 0 auto; padding: 0 28px;
-    display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 56px; align-items: start }
-  nav.rail { position: sticky; top: 58px; padding: 40px 0 48px; max-height: calc(100dvh - 58px); overflow-y: auto }
-  nav.rail p { font: 700 10px/1 Inter; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--muted); margin: 0 0 12px; padding-inline-start: 14px }
-  nav.rail a { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--body);
-    font: 500 13.5px/1 Inter; padding: 9px 14px; border-radius: 9px; transition: .15s }
-  nav.rail a i { font: 700 10px/1 'JetBrains Mono', monospace; color: var(--muted);
-    width: 15px; flex: none; font-style: normal }
-  nav.rail a:hover { background: var(--soft); color: var(--ink) }
-  nav.rail a.on { background: var(--tint); color: var(--deep); font-weight: 650 }
-  nav.rail a.on i { color: var(--pair) }
-  main { padding: 40px 0 140px; min-width: 0; max-width: var(--col) }
+  /* ---------- shell ---------- */
+  .shell { max-width: 1460px; margin: 0 auto; padding: 0 32px;
+    display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 44px; align-items: start }
+  nav.rail { position: sticky; top: 54px; padding: 32px 0 60px; max-height: calc(100dvh - 54px); overflow-y: auto }
+  nav.rail p { font: 600 10.5px/1 Inter; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 9px; padding-inline-start: 11px }
+  nav.rail a { display: block; text-decoration: none; color: var(--muted); font: 450 13px/1 Inter;
+    padding: 7.5px 11px; border-radius: 7px; transition: .14s }
+  nav.rail a:hover { color: var(--ink); background: var(--soft) }
+  nav.rail a.on { color: var(--blue-d); background: var(--blue-t); font-weight: 600 }
+  main { padding: 32px 0 120px; min-width: 0 }
 
-  /* ---- hero ---- */
-  .hero { padding-bottom: 8px }
-  .hero h1 { font: 700 33px/1.18 Inter; letter-spacing: -.03em; color: var(--ink); margin: 0 0 13px }
-  .hero .lede { font-size: 16px; line-height: 1.62; margin: 0; color: var(--body) }
-  .setup { margin-top: 26px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); padding: 15px 17px }
-  .setup label { display: block; font: 700 10px/1 Inter; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 8px }
-  .setup .row { display: flex; gap: 9px; align-items: center }
-  .setup input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface);
-    padding: 10px 13px; font: 500 13px/1 'JetBrains Mono', monospace; color: var(--ink); outline: none; transition: .16s }
-  .setup input:focus { border-color: var(--pair); box-shadow: 0 0 0 3px rgba(77,152,226,.15) }
-  .setup .hint { font-size: 12.5px; color: var(--muted); margin: 9px 0 0 }
+  /* ---------- hero ---------- */
+  .hero { padding-bottom: 6px; border-bottom: 1px solid var(--hair) }
+  .hero .eyebrow { font: 600 11px/1 Inter; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--blue-d); margin: 0 0 12px }
+  .hero h1 { font: 700 31px/1.18 Inter; letter-spacing: -.032em; color: var(--ink); margin: 0 0 11px; max-width: 18ch }
+  .hero .lede { font-size: 15.5px; line-height: 1.6; margin: 0 0 22px; color: var(--body); max-width: 56ch }
+  .idf { display: flex; align-items: center; gap: 10px; margin-bottom: 26px; flex-wrap: wrap }
+  .idf label { font: 600 11px/1 Inter; letter-spacing: .07em; text-transform: uppercase; color: var(--faint) }
+  .idf input { width: 260px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    padding: 8px 11px; font: 500 12.5px/1.3 'JetBrains Mono', monospace; color: var(--ink);
+    outline: none; transition: .15s }
+  .idf input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(77,152,226,.16) }
+  .idf .tip { font-size: 12.5px; color: var(--faint) }
 
-  /* ---- sections ---- */
-  section { padding-top: 62px; scroll-margin-top: 78px }
-  .sh { display: flex; align-items: baseline; gap: 11px; margin-bottom: 9px }
-  .sh i { font: 700 11px/1 'JetBrains Mono', monospace; color: var(--pair); font-style: normal }
-  .sh h2 { font: 700 22px/1.3 Inter; letter-spacing: -.022em; color: var(--ink); margin: 0 }
-  section > p { margin: 0 0 4px; max-width: 64ch }
-  h3 { font: 650 14.5px/1.5 Inter; color: var(--ink); margin: 28px 0 7px; letter-spacing: -.01em }
+  /* ---------- two-column sections ---------- */
+  section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, var(--aside));
+    gap: 20px 44px; align-items: start; padding: 44px 0; border-bottom: 1px solid var(--hair); scroll-margin-top: 74px }
+  section.wide { grid-template-columns: minmax(0, 1fr) }
+  section:last-child { border-bottom: 0 }
+  .sh { display: flex; align-items: center; gap: 9px; margin-bottom: 7px }
+  .sh i { font: 600 10.5px/1 'JetBrains Mono', monospace; color: var(--blue); font-style: normal;
+    background: var(--blue-t); border-radius: 5px; padding: 3px 6px }
+  .sh h2 { font: 650 19px/1.35 Inter; letter-spacing: -.021em; color: var(--ink); margin: 0 }
+  .prose p { margin: 0 0 10px; max-width: 54ch }
+  .prose p:last-child { margin-bottom: 0 }
+  h3 { font: 600 13px/1.5 Inter; color: var(--ink); margin: 20px 0 6px }
   b, strong { color: var(--ink); font-weight: 600 }
-  code.inl { background: var(--soft); border: 1px solid var(--line); border-radius: 6px;
-    padding: 1.5px 6px; font: 500 12.5px 'JetBrains Mono', monospace; color: var(--deep) }
+  code.inl { background: var(--soft); border: 1px solid var(--hair); border-radius: 5px;
+    padding: 1px 5px; font: 500 12px 'JetBrains Mono', monospace; color: var(--blue-d);
+    white-space: nowrap }
 
-  /* ---- code ---- */
-  .code { margin: 17px 0 0; border-radius: 13px; overflow: hidden; background: var(--code-bg);
-    box-shadow: 0 1px 2px rgba(11,18,32,.06), 0 18px 40px -28px rgba(11,18,32,.55) }
+  /* ---------- code ---------- */
+  .aside { position: sticky; top: 74px }
+  .code { margin: 0; border-radius: 10px; overflow: hidden; background: var(--code-bg);
+    border: 1px solid #1a2740 }
+  .code + .code { margin-top: 12px }
   .code figcaption { display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 15px; background: var(--code-bar) }
-  .code .lang { font: 700 10px/1 'JetBrains Mono', monospace; letter-spacing: .1em;
-    text-transform: uppercase; color: #7e93ab }
-  .code .cp { border: 1px solid #2b3c5a; background: transparent; color: #9fb4cb; cursor: pointer;
-    border-radius: 7px; padding: 5px 12px; font: 600 11px Inter; transition: .16s }
-  .code .cp:hover { color: #fff; border-color: #44618c; background: rgba(255,255,255,.06) }
-  .code .cp.done { color: #8fdca9; border-color: #2f5f44 }
-  .code pre { margin: 0; padding: 16px 18px; overflow: auto; direction: ltr; text-align: left }
+    padding: 8px 13px; background: var(--code-bar); border-bottom: 1px solid #1a2740 }
+  .code .lang { font: 600 9.5px/1 'JetBrains Mono', monospace; letter-spacing: .11em;
+    text-transform: uppercase; color: #6f869f }
+  .code .cp { border: 0; background: transparent; color: #7f95ae; cursor: pointer;
+    border-radius: 6px; padding: 4px 8px; font: 500 11px Inter; transition: .15s }
+  .code .cp:hover { color: #fff; background: rgba(255,255,255,.07) }
+  .code .cp.done { color: #8fdca9 }
+  .code pre { margin: 0; padding: 13px 15px; overflow-x: auto; direction: ltr; text-align: left }
+  .code code { font: 400 12px/1.7 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
+  .t-c { color: var(--c-com) } .t-s { color: var(--c-str) } .t-k { color: var(--c-key) }
+  .t-n { color: var(--c-num) } .t-t { color: var(--c-tag) } .t-o { color: var(--c-obj) }
+  .t-p { color: var(--c-ph); background: rgba(255,212,121,.15); border-radius: 3px; padding: 0 2px }
 
-  .code code { font: 400 12.5px/1.75 'JetBrains Mono', monospace; color: var(--code-fg); white-space: pre; tab-size: 2 }
-  .t-c { color: var(--t-c); font-style: italic } .t-s { color: var(--t-s) } .t-k { color: var(--t-k) }
-  .t-n { color: var(--t-n) } .t-t { color: var(--t-t) } .t-o { color: var(--t-o) }
-  .t-p { color: var(--t-p); background: rgba(255,212,121,.14); border-radius: 4px; padding: 0 3px }
+  .bul { margin: 12px 0 0; padding: 0; list-style: none; max-width: 54ch }
+  .bul li { position: relative; padding-inline-start: 16px; margin-bottom: 7px; font-size: 13.5px; color: var(--muted) }
+  .bul li::before { content: ''; position: absolute; inset-inline-start: 0; top: 9px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--blue); opacity: .55 }
 
-  /* ---- tables ---- */
-  .tbl { margin-top: 17px; border: 1px solid var(--line); border-radius: 13px; overflow: hidden }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px }
-  th { text-align: start; font: 700 10px/1 Inter; letter-spacing: .09em; text-transform: uppercase;
-    color: var(--muted); padding: 12px 15px; background: var(--soft); border-bottom: 1px solid var(--line) }
-  td { padding: 13px 15px; border-bottom: 1px solid var(--soft); vertical-align: top; line-height: 1.58 }
-  tr:last-child td { border-bottom: 0 }
-  td code { font: 500 12px 'JetBrains Mono', monospace; color: var(--deep); word-break: break-word }
-  td code.dim { color: var(--muted) }
-  td:first-child { white-space: nowrap }
+  /* ---------- motion ---------- */
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+  .hero > * { animation: rise .5s cubic-bezier(.22,1,.36,1) both }
+  .hero .eyebrow { animation-delay: .02s } .hero h1 { animation-delay: .07s }
+  .hero .lede { animation-delay: .13s } .hero .idf { animation-delay: .19s }
+  nav.rail { animation: fade .6s ease-out both; animation-delay: .1s }
 
-  /* ---- tabs & note ---- */
-  .tabs { display: inline-flex; gap: 3px; padding: 3px; margin-top: 20px;
-    border: 1px solid var(--line); background: var(--soft); border-radius: 11px }
-  .tabs button { border: 0; background: none; cursor: pointer; border-radius: 8px;
-    font: 600 12.5px Inter; color: var(--muted); padding: 8px 17px; transition: .16s }
+  /* Sections arrive as they are reached, once — the prose first, the code just
+     behind it, so the eye lands on the explanation before the snippet. */
+  html.anim section:not(.seen) { opacity: 0 }
+  section { transition: opacity .3s }
+  html.anim section.seen > .prose { animation: rise .55s cubic-bezier(.22,1,.36,1) both }
+  html.anim section.seen > .aside, html.anim section.seen > .ref {
+    animation: rise .55s cubic-bezier(.22,1,.36,1) both; animation-delay: .09s }
+  .code { transition: border-color .25s, transform .25s }
+  .code:hover { border-color: #2a3d5e }
+  nav.rail a { position: relative }
+  nav.rail a.on::before { content: ''; position: absolute; inset-inline-start: -9px; top: 50%;
+    width: 2px; height: 0; background: var(--blue); border-radius: 2px;
+    transform: translateY(-50%); animation: tick .3s cubic-bezier(.22,1,.36,1) forwards }
+  @keyframes tick { to { height: 16px } }
+  .ref > div { transition: background .2s }
+  .ref > div:hover { background: var(--soft) }
+  .idf input, .tabs button, .cp { transition: all .18s }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero > *, nav.rail, html.anim section.seen > .prose, html.anim section.seen > .aside,
+    html.anim section.seen > .ref, nav.rail a.on::before { animation: none }
+    html.anim section:not(.seen) { opacity: 1 }
+    html { scroll-behavior: auto }
+  }
+
+  /* ---------- reference ---------- */
+  .ref { margin: 14px 0 0; padding: 0; columns: 2; column-gap: 40px }
+  section.wide .ref { columns: 2 }
+  .ref > div { break-inside: avoid; padding: 9px 0 10px; border-bottom: 1px solid var(--hair) }
+  .ref dt { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 2px }
+  .ref dt code { font: 500 12.5px/1.5 'JetBrains Mono', monospace; color: var(--blue-d) }
+  .ref dt span { font: 400 11px/1.5 'JetBrains Mono', monospace; color: var(--faint);
+    background: var(--soft); border: 1px solid var(--hair); border-radius: 4px; padding: 0 5px }
+  .ref dd { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted) }
+
+  /* ---------- tabs & note ---------- */
+  .tabs { display: inline-flex; gap: 2px; padding: 2.5px; margin-bottom: 12px;
+    border: 1px solid var(--line); background: var(--soft); border-radius: 9px }
+  .tabs button { border: 0; background: none; cursor: pointer; border-radius: 6.5px;
+    font: 550 12px Inter; color: var(--muted); padding: 6px 14px; transition: .15s }
   .tabs button:hover { color: var(--ink) }
-  .tabs button.on { background: var(--surface); color: var(--deep); box-shadow: 0 1px 3px rgba(11,18,32,.1) }
+  .tabs button.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(10,14,20,.08) }
   .pane { display: none } .pane.on { display: block }
-  .note { border: 1px solid var(--line); border-inline-start: 3px solid var(--pair); background: var(--tint);
-    border-radius: 0 11px 11px 0; padding: 14px 17px; margin: 22px 0 0; font-size: 13.5px }
-  .note b { display: block; color: var(--ink); margin-bottom: 3px }
+  .note { border-inline-start: 2px solid var(--blue); padding: 1px 0 1px 13px; margin: 14px 0 0;
+    font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 54ch }
+  .note b { color: var(--ink) }
 
-  @media (max-width: 940px) {
+  @media (max-width: 1180px) {
+    section { grid-template-columns: minmax(0, 1fr) }
+    .aside { position: static }
+    .ref { columns: 1 }
+  }
+  @media (max-width: 900px) {
     .shell { grid-template-columns: 1fr; gap: 0 }
-    nav.rail { position: static; max-height: none; padding: 18px 0 0; display: flex; gap: 5px;
+    nav.rail { position: static; max-height: none; padding: 14px 0 0; display: flex; gap: 4px;
       overflow-x: auto; border-bottom: 1px solid var(--line) }
     nav.rail p { display: none }
-    nav.rail a { white-space: nowrap; border-radius: 8px 8px 0 0 } nav.rail a i { display: none }
-    main { padding-top: 26px } .bar .chip { display: none }
+    nav.rail a { white-space: nowrap }
+    main { padding-top: 24px }
   }
-  @media (max-width: 620px) { td:first-child { white-space: normal } .bar a.ghost { display: none } }
 </style>
 </head>
 <body>
@@ -962,99 +1023,108 @@ publicRouter.get(
 <header class="bar">
   <div class="bar-in">
     <img src="/pair-wordmark.svg" alt="Pair" />
-    <span class="chip">Integration guide</span>
-    <span class="rt"><a class="ghost" href="/api/public/docs#mobile">Android &amp; iOS</a></span>
+    <span class="div"></span>
+    <span class="name">Widget integration</span>
+    <span class="rt"><a class="gh" href="#mobile">Android &amp; iOS</a></span>
   </div>
 </header>
 
 <div class="shell">
   <nav class="rail">
-    <p>On this page</p>
-    <a href="#install"><i>01</i>Install</a>
-    <a href="#control"><i>02</i>Control API</a>
-    <a href="#send"><i>03</i>Messages you send</a>
-    <a href="#receive"><i>04</i>Messages you receive</a>
-    <a href="#headers"><i>05</i>Headers &amp; params</a>
-    <a href="#mobile"><i>06</i>Android &amp; iOS</a>
+    <p>Guide</p>
+    <a href="#install">Install</a>
+    <a href="#control">Control API</a>
+    <a href="#send">Messages you send</a>
+    <a href="#receive">Messages you receive</a>
+    <a href="#headers">Headers &amp; params</a>
+    <a href="#mobile">Android &amp; iOS</a>
   </nav>
 
   <main>
     <div class="hero">
-      <h1>Put the widget anywhere,<br />drive it from your own code</h1>
+      <p class="eyebrow">Widget SDK</p>
+      <h1>Put the widget anywhere, drive it from your code</h1>
       <p class="lede">One script on the web, a web view in an app, and the same control API in both.</p>
-      <div class="setup">
-        <label for="wid">Your widget ID</label>
-        <div class="row"><input id="wid" placeholder="YOUR_WIDGET_ID" spellcheck="false" aria-label="Your widget ID" /></div>
-        <p class="hint">Fills in every snippet on this page, and is remembered on this browser.</p>
+      <div class="idf">
+        <label for="wid">Widget ID</label>
+        <input id="wid" placeholder="YOUR_WIDGET_ID" spellcheck="false" aria-label="Your widget ID" />
+        <span class="tip">fills every snippet below</span>
       </div>
     </div>
 
     <section id="install">
-      <div class="sh"><i>01</i><h2>Install</h2></div>
-      <p>Paste this before <code class="inl">&lt;/body&gt;</code>. It loads the SDK, which builds the launcher and the panel and exposes <code class="inl">window.PairWidget</code>.</p>
-      ${codeBlock('html', install, true)}
+      <div class="prose">
+        <div class="sh"><i>01</i><h2>Install</h2></div>
+        <p>Paste this before <code class="inl">&lt;/body&gt;</code>. It loads the SDK, which builds the launcher and the panel and exposes <code class="inl">window.PairWidget</code>.</p>
+        <p>Nothing else is required — the design, the copy and the language all come from the widget's own config.</p>
+        <ul class="bul">
+          <li><b>beBaseUrl</b> is where the widget reads its config and sends its messages.</li>
+          <li><b>widgetId</b> picks which design to serve.</li>
+          <li>The launcher and panel are built by the SDK; you do not style them from the page.</li>
+        </ul>
+      </div>
+      <div class="aside">${codeBlock('html', install)}</div>
     </section>
 
     <section id="control">
-      <div class="sh"><i>02</i><h2>Control API</h2></div>
-      <p><code class="inl">window.PairWidget</code> — also <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
-      ${codeBlock('javascript', usage, true)}
-      <div class="tbl"><table>
-        <thead><tr><th>Call</th><th>Takes</th><th>What it does</th></tr></thead>
-        <tbody>${docRows(DOC_API)}</tbody>
-      </table></div>
+      <div class="prose">
+        <div class="sh"><i>02</i><h2>Control API</h2></div>
+        <p><code class="inl">window.PairWidget</code> — also <code class="inl">window.PairAiWidgetSDK</code> — is ready as soon as the script loads. Wait for the <b>ready</b> event before changing the view.</p>
+        <p>Every call is a <code class="inl">postMessage</code> underneath, so nothing here is privileged: you can send the same messages yourself.</p>
+      </div>
+      <div class="aside">${codeBlock('javascript', usage)}${codeBlock('javascript', custom)}</div>
     </section>
 
-    <section id="send">
-      <div class="sh"><i>03</i><h2>Messages you send</h2></div>
-      <p>Every call above is a <code class="inl">postMessage</code> underneath. Send one yourself with <code class="inl">PairWidget.send(type, data)</code> when you need something the API does not wrap.</p>
-      <div class="tbl"><table>
-        <thead><tr><th>Type</th><th>Payload</th><th>What it does</th></tr></thead>
-        <tbody>${docRows(DOC_SEND)}</tbody>
-      </table></div>
+    <section id="control-ref" class="wide">
+      <div class="prose"><h3>Every call</h3></div>
+      ${docRows(DOC_API)}
     </section>
 
-    <section id="receive">
-      <div class="sh"><i>04</i><h2>Messages you receive</h2></div>
-      <p>Subscribe with <code class="inl">PairWidget.on(name, fn)</code>, using the name without its <code class="inl">widget:</code> prefix. <code class="inl">'*'</code> receives every one.</p>
-      <div class="tbl"><table>
-        <thead><tr><th>Event</th><th>Payload</th><th>When it fires</th></tr></thead>
-        <tbody>${docRows(DOC_RECEIVE)}</tbody>
-      </table></div>
+    <section id="send" class="wide">
+      <div class="prose">
+        <div class="sh"><i>03</i><h2>Messages you send</h2></div>
+        <p>Use <code class="inl">PairWidget.send(type, data)</code> when you need something the API does not wrap.</p>
+      </div>
+      ${docRows(DOC_SEND)}
+    </section>
+
+    <section id="receive" class="wide">
+      <div class="prose">
+        <div class="sh"><i>04</i><h2>Messages you receive</h2></div>
+        <p>Subscribe with <code class="inl">PairWidget.on(name, fn)</code>, using the name without its <code class="inl">widget:</code> prefix. <code class="inl">'*'</code> receives every one.</p>
+      </div>
+      ${docRows(DOC_RECEIVE)}
     </section>
 
     <section id="headers">
-      <div class="sh"><i>05</i><h2>Headers &amp; query params</h2></div>
-      <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design — it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it. Your page only supplies the values.</p>
-      ${codeBlock('javascript', metadata)}
-      <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, sending <code class="inl">user_id</code> fills that header — and a key you never send is left out of the request entirely.</div>
+      <div class="prose">
+        <div class="sh"><i>05</i><h2>Headers &amp; query params</h2></div>
+        <p>The widget can attach values from your page to the requests it makes. The mapping lives in the widget's design — it names a <b>header</b> (or a <b>query param</b>) and the <b>metadata key</b> that fills it.</p>
+        <div class="note"><b>Values, not names.</b> Your page never names the header. If the design maps <code class="inl">X-User-Id</code> to <code class="inl">user_id</code>, sending <code class="inl">user_id</code> fills it — and a key you never send is left out entirely.</div>
+      </div>
+      <div class="aside">${codeBlock('javascript', metadata)}</div>
     </section>
 
     <section id="mobile">
-      <div class="sh"><i>06</i><h2>Android &amp; iOS</h2></div>
-      <p>There is no separate mobile SDK and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
-      <div class="tabs" id="tabs">
-        <button type="button" data-p="android" class="on">Android</button>
-        <button type="button" data-p="ios">iOS</button>
+      <div class="prose">
+        <div class="sh"><i>06</i><h2>Android &amp; iOS</h2></div>
+        <p>There is no separate mobile SDK and nothing new to learn: the widget is a web page, so an app hosts it in a web view and drives it with the same <code class="inl">PairWidget</code> API.</p>
+        <p>Two settings matter on Android — JavaScript, and DOM storage, where the widget keeps the visitor's language and theme choice.</p>
+        <div class="note"><b>Testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
       </div>
-      <div class="pane on" data-p="android">
-        <h3>Kotlin — WebView</h3>
-        <p>Two settings matter: JavaScript, and DOM storage — the widget keeps the visitor's language and theme choice in <code class="inl">localStorage</code>.</p>
-        ${codeBlock('kotlin', android, true)}
+      <div class="aside">
+        <div class="tabs" id="tabs">
+          <button type="button" data-p="android" class="on">Android</button>
+          <button type="button" data-p="ios">iOS</button>
+        </div>
+        <div class="pane on" data-p="android">${codeBlock('kotlin', android)}</div>
+        <div class="pane" data-p="ios">${codeBlock('swift', ios)}</div>
       </div>
-      <div class="pane" data-p="ios">
-        <h3>Swift — WKWebView</h3>
-        <p>The same, with events arriving through a <code class="inl">WKScriptMessageHandler</code> instead of a JavaScript interface.</p>
-        ${codeBlock('swift', ios, true)}
-      </div>
-      <div class="note"><b>Testing on a device.</b> The host page has to be reachable from the phone — a <code class="inl">localhost</code> origin will not resolve inside an emulator. Use your machine's LAN address or a tunnel.</div>
     </section>
   </main>
 </div>
 
 <script>
-  /* The widget ID is one field that rewrites every sample. Only the highlighted
-     placeholder spans are touched, so the highlighting survives. */
   var input = document.getElementById('wid')
   var slots = [].slice.call(document.querySelectorAll('.ph'))
   function applyId() {
@@ -1071,13 +1141,12 @@ publicRouter.get(
 
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.cp')
-    if (!btn) return
+    if (!btn || !navigator.clipboard) return
     var code = btn.closest('.code').querySelector('code')
-    if (!navigator.clipboard) return
     navigator.clipboard.writeText(code.textContent).then(function () {
       btn.textContent = 'Copied'
       btn.classList.add('done')
-      setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done') }, 1600)
+      setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done') }, 1500)
     }, function () {})
   })
 
@@ -1089,18 +1158,44 @@ publicRouter.get(
     ;[].forEach.call(document.querySelectorAll('.pane'), function (p) { p.classList.toggle('on', p.getAttribute('data-p') === want) })
   })
 
-  /* The rail follows the section being read. */
+  /* Reveal each section once, as it is reached.
+     The hiding is switched on from here rather than in the stylesheet: if this
+     script never runs, or the browser has no IntersectionObserver, the page is
+     simply all visible instead of all blank. */
+  var canAnimate = 'IntersectionObserver' in window &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (canAnimate) document.documentElement.classList.add('anim')
+
+  var sections = [].slice.call(document.querySelectorAll('section'))
+  if (!canAnimate) {
+    sections.forEach(function (s) { s.classList.add('seen') })
+  } else {
+  // Anything already in view at load appears at once, with no fade-in on arrival.
+  sections.forEach(function (s) {
+    if (s.getBoundingClientRect().top < window.innerHeight * 0.92) s.classList.add('seen')
+  })
+  var reveal = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return
+      en.target.classList.add('seen')
+      reveal.unobserve(en.target)
+    })
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.04 })
+  sections.forEach(function (s) { if (!s.classList.contains('seen')) reveal.observe(s) })
+  }
+
   var links = [].slice.call(document.querySelectorAll('nav.rail a'))
   var byId = {}
   links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a })
   var spy = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) {
       if (!en.isIntersecting) return
-      links.forEach(function (a) { a.classList.remove('on') })
       var a = byId[en.target.id]
-      if (a) a.classList.add('on')
+      if (!a) return
+      links.forEach(function (l) { l.classList.remove('on') })
+      a.classList.add('on')
     })
-  }, { rootMargin: '-78px 0px -68% 0px' })
+  }, { rootMargin: '-74px 0px -70% 0px' })
   ;[].forEach.call(document.querySelectorAll('section[id]'), function (s) { spy.observe(s) })
 <\/script>
 </body>
