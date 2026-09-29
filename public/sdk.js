@@ -23,6 +23,7 @@
   var bubbleHolder = null
   var widgetHolder = null
   var previewHolder = null
+  var previewAutoHide = null
   var config = {}
   var unreadCount = 0
   var badgeElement = null
@@ -310,26 +311,62 @@
       badgeHtml = '<div class="pair-ai-preview-badge">' + displayCount + '</div>'
     }
 
-    var html = `
-      <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%;">
-        <button class="pair-ai-preview-close" aria-label="Close preview">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          Close
-        </button>
-        <div class="pair-ai-preview-card ${cornerClass}">
-          ${badgeHtml}
-          <div class="pair-ai-preview-header">
-            ${avatarHtml}
-            <span class="pair-ai-preview-header-name">From ${senderName}</span>
-          </div>
-          <div class="pair-ai-preview-body">${content}</div>
-        </div>
-        <button class="pair-ai-preview-action">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-          See new messages
-        </button>
-      </div>
-    `
+    var isAr = /[\u0600-\u06FF]/.test(content)
+    var brand =
+      (config.launcherDesign && config.launcherDesign.background === '#brand' ? config.primaryColor : null) ||
+      config.primaryColor ||
+      '#B3202C'
+    var iconUrl = config.launcherDesign && config.launcherDesign.iconUrl
+    if (iconUrl && iconUrl.indexOf('http') !== 0) iconUrl = (config.beBaseUrl || '').replace(/\/$/, '') + iconUrl
+    var tdS = (config.toastDesign && config.toastDesign.styles) || {}
+    var cardBg = tdS.backgroundColor || '#ffffff'
+    var cardColor = tdS.color || '#1c1d22'
+    var cardRadius = tdS.borderRadius || '16px'
+    var avatar = iconUrl
+      ? '<img src="' +
+        iconUrl +
+        '" alt="" style="width:30px;height:30px;border-radius:9px;object-fit:contain;background:' +
+        brand +
+        ';flex-shrink:0" />'
+      : '<span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:' +
+        brand +
+        ';color:#fff;font-weight:700;font-size:14px;flex-shrink:0">' +
+        (senderName || 'C').charAt(0) +
+        '</span>'
+
+    var html =
+      '<div class="pair-ai-preview-card ' +
+      cornerClass +
+      '" role="button" tabindex="0" dir="' +
+      (isAr ? 'rtl' : 'ltr') +
+      '"' +
+      ' style="all:initial;font-family:inherit;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;padding:14px 16px;cursor:pointer;background:' +
+      cardBg +
+      ';color:' +
+      cardColor +
+      ';border-radius:' +
+      cardRadius +
+      ';border:1px solid rgba(0,0,0,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.16), 0 0 0 1.5px ' +
+      brand +
+      '22">' +
+      '  <div style="display:flex;align-items:center;gap:10px">' +
+      avatar +
+      '    <span style="flex:1;font-size:12.5px;font-weight:700;font-family:inherit;color:inherit">' +
+      senderName +
+      '</span>' +
+      '    <button class="pair-ai-preview-close" aria-label="Close" style="all:initial;cursor:pointer;line-height:0;padding:4px;opacity:.55">' +
+      '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+      '    </button>' +
+      '  </div>' +
+      '  <div class="pair-ai-preview-body" style="font-size:13.5px;line-height:1.55;font-family:inherit;color:inherit;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">' +
+      content +
+      '</div>' +
+      '  <span class="pair-ai-preview-action" style="font-size:12px;font-weight:600;font-family:inherit;color:' +
+      brand +
+      '">' +
+      (isAr ? 'اعرض الرسالة ←' : 'View message →') +
+      '</span>' +
+      '</div>'
 
     previewHolder.innerHTML = html
 
@@ -342,14 +379,23 @@
       })
     }
 
-    var actionBtn = previewHolder.querySelector('.pair-ai-preview-action')
-    if (actionBtn) {
-      actionBtn.addEventListener('click', function () {
+    var cardEl = previewHolder.querySelector('.pair-ai-preview-card')
+    if (cardEl) {
+      cardEl.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.pair-ai-preview-close')) return
         hidePreview()
         toggleWidget(true)
         sendMessageToWidget('sdk:dismissPreview', {})
       })
     }
+
+    // Auto-hide after the Builder's duration (clamped to a readable minimum)
+    if (previewAutoHide) clearTimeout(previewAutoHide)
+    var tdd = config.toastDesign || {}
+    var dur = Math.max(4000, Number(tdd.durationMs) || 8000)
+    previewAutoHide = setTimeout(function () {
+      hidePreview()
+    }, dur)
 
     // Builder toast design: colours, radius and fonts land on the card itself
     var td = config.toastDesign || {}
