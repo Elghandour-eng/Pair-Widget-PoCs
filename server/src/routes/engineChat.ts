@@ -52,6 +52,19 @@ const PRICE_ITEMS = [
   { label: 'بيت الأفلام 1954 (ديلوكس)', label_en: '1954 Film House (Deluxe)', price: '6.000' },
 ]
 
+/** Every experience with its cinemas and price, in both languages — hydrated from `{"template":"experiences_list","data":{}}`. */
+const EXPERIENCE_ITEMS = [
+  { name: 'IMAX', cinemas_ar: 'الكوت فقط (الوحيدة بالكويت)', cinemas_en: 'Al Kout only (the only one in Kuwait)', price: '4.000' },
+  { name: 'Dolby Cinema', cinemas_ar: '360، الأفنيوز، العاصمة', cinemas_en: '360, Avenues, Assima', price: '4.500' },
+  { name: '4DX', cinemas_ar: '360، الأفنيوز، الكوت', cinemas_en: '360, Avenues, Al Kout', price: '8.000' },
+  { name: '4DX Screen', cinemas_ar: 'العاصمة فقط', cinemas_en: 'Assima only', price: '8.000' },
+  { name: 'ScreenX', cinemas_ar: 'الأفنيوز والعاصمة', cinemas_en: 'Avenues and Assima', price: '4.500' },
+  { name: 'ELEVEN', cinemas_ar: 'الكوت فقط', cinemas_en: 'Al Kout only', price: '3.500' },
+  { name: 'VIP', cinemas_ar: '360، الأفنيوز، العاصمة، الخيران', cinemas_en: '360, Avenues, Assima, Khiran', price: '8.000' },
+  { name: 'Skyline', cinemas_ar: 'العاصمة', cinemas_en: 'Assima', price: '5.000', note_ar: 'موسمي بالشتاء', note_en: 'seasonal, winter' },
+  { name: '1954 Film House', cinemas_ar: 'سوق الكوت', cinemas_en: 'Souq Al Kout', price: '6.000', note_ar: 'سينما بوتيك بمقاعد ديلوكس', note_en: 'boutique cinema, Deluxe seats' },
+]
+
 function hydrateComponents(list: unknown): unknown {
   if (!Array.isArray(list)) return list
   return list.map((c) => {
@@ -65,7 +78,11 @@ function hydrateComponents(list: unknown): unknown {
     }
     if (comp.template === 'price_list') {
       const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : PRICE_ITEMS
-      return { ...comp, data: { title: data.title ?? 'أسعار التذاكر 🎬', currency: data.currency ?? 'د.ك', items } }
+      return { ...comp, data: { title: data.title ?? 'أسعار التذاكر 🎬', title_en: 'Ticket prices 🎬', currency: 'د.ك', currency_en: 'KD', items } }
+    }
+    if (comp.template === 'experiences_list') {
+      const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : EXPERIENCE_ITEMS
+      return { ...comp, data: { title: 'تجاربنا السينمائية ✨', title_en: 'Our cinema experiences ✨', items } }
     }
     return comp
   })
@@ -491,6 +508,8 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>): Record<str
   if (cards.length > 0) return { type: 'location_cards', content: { cards } }
   const price = comps.find((c) => c.type === 'template' && c.template === 'price_list')
   if (price) return { type: 'price_list', content: price.data as Record<string, unknown> }
+  const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
+  if (exp) return { type: 'experiences_list', content: exp.data as Record<string, unknown> }
   return undefined
 }
 
@@ -578,7 +597,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
   const think = (text: string) => broadcast(conv, { event: 'thinking', conversation_id: conv.engineConv, stream_id: streamId, text })
-  think('أفكر')
+  think('قاعد أفكر شلون أساعدك 🍿')
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
@@ -610,11 +629,11 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           onConvId = undefined
         }
         if (e.event === 'route') {
-          think('أجهّز لك الإجابة')
+          think('ثواني وحدة، قاعد أجهّز لك الجواب')
         } else if (e.event === 'agent_thought') {
           const tool = String((e as { tool?: unknown }).tool ?? '')
-          if (tool === 'cinescape_locations') think('أجيب لك بيانات السينمات 📍')
-          else if (tool && !tool.startsWith('route_to_')) think('أراجع المعلومات')
+          if (tool === 'cinescape_locations') think('قاعد أجيب لك بيانات السينمات من النظام 📍')
+          else if (tool && !tool.startsWith('route_to_')) think('قاعد أراجع معلوماتنا الرسمية عشان أتأكد لك')
         } else if (e.event === 'message' && typeof e.answer === 'string') {
           buf += e.answer
           broadcast(conv, { event: 'delta', conversation_id: convId(), stream_id: streamId, delta: e.answer, seq: seq++ })
