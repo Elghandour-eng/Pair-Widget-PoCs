@@ -92,14 +92,20 @@ function hydrateComponents(list: unknown): unknown {
       const cat = String(data.category ?? '').trim()
       if (items.length === 0 && cat) {
         const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase())
-        items = matched.map((m) => ({ name: m.name, name_ar: m.name_ar, price: m.price }))
+        // the price-list renderer reads label/label_en
+        items = matched.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price }))
         title = title ?? matched[0]?.category_ar
         title_en = title_en ?? matched[0]?.category
       } else if (items.length > 0) {
-        // fill missing prices/arabic names from the dataset by name
+        // normalize model-passed items and fill prices from the dataset by name
         items = items.map((it) => {
-          const m = MENU_ITEMS.find((x) => x.name.toLowerCase() === String(it.name ?? '').toLowerCase() || x.name_ar === it.name_ar)
-          return m ? { name: m.name, name_ar: m.name_ar, price: m.price, ...it } : it
+          const nm = String(it.name ?? it.label ?? '')
+          const m = MENU_ITEMS.find((x) => x.name.toLowerCase() === nm.toLowerCase() || x.name_ar === (it.name_ar ?? it.label))
+          return {
+            label: (it.name_ar ?? it.label ?? m?.name_ar ?? m?.name ?? nm) as string,
+            label_en: (it.name ?? it.label_en ?? m?.name ?? nm) as string,
+            price: (it.price ?? m?.price ?? '') as string,
+          }
         })
       }
       return { ...comp, data: { title: title ?? 'المنيو 🍿', title_en: title_en ?? 'Menu 🍿', currency: 'د.ك', currency_en: 'KD', items } }
@@ -735,6 +741,7 @@ function componentsToWidgetFields(comps: Array<Record<string, unknown>>): Pick<W
     }
     if (c.type === 'question') {
       const opts = (Array.isArray(c.options) ? c.options : []) as Array<Record<string, unknown>>
+      if (opts.length < 2) continue // a choice card with no real choices renders as a useless empty box
       out.next_messages = [
         ...(out.next_messages ?? []),
         { type: 'question', question: String(c.text ?? ''), input_type: c.select === 'multi' ? 'multi' : 'single', options: opts.map((o) => String(o.label ?? o.id ?? '')) },
