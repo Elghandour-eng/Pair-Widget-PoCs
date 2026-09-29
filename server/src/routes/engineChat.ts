@@ -833,12 +833,18 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
   }
-  if (!comps.some((c) => c.type === 'suggestions')) {
+  {
+    // chips must speak the reply's language — mismatched ones (a model slip) are replaced
     const arReply = /[\u0600-\u06FF]/.test(finalText || buf)
-    comps.push({
-      type: 'suggestions',
-      items: arReply ? ['كل السينمات 📍', 'أسعار التذاكر', 'شنو التجارب عندكم؟'] : ['All cinemas 📍', 'Ticket prices', 'Your experiences?'],
-    })
+    const fallback = arReply ? ['كل السينمات 📍', 'أسعار التذاكر', 'شنو التجارب عندكم؟'] : ['All cinemas 📍', 'Ticket prices', 'Your experiences?']
+    const sug = comps.find((c) => c.type === 'suggestions') as { items?: unknown[] } | undefined
+    if (!sug) {
+      comps.push({ type: 'suggestions', items: fallback })
+    } else if (Array.isArray(sug.items) && sug.items.length > 0) {
+      const arItems = sug.items.filter((i) => /[\u0600-\u06FF]/.test(String(i))).length
+      const mismatched = arReply ? arItems < sug.items.length / 2 : arItems > sug.items.length / 2
+      if (mismatched) sug.items = fallback
+    }
   }
   const template = componentsToTemplate(comps, finalText || buf)
   const content = template ? finalText || buf : [finalText || buf, cardsToMarkdown(comps)].filter(Boolean).join('\n\n')
