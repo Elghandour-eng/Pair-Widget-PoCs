@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import { WidgetContent } from '@/components/widget-content'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
+import { useWidgetUIContext } from '@/contexts/widget-ui-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { ConversationMessage } from '@/features/conversation/components/conversation-message/conversation-message'
 import { EmptyMessage } from '@/features/conversation/components/empty-message'
@@ -36,6 +37,7 @@ function ConversationMessages({
   // Filter out system messages
   const messages = allMessages.filter((msg) => msg.sender_type !== 'system')
   const { widgetConfig } = useWidgetConfigContext()
+  const { isOpen: isWidgetOpen } = useWidgetUIContext()
   const { unreadMessages, getFirstUnreadMessageId, markConversationAsRead, markAsRead, typingStates } =
     useUnreadMessages()
   const typingState = conversationId ? typingStates.get(conversationId) : undefined
@@ -126,7 +128,7 @@ function ConversationMessages({
     onReachBottom: () => {
       // Mark conversation as read when user scrolls to bottom
       // This ensures unread indicator is cleared when user actively views all messages
-      if (conversationId && unreadCount > 0) {
+      if (conversationId && unreadCount > 0 && isWidgetOpen) {
         logger.debug('ConversationMessages', 'User reached bottom, marking conversation as read', {
           conversationId,
           unreadCount,
@@ -175,7 +177,7 @@ function ConversationMessages({
             messageIds: messagesToMarkAsRead,
             conversationId,
           })
-          markAsRead(conversationId, messagesToMarkAsRead)
+          if (isWidgetOpen) markAsRead(conversationId, messagesToMarkAsRead)
         }
       },
       {

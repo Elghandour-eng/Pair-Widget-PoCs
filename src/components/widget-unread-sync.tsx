@@ -64,9 +64,11 @@ export function WidgetUnreadSync() {
     }
   }, [dismissPreview])
 
-  // Send preview data to parent SDK to render natively
+  // Send preview data to parent SDK to render natively. `isOpen` is a dep on
+  // purpose: closing the widget with a fresh message waiting re-posts the
+  // preview so the SDK (now closed) can actually show it.
   useEffect(() => {
-    if (lastIncomingMessage && !isPreviewDismissed) {
+    if (lastIncomingMessage && !isPreviewDismissed && !isOpen) {
       sendToParent('widget:previewMessage', {
         message: {
           content: lastIncomingMessage.content,
@@ -78,7 +80,7 @@ export function WidgetUnreadSync() {
     } else if (isPreviewDismissed) {
       sendToParent('widget:dismissPreview')
     }
-  }, [lastIncomingMessage, isPreviewDismissed, visibleUnreadCount])
+  }, [lastIncomingMessage, isPreviewDismissed, visibleUnreadCount, isOpen])
 
   return null
 }
