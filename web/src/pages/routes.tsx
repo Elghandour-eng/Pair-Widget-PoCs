@@ -8,8 +8,8 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 const loaders = {
   '/login': () => import('@/pages/Login'),
   '/widgets': () => import('@/pages/Widgets'),
-  '/widgets/:widgetId': () => import('@/pages/WidgetDetail'),
-  '/widgets/:widgetId/builder': () => import('@/pages/Builder'),
+  '/widgets/:widgetId': () => import('@/pages/widget-detail/index'),
+  '/widgets/:widgetId/builder': () => import('@/pages/builder/index'),
   '/users': () => import('@/pages/Users'),
   '/logs': () => import('@/pages/Logs'),
   preview: () => import('@/pages/PreviewFrame'),
