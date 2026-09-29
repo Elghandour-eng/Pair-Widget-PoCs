@@ -54,13 +54,15 @@ interface InteractiveButtonProps {
 
 export function InteractiveButton({ option, sourceMessageUlid, messageContent }: InteractiveButtonProps) {
   const { widgetConfig, view } = useWidgetConfigContext()
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
+  // chips sit on the messages surface, which follows the VIEW theme — the design's
+  // widgetBgColor (a dark header/panel) must not push them into dark styling
+  const isDark = view.theme === 'dark'
   const chips = widgetConfig.messagesConfig?.suggestions
   const brand = widgetConfig.primaryColor || '#B3202C'
   const chipStyle: React.CSSProperties = {
-    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.06)' : '#fff'),
+    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.07)' : '#ffffff'),
     borderColor: chips?.borderColor ?? (isDark ? `${brand}8c` : `${brand}99`),
-    color: chips?.textColor ?? (isDark ? 'rgba(255,255,255,0.85)' : '#3a3b40'),
+    color: chips?.textColor ?? (isDark ? 'rgba(255,255,255,0.88)' : '#2c2d33'),
     borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
     fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
     borderWidth: '1.5px',
