@@ -58,3 +58,39 @@ export const sdkBaseUrl = (): string => {
   // from working until you notice the widget is the wrong version.
   return env.WIDGET_SDK_BASE_URL || '/sdk'
 }
+
+/**
+ * Checks once, at startup, that the configured SDK origin really serves the
+ * widget — and says so loudly when it does not.
+ *
+ * This exists because the failure it catches is invisible from the server's
+ * side: a WIDGET_SDK_BASE_URL pointing at an origin with no sdk.js at its root
+ * (the deployment's own origin, say) leaves the server perfectly healthy while
+ * every host page refuses the script for being JSON, and the only evidence is
+ * in a visitor's browser console. One request at boot moves that evidence into
+ * the deployment's own logs.
+ *
+ * It never blocks or fails startup: a slow or unreachable SDK origin is not a
+ * reason to refuse to serve the dashboard.
+ */
+export const checkSdkOrigin = (log: {
+  info: (o: object, m: string) => void
+  error: (o: object, m: string) => void
+}): void => {
+  if (isLocalSdk() || !env.WIDGET_SDK_BASE_URL) return
+  const url = `${env.WIDGET_SDK_BASE_URL.replace(/\/$/, '')}/sdk.js`
+  const done = (o: object, m: string, bad: boolean) => (bad ? log.error(o, m) : log.info(o, m))
+  fetch(url, { signal: AbortSignal.timeout(8000) })
+    .then((res) => {
+      const type = res.headers.get('content-type') ?? ''
+      const ok = res.ok && /javascript|ecmascript/i.test(type)
+      done(
+        { url, status: res.status, type },
+        ok ? 'the configured widget SDK origin serves sdk.js' : 'the configured widget SDK origin does not serve sdk.js; host pages will refuse the script',
+        !ok,
+      )
+    })
+    .catch((err: unknown) => {
+      log.error({ url, err: (err as Error).message }, 'the configured widget SDK origin could not be reached')
+    })
+}

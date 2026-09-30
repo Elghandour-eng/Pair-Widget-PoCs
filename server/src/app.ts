@@ -9,7 +9,7 @@ import { env } from './config/env.js'
 import { logger } from './lib/logger.js'
 import { mongoStatus } from './lib/mongo.js'
 import { redis } from './lib/redis.js'
-import { localSdkDist, localSdkStatus } from './lib/sdkBase.js'
+import { checkSdkOrigin, localSdkDist, localSdkStatus } from './lib/sdkBase.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
@@ -149,6 +149,7 @@ export function createApp() {
         ? 'WIDGET_SDK_DIST holds no sdk.js, so this deployment serves no widget of its own'
         : 'WIDGET_SDK_DIST is not set, so this deployment serves no widget of its own',
     )
+    checkSdkOrigin(logger)
   }
 
   // Serve the built dashboard (web/dist) from the same origin in production.
