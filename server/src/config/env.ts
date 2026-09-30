@@ -21,6 +21,18 @@ const schema = z.object({
   // every embed loads the widget from this same origin — so the widget and the
   // config it renders always ship together.
   WIDGET_SDK_DIST: z.string().default(''),
+  // The widget's own settings. The image builds the widget without them and
+  // this server hands them to it at runtime (see sdkRuntimeEnv), so they come
+  // from the deployment's environment — Vault — and a change needs a restart,
+  // not a rebuild. Blank is allowed here; the widget itself refuses to start
+  // without VITE_BASE_URL and VITE_PUSHER_APP_KEY, and the server says so at boot.
+  VITE_BASE_URL: z.string().default(''),
+  VITE_PUSHER_APP_KEY: z.string().default(''),
+  VITE_PUSHER_CLUSTER: z.string().default(''),
+  VITE_PUSHER_HOST: z.string().default(''),
+  VITE_PUSHER_PORT: z.string().default(''),
+  VITE_PUSHER_FORCE_TLS: z.string().default(''),
+  VITE_HIRO_WIDGET_ID: z.string().default(''),
   // Optional: when set, system logs are also written to MongoDB.
   MONGODB_URI: z.string().optional(),
   MONGODB_DB: z.string().default('pair_widget_studio'),

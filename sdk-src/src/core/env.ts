@@ -2,9 +2,18 @@ import { createDebugLogger, getFilePathFromUrl } from '../utils/logger'
 
 const logger = createDebugLogger(getFilePathFromUrl(import.meta.url))
 
+/**
+ * Settings written into the page by the server that serves this build win over
+ * the ones baked in by Vite: a deployment's values live in its environment, not
+ * in the image, so the image is built without them.
+ */
+function readEnv(key: keyof ImportMetaEnv): string | undefined {
+  return window.__PAIR_WIDGET_ENV__?.[key] ?? import.meta.env[key]
+}
+
 function getEnvVariable(key: keyof ImportMetaEnv): string {
   logger.debug('getEnvVariable', `Retrieving environment variable: ${key}`)
-  const value = import.meta.env[key]
+  const value = readEnv(key)
   if (typeof value !== 'string' || value === '') {
     logger.debug('getEnvVariable', `Environment variable missing or invalid: ${key}`)
     throw new Error(`Missing or invalid environment variable: ${key}`)
@@ -15,7 +24,7 @@ function getEnvVariable(key: keyof ImportMetaEnv): string {
 }
 
 function getOptionalEnvVariable(key: keyof ImportMetaEnv): string | undefined {
-  const value = import.meta.env[key]
+  const value = readEnv(key)
   if (typeof value !== 'string' || value.trim() === '') {
     return undefined
   }

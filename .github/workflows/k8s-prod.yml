@@ -16,8 +16,9 @@ env:
 
 jobs:
   build-and-push:
-    name: Build and push testing image
+    name: Build and push production image
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       packages: write
@@ -30,33 +31,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # The widget is built from sdk-src/ in this repository (see the Dockerfile's
-      # sdk stage) so the image carries the widget its config was designed
-      # against. Vite bakes the VITE_* values into the bundle and the widget
-      # throws on a missing VITE_BASE_URL or VITE_PUSHER_APP_KEY, so a build
-      # without them would ship a widget that cannot start. Rather than fail the
-      # deploy, the build then skips the widget and the server falls back to
-      # WIDGET_SDK_BASE_URL — loudly, in its own logs and in /api/health.
-      #
-      # Staging reads its own variables. Sharing one set across environments
-      # would point this environment's visitors at the other one's Pusher, with
-      # the widget otherwise working and nothing reporting it.
-      - name: Resolve widget build inputs
-        id: sdk
-        env:
-          VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
-          VITE_PUSHER_APP_KEY: ${{ vars.VITE_PUSHER_APP_KEY }}
-        run: |
-          missing=""
-          [ -n "${VITE_BASE_URL}" ] || missing="${missing} VITE_BASE_URL"
-          [ -n "${VITE_PUSHER_APP_KEY}" ] || missing="${missing} VITE_PUSHER_APP_KEY"
-          if [ -n "${missing}" ]; then
-            echo "::warning title=No widget in this image::Set these repository variables to build it:${missing}"
-            echo "build_sdk=0" >> "$GITHUB_OUTPUT"
-          else
-            echo "build_sdk=1" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,9 +48,9 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          IMAGE_TAG="producation-${SHORT_SHA}"
+          IMAGE_TAG="production-${SHORT_SHA}"
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          IMG_LATEST=$(echo "ghcr.io/${REPO}:producation-latest" | tr '[:upper:]' '[:lower:]')
+          IMG_LATEST=$(echo "ghcr.io/${REPO}:production-latest" | tr '[:upper:]' '[:lower:]')
           IMG_SHA=$(echo "ghcr.io/${REPO}:${IMAGE_TAG}" | tr '[:upper:]' '[:lower:]')
 
           {
@@ -96,14 +70,6 @@ jobs:
             ${{ steps.img.outputs.img_latest }}
             ${{ steps.img.outputs.img_sha }}
           platforms: linux/amd64
-          build-args: |
-            BUILD_SDK=${{ steps.sdk.outputs.build_sdk }}
-            VITE_BASE_URL=${{ vars.VITE_BASE_URL }}
-            VITE_PUSHER_APP_KEY=${{ vars.VITE_PUSHER_APP_KEY }}
-            VITE_PUSHER_CLUSTER=${{ vars.VITE_PUSHER_CLUSTER }}
-            VITE_PUSHER_HOST=${{ vars.VITE_PUSHER_HOST }}
-            VITE_PUSHER_PORT=${{ vars.VITE_PUSHER_PORT }}
-            VITE_PUSHER_FORCE_TLS=${{ vars.VITE_PUSHER_FORCE_TLS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           annotations: |

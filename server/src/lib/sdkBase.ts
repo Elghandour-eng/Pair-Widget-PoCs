@@ -38,6 +38,32 @@ export const localSdkStatus = (): { configured: boolean; ok: boolean; dir: strin
   dir: local?.dir ?? null,
 })
 
+const RUNTIME_KEYS = [
+  'VITE_BASE_URL',
+  'VITE_PUSHER_APP_KEY',
+  'VITE_PUSHER_CLUSTER',
+  'VITE_PUSHER_HOST',
+  'VITE_PUSHER_PORT',
+  'VITE_PUSHER_FORCE_TLS',
+  'VITE_HIRO_WIDGET_ID',
+] as const
+
+/**
+ * The widget's settings, read from this process's environment.
+ *
+ * The widget is a Vite app, and Vite would bake these into the bundle at build
+ * time — where the deployment's secrets are not. So the image builds the widget
+ * without them and this server writes them into the widget's page on every load
+ * (window.__PAIR_WIDGET_ENV__), which the widget reads before import.meta.env.
+ * Blank values are left out, so a local build's own .env still applies.
+ */
+export const sdkRuntimeEnv = (): Record<string, string> =>
+  Object.fromEntries(RUNTIME_KEYS.filter((k) => env[k] !== '').map((k) => [k, env[k]]))
+
+/** The settings the widget throws without, when they are missing. */
+export const missingSdkEnv = (): string[] =>
+  (['VITE_BASE_URL', 'VITE_PUSHER_APP_KEY'] as const).filter((k) => env[k] === '')
+
 /** True when a local build of the widget SDK is being served at /sdk. */
 export const isLocalSdk = (): boolean => !!local?.ok
 

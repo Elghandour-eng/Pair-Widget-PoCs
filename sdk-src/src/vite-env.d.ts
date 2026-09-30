@@ -19,3 +19,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  // Written into the page by the server that serves this build; see core/env.ts.
+  __PAIR_WIDGET_ENV__?: Partial<Record<keyof ImportMetaEnv, string>>
+}

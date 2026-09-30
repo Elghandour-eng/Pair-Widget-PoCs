@@ -9,35 +9,15 @@ FROM ghcr.io/taha2samy-3/node:22-dev AS sdk
 WORKDIR /src
 # husky's prepare script wants a .git directory that is not in the build context.
 ENV HUSKY=0
-# Vite inlines these at build time, and the widget's env module throws on a
-# missing VITE_BASE_URL or VITE_PUSHER_APP_KEY, so they are build inputs rather
-# than runtime configuration. The Pusher app key is a client key, public by
-# design — the widget ships it to every browser either way.
-# Set to 1 to build the widget. Left unset, the image ships without one and the
-# server falls back to WIDGET_SDK_BASE_URL — the escape hatch for a deployment
-# whose Pusher and Pair values are not configured yet, since a widget built
-# without them throws on startup and is worse than no widget at all.
-ARG BUILD_SDK=""
-ARG VITE_BASE_URL=""
-ARG VITE_PUSHER_APP_KEY=""
-ARG VITE_PUSHER_CLUSTER=""
-ARG VITE_PUSHER_HOST=""
-ARG VITE_PUSHER_PORT=""
-ARG VITE_PUSHER_FORCE_TLS=""
+# Built with no settings at all. The widget's VITE_* values are the
+# deployment's, not the image's: the server reads them from its environment
+# (Vault) and writes them into the widget's page at runtime, so one image runs
+# anywhere and a changed value needs a restart, not a rebuild.
 COPY --chown=node:node . .
-RUN set -eu; \
-    if [ "$BUILD_SDK" != "1" ]; then \
-      echo 'sdk: BUILD_SDK is not 1; this image ships no widget of its own'; \
-      mkdir -p sdk-src/dist; \
-    else \
-      if [ -z "$VITE_BASE_URL" ] || [ -z "$VITE_PUSHER_APP_KEY" ]; then \
-        echo 'sdk: VITE_BASE_URL and VITE_PUSHER_APP_KEY must be passed as build args' >&2; \
-        exit 1; \
-      fi; \
-      cd sdk-src; \
-      npm ci --no-audit --no-fund; \
-      npx vite build --base=/sdk/ --outDir dist; \
-    fi
+RUN cd sdk-src \
+    && npm ci --no-audit --no-fund \
+    && npx vite build --base=/sdk/ --outDir dist \
+    && test -f dist/sdk.js
 
 # ---- dependencies ----
 FROM ghcr.io/taha2samy-3/node:22-dev AS deps
@@ -69,8 +49,8 @@ COPY --from=deps --chown=node:node /app ./
 COPY --from=build --chown=node:node /app/server/dist server/dist
 COPY --from=build --chown=node:node /app/web/dist web/dist
 
-# 3. Copy the widget SDK this image serves at /sdk. Empty when the build context
-#    carried no widget source; set WIDGET_SDK_DIST=/app/sdk-dist to serve it.
+# 3. Copy the widget SDK this image serves at /sdk; set WIDGET_SDK_DIST=/app/sdk-dist
+#    to serve it.
 COPY --from=sdk --chown=node:node /src/sdk-src/dist sdk-dist
 
 USER node

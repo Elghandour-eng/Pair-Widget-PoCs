@@ -1,5 +1,5 @@
 import cors from 'cors'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import express from 'express'
@@ -9,7 +9,7 @@ import { env } from './config/env.js'
 import { logger } from './lib/logger.js'
 import { mongoStatus } from './lib/mongo.js'
 import { redis } from './lib/redis.js'
-import { checkSdkOrigin, localSdkDist, localSdkStatus } from './lib/sdkBase.js'
+import { checkSdkOrigin, localSdkDist, localSdkStatus, missingSdkEnv, sdkRuntimeEnv } from './lib/sdkBase.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
@@ -100,6 +100,22 @@ export function createApp() {
   // the only way a change to the widget itself is visible before it ships.
   const sdkDist = localSdkDist()
   if (sdkDist) {
+    // The widget's page, with its settings written in ahead of its bundle. It
+    // is rendered once: the settings are this process's environment, which
+    // does not change while it runs. `<` is escaped so no value can close the
+    // script tag it sits in.
+    const sdkIndex = path.join(sdkDist, 'index.html')
+    const sdkPage = existsSync(sdkIndex)
+      ? readFileSync(sdkIndex, 'utf8').replace(
+          '<head>',
+          `<head><script>window.__PAIR_WIDGET_ENV__=${JSON.stringify(sdkRuntimeEnv()).replace(/</g, '\\u003c')}</script>`,
+        )
+      : null
+    const missing = missingSdkEnv()
+    if (missing.length) {
+      logger.error({ missing }, 'the widget is served without settings it cannot start without; set them in this deployment\'s environment')
+    }
+
     // The widget is a separate app that runs in an iframe on any site, and it
     // has its own inline bootstrap. The dashboard's policy — script-src 'self'
     // with no inline — is the wrong one for it and blocks it outright, so
@@ -123,11 +139,18 @@ export function createApp() {
         )
         next()
       },
+      (req, res, next) => {
+        if (!sdkPage || (req.method !== 'GET' && req.method !== 'HEAD')) return next()
+        if (req.path !== '/' && req.path !== '/index.html') return next()
+        res.setHeader('Cache-Control', 'no-cache')
+        res.type('html').send(sdkPage)
+      },
       // Hashed bundles cache hard; sdk.js, sdk.css and index.html revalidate
       // on every load, so a rebuilt widget is what the next page view runs —
       // a browser that cached the old sdk.js for minutes looked exactly like
       // "the snippet does not work".
       express.static(sdkDist, {
+        index: false,
         setHeaders: (res, filePath) => {
           const hashed = /[\\/]assets[\\/]/.test(filePath)
           res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache')
