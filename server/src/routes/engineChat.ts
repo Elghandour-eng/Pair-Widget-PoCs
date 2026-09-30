@@ -90,20 +90,35 @@ function hydrateComponents(list: unknown): unknown {
       let title = data.title as string | undefined
       let title_en = data.title_en as string | undefined
       const cat = String(data.category ?? '').trim()
+      // optional cinema filter: map the customer's cinema to Airtable availability columns
+      const cinemaRaw = String(data.cinema ?? '').trim().toLowerCase()
+      const CINEMA_COLS: Array<[RegExp, string[]]> = [
+        [/360/, ['360', '360 VIP']],
+        [/avenue|أفنيوز|افنيوز/, ['Avenues', 'Avenues VIP']],
+        [/kout|كوت/, ['Al Kout']],
+        [/assima|عاصمة|العاصمه|skyline|سكاي/, ['Assima', 'Assima VIP', 'Skyline']],
+        [/khiran|khairan|خيران/, ['Khairan', 'Khairan VIP']],
+        [/warehouse|ويرهاوس/, ['Warehouse']],
+        [/bairaq|بيرق/, ['Bairaq']],
+        [/ajial|أجيال|اجيال/, ['Ajial']],
+        [/1954|بيت الأفلام|film house/, ['1954']],
+      ]
+      const cols = cinemaRaw ? CINEMA_COLS.find(([re]) => re.test(cinemaRaw))?.[1] : undefined
+      const atCinema = (m: { cinemas: string[] }) => (cols ? m.cinemas.some((c) => cols.includes(c)) : m.cinemas.length > 0)
       // a specific food type ("popcorn", "قهوة") filters by item name, never a whole category
       const match = String(data.match ?? '').trim()
       if (items.length === 0 && match) {
         const terms = match.toLowerCase().split(/[|,،\s]+/).filter((t) => t.length >= 2)
         const hits = MENU_ITEMS.filter((m) => {
           const hay = `${m.name} ${m.name_ar}`.toLowerCase()
-          return terms.some((t) => hay.includes(t))
+          return terms.some((t) => hay.includes(t)) && atCinema(m)
         })
         items = hits.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
         title = title ?? match.split(/[|,،]/)[0]
         title_en = title_en ?? match.split(/[|,،]/)[0]
       }
       if (items.length === 0 && cat) {
-        const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase())
+        const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase() && atCinema(m))
         // the price-list renderer reads label/label_en
         items = matched.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
         title = title ?? matched[0]?.category_ar

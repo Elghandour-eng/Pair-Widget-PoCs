@@ -1,5 +1,5 @@
-/** Cinescape concession menu (Airtable export 2026). */
-export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string; category_ar: string; price: string; vip_only: boolean; image: string }> = [
+/** Cinescape concession menu (Airtable export 2026). `cinemas` = Airtable availability columns. */
+export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string; category_ar: string; price: string; vip_only: boolean; image: string; cinemas: string[] }> = [
   {
     "name": "Barbican Apple",
     "name_ar": "بيرة بربيكان ( تفاح )",
@@ -7,7 +7,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/barbican-apple.jpg"
+    "image": "/api/public/uploads/menu/barbican-apple.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Barbican Pomegranate",
@@ -16,7 +32,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/barbican-pomegranate.jpg"
+    "image": "/api/public/uploads/menu/barbican-pomegranate.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Barbican Strawberry",
@@ -25,7 +57,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/barbican-strawberry.jpg"
+    "image": "/api/public/uploads/menu/barbican-strawberry.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Lemon Mint Juice",
@@ -34,7 +82,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.300",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/lemon-mint-juice.jpg"
+    "image": "/api/public/uploads/menu/lemon-mint-juice.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Mango Juice",
@@ -43,7 +105,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.450",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/mango-juice.jpg"
+    "image": "/api/public/uploads/menu/mango-juice.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Orange Juice",
@@ -52,7 +128,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.300",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/orange-juice.jpg"
+    "image": "/api/public/uploads/menu/orange-juice.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Red Bull Energy Drink",
@@ -61,7 +151,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/red-bull-energy-drink.jpg"
+    "image": "/api/public/uploads/menu/red-bull-energy-drink.jpg",
+    "cinemas": []
   },
   {
     "name": "Red Bull Suger Free",
@@ -70,7 +161,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/red-bull-suger-free.jpg"
+    "image": "/api/public/uploads/menu/red-bull-suger-free.jpg",
+    "cinemas": []
   },
   {
     "name": "Slush Large Cup",
@@ -79,7 +171,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.250",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/slush-large-cup.jpg"
+    "image": "/api/public/uploads/menu/slush-large-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq"
+    ]
   },
   {
     "name": "Slush Medium Cup",
@@ -88,7 +194,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "1.000",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq"
+    ]
   },
   {
     "name": "Soft Drink Large Cup",
@@ -97,7 +217,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.850",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/soft-drink-large-cup.jpg"
+    "image": "/api/public/uploads/menu/soft-drink-large-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial"
+    ]
   },
   {
     "name": "Soft Drink Medium Cup",
@@ -106,7 +241,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/soft-drink-medium-cup.jpg"
+    "image": "/api/public/uploads/menu/soft-drink-medium-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial"
+    ]
   },
   {
     "name": "Soft Drink Small Cup",
@@ -115,7 +265,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.650",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/soft-drink-small-cup.jpg"
+    "image": "/api/public/uploads/menu/soft-drink-small-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial"
+    ]
   },
   {
     "name": "Sparkling Water",
@@ -124,7 +289,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/sparkling-water.jpg"
+    "image": "/api/public/uploads/menu/sparkling-water.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Water Aquafina",
@@ -133,7 +314,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "مشروبات",
     "price": "0.350",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/water-aquafina.jpg"
+    "image": "/api/public/uploads/menu/water-aquafina.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Aero 46 g",
@@ -142,7 +339,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/aero-46-g.jpg"
+    "image": "/api/public/uploads/menu/aero-46-g.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Chupa Chups Sour Belt",
@@ -151,7 +364,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/chupa-chups-sour-belt.jpg"
+    "image": "/api/public/uploads/menu/chupa-chups-sour-belt.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Crepe Nutella",
@@ -160,7 +389,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "1.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/crepe-nutella.jpg"
+    "image": "/api/public/uploads/menu/crepe-nutella.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Double Chocolate With Nutella & Sea Salt",
@@ -169,7 +411,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.650",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/double-chocolate-with-nutella-sea-salt.jpg"
+    "image": "/api/public/uploads/menu/double-chocolate-with-nutella-sea-salt.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Ferrero Rocher",
@@ -178,7 +436,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.950",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/ferrero-rocher.jpg"
+    "image": "/api/public/uploads/menu/ferrero-rocher.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Kinder Bueno",
@@ -187,7 +461,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/kinder-bueno.jpg"
+    "image": "/api/public/uploads/menu/kinder-bueno.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Kinder chocolate Cookies",
@@ -196,7 +486,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.650",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/kinder-chocolate-cookies.jpg"
+    "image": "/api/public/uploads/menu/kinder-chocolate-cookies.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Kit Kat 4 Fingers",
@@ -205,7 +510,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.850",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/kit-kat-4-fingers.jpg"
+    "image": "/api/public/uploads/menu/kit-kat-4-fingers.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "M&M Peanuts 50g",
@@ -214,7 +535,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.950",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/m-m-peanuts-50g.jpg"
+    "image": "/api/public/uploads/menu/m-m-peanuts-50g.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Maltesers 37g",
@@ -223,7 +560,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.950",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/maltesers-37g.jpg"
+    "image": "/api/public/uploads/menu/maltesers-37g.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Milk chocolate Cookies",
@@ -232,7 +585,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.650",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/milk-chocolate-cookies.jpg"
+    "image": "/api/public/uploads/menu/milk-chocolate-cookies.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Ministrels",
@@ -241,7 +609,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.950",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/ministrels.jpg"
+    "image": "/api/public/uploads/menu/ministrels.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Rych Bueno Protein",
@@ -250,7 +634,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "1.450",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Rych Lotus Protein",
@@ -259,7 +658,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "1.400",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Rych Peanut Butter Protein",
@@ -268,7 +682,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "1.350",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "1954"
+    ]
   },
   {
     "name": "Skittles",
@@ -277,7 +706,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/skittles.jpg"
+    "image": "/api/public/uploads/menu/skittles.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Yan Yan",
@@ -286,7 +731,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "الحلو",
     "price": "0.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/yan-yan.jpg"
+    "image": "/api/public/uploads/menu/yan-yan.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Cheese Popcorn Large",
@@ -295,7 +756,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/cheese-popcorn-large.jpg"
+    "image": "/api/public/uploads/menu/cheese-popcorn-large.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Cheese Popcorn Medium",
@@ -304,7 +781,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/cheese-popcorn-medium.jpg"
+    "image": "/api/public/uploads/menu/cheese-popcorn-medium.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Cheese Popcorn Small",
@@ -313,7 +806,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.250",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/cheese-popcorn-small.jpg"
+    "image": "/api/public/uploads/menu/cheese-popcorn-small.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Hot Dog",
@@ -322,7 +831,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/hot-dog.jpg"
+    "image": "/api/public/uploads/menu/hot-dog.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Kid's Pop Rocket",
@@ -331,7 +856,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.000",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/kid-s-pop-rocket.jpg"
+    "image": "/api/public/uploads/menu/kid-s-pop-rocket.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Nacho Dog",
@@ -340,7 +881,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/nacho-dog.jpg"
+    "image": "/api/public/uploads/menu/nacho-dog.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Nachos",
@@ -349,7 +906,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.500",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Nachos large",
@@ -358,7 +931,22 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "2.250",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/nachos-large.jpg"
+    "image": "/api/public/uploads/menu/nachos-large.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Popcorn Large",
@@ -367,7 +955,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/popcorn-large.jpg"
+    "image": "/api/public/uploads/menu/popcorn-large.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Popcorn Medium",
@@ -376,7 +980,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.250",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/popcorn-medium.jpg"
+    "image": "/api/public/uploads/menu/popcorn-medium.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Popcorn Small",
@@ -385,7 +1005,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "المفضلة",
     "price": "1.000",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Americano",
@@ -394,7 +1030,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.300",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Cappuccino",
@@ -403,7 +1053,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.750",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Double Espresso",
@@ -412,7 +1076,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.350",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Dutch Brew",
@@ -421,7 +1099,13 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.950",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Avenues",
+      "Avenues VIP"
+    ]
   },
   {
     "name": "Earl Grey Tea",
@@ -430,7 +1114,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.150",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Extra Coffee Shot",
@@ -439,7 +1137,10 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "0.300",
     "vip_only": true,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "Skyline"
+    ]
   },
   {
     "name": "Extra Sweet",
@@ -448,7 +1149,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "0.200",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": []
   },
   {
     "name": "Flat White",
@@ -457,7 +1159,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.750",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Iced Americano",
@@ -466,7 +1181,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.300",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Iced Latte",
@@ -475,7 +1204,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.550",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Iced Matcha Latte",
@@ -484,7 +1227,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "2.150",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": []
   },
   {
     "name": "Iced Spanish Latte",
@@ -493,7 +1237,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "2.150",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Latte",
@@ -502,7 +1260,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.550",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Matcha Latte",
@@ -511,7 +1283,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "2.150",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": []
   },
   {
     "name": "Single Espresso",
@@ -520,7 +1293,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.100",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Spanish Latte",
@@ -529,7 +1316,21 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "شاي وقهوة",
     "price": "1.750",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "1954"
+    ]
   },
   {
     "name": "Edamame",
@@ -538,7 +1339,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "وجبات صحية",
     "price": "1.750",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/edamame.jpg"
+    "image": "/api/public/uploads/menu/edamame.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Fresh Fruit",
@@ -547,7 +1364,23 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "وجبات صحية",
     "price": "1.650",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse",
+      "Bairaq",
+      "Ajial",
+      "1954"
+    ]
   },
   {
     "name": "Barbeque Sauce",
@@ -556,7 +1389,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "0.350",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/barbeque-sauce.jpg"
+    "image": "/api/public/uploads/menu/barbeque-sauce.jpg",
+    "cinemas": []
   },
   {
     "name": "Beef Slider",
@@ -565,7 +1399,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.750",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/beef-slider.jpg"
+    "image": "/api/public/uploads/menu/beef-slider.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Chicken Bites",
@@ -574,7 +1413,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.250",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/chicken-bites.jpg"
+    "image": "/api/public/uploads/menu/chicken-bites.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Chicken Slider",
@@ -583,7 +1427,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.750",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/chicken-slider.jpg"
+    "image": "/api/public/uploads/menu/chicken-slider.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "French Fries",
@@ -592,7 +1441,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "1.500",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/french-fries.jpg"
+    "image": "/api/public/uploads/menu/french-fries.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Honey Mustard Dip",
@@ -601,7 +1455,8 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "0.350",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/honey-mustard-dip.jpg"
+    "image": "/api/public/uploads/menu/honey-mustard-dip.jpg",
+    "cinemas": []
   },
   {
     "name": "Hot Dog Slider",
@@ -610,7 +1465,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.500",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/hot-dog-slider.jpg"
+    "image": "/api/public/uploads/menu/hot-dog-slider.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Margherita Pizza Square",
@@ -619,7 +1479,11 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/margherita-pizza-square.jpg"
+    "image": "/api/public/uploads/menu/margherita-pizza-square.jpg",
+    "cinemas": [
+      "360 VIP",
+      "1954"
+    ]
   },
   {
     "name": "Messy Fries",
@@ -628,7 +1492,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.750",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/messy-fries.jpg"
+    "image": "/api/public/uploads/menu/messy-fries.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Pepperoni Pizza Square",
@@ -637,7 +1506,11 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "2.500",
     "vip_only": false,
-    "image": ""
+    "image": "",
+    "cinemas": [
+      "360 VIP",
+      "1954"
+    ]
   },
   {
     "name": "Special Sauce",
@@ -646,7 +1519,10 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "VIP",
     "price": "0.350",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/special-sauce.jpg"
+    "image": "/api/public/uploads/menu/special-sauce.jpg",
+    "cinemas": [
+      "360 VIP"
+    ]
   },
   {
     "name": "Beef Pastrami Sandwich",
@@ -655,7 +1531,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "ساندويتش",
     "price": "2.400",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/beef-pastrami-sandwich.jpg"
+    "image": "/api/public/uploads/menu/beef-pastrami-sandwich.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Cajun Turkey Wrap",
@@ -664,7 +1553,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "ساندويتش",
     "price": "2.000",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/cajun-turkey-wrap.jpg"
+    "image": "/api/public/uploads/menu/cajun-turkey-wrap.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Mediterranean Halloumi Sandwich",
@@ -673,7 +1575,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "ساندويتش",
     "price": "1.950",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/mediterranean-halloumi-sandwich.jpg"
+    "image": "/api/public/uploads/menu/mediterranean-halloumi-sandwich.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Pesto Mozzarella Sandwich",
@@ -682,7 +1597,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "ساندويتش",
     "price": "2.100",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/pesto-mozzarella-sandwich.jpg"
+    "image": "/api/public/uploads/menu/pesto-mozzarella-sandwich.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Tornado Chicken Wrap",
@@ -691,7 +1619,20 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "ساندويتش",
     "price": "2.100",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/tornado-chicken-wrap.jpg"
+    "image": "/api/public/uploads/menu/tornado-chicken-wrap.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Skyline",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Nacho Quesadilla",
@@ -700,7 +1641,12 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "فترة محدود",
     "price": "2.750",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/nacho-quesadilla.jpg"
+    "image": "/api/public/uploads/menu/nacho-quesadilla.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Khairan VIP"
+    ]
   },
   {
     "name": "Cheese Cup",
@@ -709,7 +1655,19 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "إضافات",
     "price": "0.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/cheese-cup.jpg"
+    "image": "/api/public/uploads/menu/cheese-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Jalapeno  Cup",
@@ -718,7 +1676,19 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "إضافات",
     "price": "0.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/jalapeno-cup.jpg"
+    "image": "/api/public/uploads/menu/jalapeno-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Salsa  Cup",
@@ -727,7 +1697,19 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "إضافات",
     "price": "0.500",
     "vip_only": false,
-    "image": "/api/public/uploads/menu/salsa-cup.jpg"
+    "image": "/api/public/uploads/menu/salsa-cup.jpg",
+    "cinemas": [
+      "360",
+      "360 VIP",
+      "Assima",
+      "Assima VIP",
+      "Khairan",
+      "Khairan VIP",
+      "Avenues",
+      "Avenues VIP",
+      "Al Kout",
+      "Warehouse"
+    ]
   },
   {
     "name": "Blanket",
@@ -736,6 +1718,11 @@ export const MENU_ITEMS: Array<{ name: string; name_ar: string; category: string
     "category_ar": "منتجاتنا",
     "price": "1.500",
     "vip_only": true,
-    "image": "/api/public/uploads/menu/blanket.jpg"
+    "image": "/api/public/uploads/menu/blanket.jpg",
+    "cinemas": [
+      "360 VIP",
+      "Assima VIP",
+      "Avenues VIP"
+    ]
   }
 ]
