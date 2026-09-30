@@ -31,47 +31,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # The widget SDK is built into this image (see the Dockerfile's sdk stage) so
-      # the deployment serves the widget it was built with. Without it the server
-      # sends every embed to WIDGET_SDK_BASE_URL — a separately deployed widget
-      # that can be older than the config it renders, and nothing reports it.
-      #
-      # A repository with no SDK_REPO_TOKEN yet still builds, without an SDK, so
-      # adding this does not break deploys before the secrets exist. A token
-      # *with* missing build inputs fails here instead of at docker build: the
-      # widget throws at startup on a missing VITE_BASE_URL or
-      # VITE_PUSHER_APP_KEY, so a build without them is worse than no build.
-      - name: Resolve widget SDK build inputs
-        id: sdk
-        env:
-          SDK_REPO_TOKEN: ${{ secrets.SDK_REPO_TOKEN }}
-          VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
-          VITE_PUSHER_APP_KEY: ${{ vars.VITE_PUSHER_APP_KEY }}
-        run: |
-          if [ -z "${SDK_REPO_TOKEN}" ]; then
-            echo "::warning title=No widget SDK::SDK_REPO_TOKEN is not set, so this image ships no SDK and embeds will load WIDGET_SDK_BASE_URL."
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          missing=""
-          [ -n "${VITE_BASE_URL}" ] || missing="${missing} VITE_BASE_URL"
-          [ -n "${VITE_PUSHER_APP_KEY}" ] || missing="${missing} VITE_PUSHER_APP_KEY"
-          if [ -n "${missing}" ]; then
-            echo "::error title=Incomplete widget SDK configuration::Set these repository variables:${missing}"
-            exit 1
-          fi
-          echo "enabled=true" >> "$GITHUB_OUTPUT"
-
-      - name: Check out the widget SDK
-        if: steps.sdk.outputs.enabled == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ vars.SDK_REPO || 'Pair-AI-Platform/pair-widgets-preview' }}
-          ref: ${{ vars.SDK_REF || 'main' }}
-          token: ${{ secrets.SDK_REPO_TOKEN }}
-          path: sdk-src
-          persist-credentials: false
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -110,13 +69,6 @@ jobs:
             ${{ steps.img.outputs.img_latest }}
             ${{ steps.img.outputs.img_sha }}
           platforms: linux/amd64
-          build-args: |
-            VITE_BASE_URL=${{ vars.VITE_BASE_URL }}
-            VITE_PUSHER_APP_KEY=${{ vars.VITE_PUSHER_APP_KEY }}
-            VITE_PUSHER_CLUSTER=${{ vars.VITE_PUSHER_CLUSTER }}
-            VITE_PUSHER_HOST=${{ vars.VITE_PUSHER_HOST }}
-            VITE_PUSHER_PORT=${{ vars.VITE_PUSHER_PORT }}
-            VITE_PUSHER_FORCE_TLS=${{ vars.VITE_PUSHER_FORCE_TLS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           annotations: |
