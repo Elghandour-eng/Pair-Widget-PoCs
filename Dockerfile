@@ -5,6 +5,8 @@
 # given. That failure is silent — pages load, the program is just the wrong one —
 # which is exactly how a staging deployment ran an old widget against new config
 # with no error anywhere.
+
+
 #
 # CI checks the widget repository out into sdk-src/. A build context without it
 # (any plain local `docker build`) ships no SDK, and the server then logs the
