@@ -781,6 +781,16 @@ export interface MovieCardsTemplate {
   }
 }
 
+export interface MenuCategoriesTemplate {
+  type: 'menu_categories'
+  content: {
+    lang?: 'ar' | 'en'
+    title?: string
+    title_en?: string
+    items: Array<{ key: string; label: string; label_en?: string; image?: string; count?: number }>
+  }
+}
+
 export type WidgetTemplate =
   | ProductComparisonTemplate
   | ProductCollectionSuggestionsTemplate
@@ -796,6 +806,7 @@ export type WidgetTemplate =
   | AppLinksTemplate
   | MenuCardsTemplate
   | MovieCardsTemplate
+  | MenuCategoriesTemplate
 
 /**
  * Messages list response (matches actual API response)

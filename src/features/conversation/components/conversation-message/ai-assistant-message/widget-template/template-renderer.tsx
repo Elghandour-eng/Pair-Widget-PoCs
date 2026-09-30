@@ -14,6 +14,7 @@ import { ExperiencesList } from './experiences-list'
 import { AppLinks } from './app-links'
 import { MenuCards } from './menu-cards'
 import { MovieCards } from './movie-cards'
+import { MenuCategories } from './menu-categories'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -55,6 +56,8 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <MenuCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'movie_cards':
       return <MovieCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'menu_categories':
+      return <MenuCategories template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }
