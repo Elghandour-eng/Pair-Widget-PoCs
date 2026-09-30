@@ -1,20 +1,23 @@
 # ---- widget SDK ----
-# The widget itself, built here so this deployment serves the SDK it was built
-# against. Without it the server hands every embed WIDGET_SDK_BASE_URL: a
-# separately deployed copy of the widget that can be older than the config it is
-# given. That failure is silent — pages load, the program is just the wrong one —
-# which is exactly how a staging deployment ran an old widget against new config
-# with no error anywhere.
-#
-# CI checks the widget repository out into sdk-src/. A build context without it
-# (any plain local `docker build`) ships no SDK, and the server then logs the
-# fallback loudly instead of mounting a /sdk that 404s.
+# The widget lives in this repository, under sdk-src/, and is built here so the
+# image carries the widget its own configuration was designed against. They ship
+# in one commit and one image, which is the only arrangement in which they cannot
+# disagree: a deployment pointed at a separately hosted widget runs new config
+# against whatever version that host happens to serve, and the page loads either
+# way, so nothing reports it.
 FROM ghcr.io/taha2samy-3/node:22-dev AS sdk
 WORKDIR /src
+# husky's prepare script wants a .git directory that is not in the build context.
+ENV HUSKY=0
 # Vite inlines these at build time, and the widget's env module throws on a
 # missing VITE_BASE_URL or VITE_PUSHER_APP_KEY, so they are build inputs rather
 # than runtime configuration. The Pusher app key is a client key, public by
 # design — the widget ships it to every browser either way.
+# Set to 1 to build the widget. Left unset, the image ships without one and the
+# server falls back to WIDGET_SDK_BASE_URL — the escape hatch for a deployment
+# whose Pusher and Pair values are not configured yet, since a widget built
+# without them throws on startup and is worse than no widget at all.
+ARG BUILD_SDK=""
 ARG VITE_BASE_URL=""
 ARG VITE_PUSHER_APP_KEY=""
 ARG VITE_PUSHER_CLUSTER=""
@@ -23,7 +26,10 @@ ARG VITE_PUSHER_PORT=""
 ARG VITE_PUSHER_FORCE_TLS=""
 COPY --chown=node:node . .
 RUN set -eu; \
-    if [ -f sdk-src/package.json ]; then \
+    if [ "$BUILD_SDK" != "1" ]; then \
+      echo 'sdk: BUILD_SDK is not 1; this image ships no widget of its own'; \
+      mkdir -p sdk-src/dist; \
+    else \
       if [ -z "$VITE_BASE_URL" ] || [ -z "$VITE_PUSHER_APP_KEY" ]; then \
         echo 'sdk: VITE_BASE_URL and VITE_PUSHER_APP_KEY must be passed as build args' >&2; \
         exit 1; \
@@ -31,9 +37,6 @@ RUN set -eu; \
       cd sdk-src; \
       npm ci --no-audit --no-fund; \
       npx vite build --base=/sdk/ --outDir dist; \
-    else \
-      echo 'sdk: no sdk-src/package.json in the build context; this image ships no SDK'; \
-      mkdir -p sdk-src/dist; \
     fi
 
 # ---- dependencies ----

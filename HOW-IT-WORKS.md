@@ -20,8 +20,10 @@ from thinking there are fewer.
 A React application. It renders the chat panel: the header, the hero image, the
 quick-link cards, the prompt chips, the text box, the messages.
 
-- **Repository:** a different one — `/var/www/html/pair-widget`
-  (`Pair-AI-Platform/pair-widgets-preview`).
+- **Repository:** this one, under `sdk-src/`. It used to live apart, in
+  `Pair-AI-Platform/pair-widgets-preview`, which is why most of this document
+  talks about two projects: they are still two applications, now in one
+  repository, so a commit changes the widget and the config it renders together.
 - **Shipped as:** static files. A loader script (`public/sdk.js`) plus a bundle.
 - **How it gets on a page:** a customer pastes a `<script>` tag. The loader
   creates a floating launcher button and an `<iframe>`, and the widget
@@ -185,7 +187,7 @@ studio hands out its own origin as the SDK base.
 `.env` contains:
 
 ```
-WIDGET_SDK_DIST=/var/www/html/pair-widget/dist-local
+WIDGET_SDK_DIST=sdk-src/dist-local
 ```
 
 So `sdkBaseUrl()` returns `/sdk`, and the snippet reads:
@@ -268,9 +270,10 @@ beBaseUrl = https://widget-profiessanl.dev.k8s.trypair.ai
 
 - Program and data ship together. Every deploy is self-consistent by
   construction, so this class of bug cannot recur.
-- **But** the widget lives in a *separate repository*, so the build has to
-  fetch it — a git submodule, or a second checkout step in the workflow. That
-  decision has not been made yet and is the open question.
+
+This is what the repository now does. The widget was moved in under `sdk-src/`,
+with its history, so the build has nothing to fetch and no credentials to hold:
+the image builds it into `/app/sdk-dist` and the server serves it at `/sdk`.
 
 ---
 
@@ -405,7 +408,8 @@ The first two are the subject of this document.
 
 The snippet is correct as written. Two different URLs is the intended shape.
 
-The open decision is **Option 3 in section 6**: should the deployment build and
-serve its own copy of the widget, so program and data ship together? If so, the
-widget lives in a separate repository, and the remaining choice is how the build
-gets it — a git submodule, or a second checkout in the CI workflow.
+**Option 3 in section 6** is the one taken: the deployment builds and serves its
+own copy of the widget, from `sdk-src/` in this repository, so program and data
+ship together. Two different URLs remains a valid shape — it is how the old
+hosted widget worked — but it depends on someone keeping that host in step, and
+nothing reported it when they did not.

@@ -13,6 +13,8 @@ sdk-src/dist-local
 # deployment's configuration comes from the cluster at runtime.
 .env
 .env.*
+**/.env
+**/.env.*
 .git
 .github
 *.log
