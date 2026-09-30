@@ -1,0 +1,80 @@
+import type { Message, ProductCardSet, NextMessageItem } from '@/features/conversation/types/message'
+import { isPendingMessage } from '@/features/conversation/utils/message-utils'
+import { AiAssistantMessageBody } from './ai-assistant-message-body'
+import { AiAssistantMessageHeader } from './ai-assistant-message-header'
+import { AiThinkingPill } from '@/features/conversation/components/ai-thinking-pill'
+import { FeedbackSection } from './feedback-section'
+import { ProductSection } from './product-section'
+import { NextMessagesSection } from './next-messages-section'
+import { TemplateRenderer } from './widget-template/template-renderer'
+
+interface AiAssistantMessageProps {
+  message: Message
+  isLastMessage?: boolean
+}
+
+export function AiAssistantMessage({ message, isLastMessage }: AiAssistantMessageProps) {
+  const isPending = isPendingMessage(message)
+
+  // Extract next_messages list from all possible sources while preserving order
+  const nextMessagesList: NextMessageItem[] =
+    message.next_messages && message.next_messages.length > 0
+      ? message.next_messages
+      : message.interactive_metadata?.next_messages && message.interactive_metadata.next_messages.length > 0
+        ? message.interactive_metadata.next_messages
+        : message.suggestions
+          ? [
+              Array.isArray(message.suggestions)
+                ? { type: 'suggestions', options: message.suggestions }
+                : message.suggestions,
+            ]
+          : message.next_msg
+            ? [message.next_msg]
+            : []
+
+  // Check if product_card_set exists outside of lastMessage constraint (for historical card display)
+  const productSetOutside = !isLastMessage
+    ? (nextMessagesList.find((item) => item?.type === 'product_card_set') as ProductCardSet | undefined)
+    : undefined
+
+  if (isPending) {
+    // A pending reply shows the thinking line, never skeleton blocks.
+    return <AiThinkingPill />
+  }
+
+  return (
+    <div className="flex w-full flex-col items-start gap-6 bg-transparent px-4 py-2">
+      <AiAssistantMessageHeader isPending={false} />
+      <AiAssistantMessageBody content={message.content} />
+
+      {message.widget_template && (
+        <TemplateRenderer widgetTemplate={message.widget_template} sourceMessageUlid={message.ulid} />
+      )}
+
+      {productSetOutside && <ProductSection productSet={productSetOutside} sourceMessageUlid={message.ulid} />}
+
+      {(() => {
+        // Older messages: template-like blocks (location request, questions)
+        // stay visible — dimmed and inert; suggestion chips disappear.
+        const shownItems = isLastMessage
+          ? nextMessagesList
+          : nextMessagesList.filter((it) => (it as { type?: string } | null)?.type !== 'suggestions')
+        if (shownItems.length === 0) return null
+        return (
+          <div
+            className={isLastMessage ? undefined : 'pointer-events-none opacity-45 select-none'}
+            aria-disabled={!isLastMessage}
+          >
+            <NextMessagesSection
+              nextMessages={shownItems}
+              sourceMessageUlid={message.ulid}
+              messageContent={message.content}
+            />
+          </div>
+        )
+      })()}
+
+      <FeedbackSection messageId={message.ulid} initialFeedback={message.ai_feedback as 'liked' | 'disliked' | null} />
+    </div>
+  )
+}

@@ -1,0 +1,449 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #fafafa;
+  --foreground: oklch(0.145 0 0);
+  --card: #fafafa;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.25rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family:
+      'DM Sans',
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+  #app {
+    width: 100%;
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Emoji picker category navigation padding */
+#epr-category-nav-id {
+  padding: 4px !important;
+}
+
+/* Emoji picker header flex container padding */
+.epr-header > div[data-cursor-element-id] {
+  padding: 4px !important;
+}
+
+/* Emoji picker category label - smaller font size */
+.epr-emoji-category-label {
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+}
+
+/* Emoji picker emojis - smaller size */
+.epr-emoji-native {
+  font-size: 1.2rem !important;
+}
+
+.epr-emoji {
+  font-size: 1.2rem !important;
+}
+
+.epr-emoji-btn {
+  font-size: 1.2rem !important;
+}
+
+/* Emoji picker button - smaller button size */
+button.epr-btn.epr-emoji {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+}
+
+/* Move category navigation to bottom */
+.epr-main {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.epr-header {
+  order: 2 !important;
+}
+
+.epr-body {
+  order: 1 !important;
+}
+
+/* Emoji picker scrollbar - hidden */
+.epr-body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.epr-body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+@keyframes claude-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-claude-spin {
+  transform-origin: center;
+}
+
+@keyframes claude-petal {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes claude-center-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+.animate-claude-spin .claude-petal {
+  animation: claude-petal 1.2s ease-in-out infinite;
+  transform-origin: 14px 14px;
+}
+
+.animate-claude-spin .claude-center {
+  animation: claude-center-pulse 1.2s ease-in-out infinite;
+  transform-origin: 14px 14px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-skeleton,
+.skeleton-pulse {
+  border-radius: var(--pair-skel-radius, 6px);
+  background: var(--pair-skel-base, #f3f4f6);
+}
+
+/* The studio sets --pair-skel-* on the container; the defaults keep the look
+   unchanged for a config that carries no loading design. */
+.shimmer-skeleton {
+  background-image: linear-gradient(90deg, transparent 25%, var(--pair-skel-hi, #e5e7eb) 50%, transparent 75%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer var(--pair-skel-speed, 4s) infinite linear;
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse var(--pair-skel-speed, 1.6s) ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-skeleton,
+  .skeleton-pulse {
+    animation: none;
+  }
+}
+
+@keyframes scale-up {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-up {
+  animation: scale-up 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Toast: the studio's design lands as inline style on each toast; these rules
+   cover what inline style cannot reach — the icon colour and the full-width
+   variant. */
+.pair-toast [data-icon] {
+  color: var(--pair-toast-icon, currentColor);
+}
+
+.pair-toast-wide {
+  width: 100%;
+}
+
+/* The widget is a phone-sized surface inside an iframe: its scroll areas pan
+   like a phone's, without desktop scrollbars. This is also what lets the host
+   page keep the iframe at its real width — it used to widen it by a scrollbar
+   just to push one out of view, which cost the content its right padding. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Consent sheet entrance: rises from the bottom edge like a phone sheet. */
+@keyframes consent-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.anim-consent-rise {
+  animation: consent-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-consent-rise {
+    animation: none;
+  }
+}
+
+/* Animated trailing dots for the AI thinking status line */
+.thinking-ellipsis::after {
+  content: '';
+  animation: thinking-dots 1.4s steps(4, end) infinite;
+}
+@keyframes thinking-dots {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+}
+
+/* Soft dots while a reply streams and finalizes */
+.finalizing-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: tp-dot 1.2s ease-in-out infinite;
+}
+.finalizing-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.finalizing-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes tp-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
+}
+
+/* While a reply streams: animated ellipsis rides inline at the end of the text,
+   and the feedback row stays hidden until the message is final. */
+.streaming-live .ai-md-body > *:last-child::after {
+  content: '';
+  display: inline;
+  opacity: 0.6;
+  animation: thinking-dots 1.2s steps(4, end) infinite;
+}
+.streaming-live .ai-feedback-row {
+  display: none;
+}
+
+/* Suggestion chips: clean white pills with a brand hairline and spark; staggered entrance */
+.pair-chip {
+  animation: pair-chip-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+.pair-chip:hover {
+  background: color-mix(in srgb, var(--chip-brand, #b3202c) 9%, transparent) !important;
+  border-color: var(--chip-brand, #b3202c) !important;
+  color: var(--chip-brand, #b3202c) !important;
+  transform: translateY(-1px);
+}
+.pair-chip:hover .pair-chip-icon {
+  transform: rotate(45deg) scale(1.1);
+}
+.pair-chip-icon {
+  transition: transform 0.25s ease;
+}
+@keyframes pair-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+coverage
+
+# Shell scripts (handled separately)
+*.sh
+.agent
+.specify
+.prettierignore
+routeTree.gen.ts
+
+*.svg
+*.png
+*.jpg
+.env*
