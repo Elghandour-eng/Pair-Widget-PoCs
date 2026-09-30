@@ -90,6 +90,18 @@ function hydrateComponents(list: unknown): unknown {
       let title = data.title as string | undefined
       let title_en = data.title_en as string | undefined
       const cat = String(data.category ?? '').trim()
+      // a specific food type ("popcorn", "قهوة") filters by item name, never a whole category
+      const match = String(data.match ?? '').trim()
+      if (items.length === 0 && match) {
+        const terms = match.toLowerCase().split(/[|,،\s]+/).filter((t) => t.length >= 2)
+        const hits = MENU_ITEMS.filter((m) => {
+          const hay = `${m.name} ${m.name_ar}`.toLowerCase()
+          return terms.some((t) => hay.includes(t))
+        })
+        items = hits.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
+        title = title ?? match.split(/[|,،]/)[0]
+        title_en = title_en ?? match.split(/[|,،]/)[0]
+      }
       if (items.length === 0 && cat) {
         const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase())
         // the price-list renderer reads label/label_en
@@ -110,6 +122,23 @@ function hydrateComponents(list: unknown): unknown {
         })
       }
       return { ...comp, data: { title: title ?? 'المنيو 🍿', title_en: title_en ?? 'Menu 🍿', currency: 'د.ك', currency_en: 'KD', items } }
+    }
+    if (comp.template === 'menu_categories') {
+      const hidden = new Set(['VIP', 'Limited', 'Merchandise'])
+      const order: string[] = []
+      const byCat = new Map<string, { key: string; label: string; label_en: string; image: string; count: number }>()
+      for (const m of MENU_ITEMS) {
+        if (hidden.has(m.category)) continue
+        let c = byCat.get(m.category)
+        if (!c) {
+          c = { key: m.category, label: m.category_ar || m.category, label_en: m.category, image: '', count: 0 }
+          byCat.set(m.category, c)
+          order.push(m.category)
+        }
+        c.count++
+        if (!c.image && m.image) c.image = m.image
+      }
+      return { ...comp, data: { title: 'المنيو 🍿', title_en: 'Our menu 🍿', items: order.map((k) => byCat.get(k)) } }
     }
     if (comp.template === 'app_links') {
       return {
@@ -672,6 +701,8 @@ function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: 
   if (price) return { type: 'price_list', content: { lang, ...(price.data as Record<string, unknown>) } }
   const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
   if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
+  const mcats = comps.find((c) => c.type === 'template' && c.template === 'menu_categories')
+  if (mcats) return { type: 'menu_categories', content: { lang, ...(mcats.data as Record<string, unknown>) } }
   const movies = comps.find((c) => c.type === 'template' && c.template === 'movie_cards')
   if (movies) return { type: 'movie_cards', content: { lang, ...(movies.data as Record<string, unknown>) } }
   const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
@@ -772,6 +803,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   let buf = ''
   let finalText = ''
   let comps: Array<Record<string, unknown>> = []
+  let replaced = false
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
   let lastThink = ''
@@ -821,13 +853,16 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           buf += e.answer
           broadcast(conv, { event: 'delta', conversation_id: convId(), stream_id: streamId, delta: e.answer, seq: seq++ })
         } else if (e.event === 'message_replace' && typeof e.answer === 'string') {
+          // the engine's corrected text (guards, offline script) wins over the model's raw message
           buf = e.answer
+          finalText = e.answer
+          replaced = true
         } else if (e.event === 'components') {
           const data = e.data as { components?: unknown } | undefined
           comps = (hydrateComponents(data?.components) as Array<Record<string, unknown>>) ?? []
         } else if (e.event === 'envelope') {
           const raw = (e.data as { raw?: { message?: string } } | undefined)?.raw
-          if (raw?.message) finalText = raw.message
+          if (raw?.message && !replaced) finalText = raw.message
         }
       }
     }
