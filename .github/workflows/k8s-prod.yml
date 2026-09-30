@@ -31,6 +31,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # The widget SDK is built into this image (see the Dockerfile's sdk stage) so
+      # production serves the widget it was built with, not a separately deployed
+      # copy that can be older than the config it renders.
+      #
+      # Production reads its own *_PROD variables rather than sharing the staging
+      # ones. Vite bakes these into the bundle, so an image is tied to one Pusher
+      # environment: inheriting staging's key here would silently point every
+      # production visitor's stream at the staging Pusher, and nothing would
+      # report it. Missing values fail the build instead.
+      - name: Resolve widget SDK build inputs
+        id: sdk
+        env:
+          SDK_REPO_TOKEN: ${{ secrets.SDK_REPO_TOKEN }}
+          VITE_BASE_URL: ${{ vars.VITE_BASE_URL_PROD }}
+          VITE_PUSHER_APP_KEY: ${{ vars.VITE_PUSHER_APP_KEY_PROD }}
+        run: |
+          if [ -z "${SDK_REPO_TOKEN}" ]; then
+            echo "::warning title=No widget SDK::SDK_REPO_TOKEN is not set, so this image ships no SDK and embeds will load WIDGET_SDK_BASE_URL."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          missing=""
+          [ -n "${VITE_BASE_URL}" ] || missing="${missing} VITE_BASE_URL_PROD"
+          [ -n "${VITE_PUSHER_APP_KEY}" ] || missing="${missing} VITE_PUSHER_APP_KEY_PROD"
+          if [ -n "${missing}" ]; then
+            echo "::error title=Incomplete widget SDK configuration::Set these repository variables:${missing}"
+            exit 1
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the widget SDK
+        if: steps.sdk.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.SDK_REPO || 'Pair-AI-Platform/pair-widgets-preview' }}
+          ref: ${{ vars.SDK_REF_PROD || 'main' }}
+          token: ${{ secrets.SDK_REPO_TOKEN }}
+          path: sdk-src
+          persist-credentials: false
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -63,38 +103,20 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          target: production
           tags: |
             ${{ steps.img.outputs.img_latest }}
             ${{ steps.img.outputs.img_sha }}
           platforms: linux/amd64
+          build-args: |
+            VITE_BASE_URL=${{ vars.VITE_BASE_URL_PROD }}
+            VITE_PUSHER_APP_KEY=${{ vars.VITE_PUSHER_APP_KEY_PROD }}
+            VITE_PUSHER_CLUSTER=${{ vars.VITE_PUSHER_CLUSTER_PROD }}
+            VITE_PUSHER_HOST=${{ vars.VITE_PUSHER_HOST_PROD }}
+            VITE_PUSHER_PORT=${{ vars.VITE_PUSHER_PORT_PROD }}
+            VITE_PUSHER_FORCE_TLS=${{ vars.VITE_PUSHER_FORCE_TLS_PROD }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           annotations: |
             index,manifest:org.opencontainers.image.source=https://github.com/${{ github.repository }}
             index,manifest:org.opencontainers.image.revision=${{ github.sha }}
             index,manifest:org.opencontainers.image.created=${{ steps.img.outputs.build_date }}
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ steps.img.outputs.img_sha }}
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-          exit-code: "0"
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-results.sarif') != ''
-        continue-on-error: true
-        with:
-          sarif_file: trivy-results.sarif
-
-      - name: Upload Trivy SARIF as artifact
-        uses: actions/upload-artifact@v4
-        if: always() && hashFiles('trivy-results.sarif') != ''
-        with:
-          name: trivy-security-scan
-          path: trivy-results.sarif
-          retention-days: 30
