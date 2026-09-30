@@ -21,6 +21,13 @@ export const engineChatRouter = Router()
 
 const ENGINE_URL = (process.env.AGENT_ENGINE_URL || 'http://127.0.0.1:8095').replace(/\/$/, '')
 const ENGINE_AGENT = process.env.AGENT_ENGINE_AGENT || 'cinescape'
+// Pair Danah Orchestrator: an application key (app-…) authenticates the widget server and selects the agent.
+// Without it the legacy X-Agent-Id header is sent (the old agent-engine accepted anonymous calls).
+const ENGINE_KEY = process.env.AGENT_ENGINE_KEY || ''
+const engineHeaders = (json = true): Record<string, string> => ({
+  ...(json ? { 'Content-Type': 'application/json' } : {}),
+  ...(ENGINE_KEY ? { Authorization: `Bearer ${ENGINE_KEY}` } : { 'X-Agent-Id': ENGINE_AGENT }),
+})
 
 /**
  * Component hydration: the model emits tiny references (a cinema id, a price preset) and the
@@ -179,7 +186,7 @@ engineChatRouter.post('/widget/:widgetId/cine/chat', async (req, res) => {
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Agent-Id': ENGINE_AGENT },
+      headers: engineHeaders(),
       body: JSON.stringify(body),
     })
     res.status(upstream.status)
@@ -831,7 +838,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Agent-Id': ENGINE_AGENT },
+      headers: engineHeaders(),
       body: JSON.stringify({ query, user: conv.user, conversation_id: conv.engineConv, response_mode: 'streaming', inputs: {} }),
     })
     if (!upstream.body) throw new Error('no body')
@@ -920,7 +927,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
 /** Rebuilds a conversation's widget history from the engine's persistent store (survives studio restarts). */
 async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
   try {
-    const r = await fetch(`${ENGINE_URL}/v1/conversations/${encodeURIComponent(convId)}`, { headers: { 'X-Agent-Id': ENGINE_AGENT } })
+    const r = await fetch(`${ENGINE_URL}/v1/conversations/${encodeURIComponent(convId)}`, { headers: engineHeaders(false) })
     if (!r.ok) return null
     const doc = (await r.json()) as { id: string; user?: string; messages?: Array<{ id: string; role: string; text: string; envelope?: string; created_at?: number }> }
     const history: WidgetMessage[] = []
