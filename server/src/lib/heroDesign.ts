@@ -119,6 +119,15 @@ export interface HeroDecorCfg {
   fill: string
   /** How far the wedge's point protrudes, as a fraction of its width. */
   point: number
+  /**
+   * Whether the shape itself flips in a right-to-left language.
+   *
+   * The layout should mirror — the copy belongs on the reading side. The shape
+   * often should not: a chevron that is the brand's own mark reads as reversed
+   * when flipped, which is exactly what it looked like on the Cinescape hero.
+   * Off keeps the shape facing the way it was drawn, in its mirrored position.
+   */
+  mirrorShape: boolean
   opacity: number
 }
 
@@ -192,7 +201,11 @@ export const HERO_DESIGN_DEFAULTS: HeroDesign = {
   mirrorInRtl: true,
   background: { type: 'color', color: '#000000', from: '#341C4C', to: '#132A3E', angle: 135 },
   pattern: { asset: 'none', color: '#E30613', opacity: 0.9, scale: 1, target: 'background', fade: false },
-  decor: { shape: 'none', x: 192, y: 24, w: 200, h: 173, color: '#FFFFFF', color2: '#FFFFFF', fill: '#FFFFFF', point: 0.32, opacity: 1 },
+  decor: {
+    shape: 'none', x: 192, y: 24, w: 200, h: 173,
+    color: '#FFFFFF', color2: '#FFFFFF', fill: '#FFFFFF',
+    point: 0.32, mirrorShape: true, opacity: 1,
+  },
   badge: { show: true, text: '', showLogo: true, color: '#FFFFFF', size: 11 },
   title: { show: false, text: '', color: '#FFFFFF', size: 24 },
   subtitle: { show: false, text: '', color: '#D1D1D6', size: 13 },
@@ -242,6 +255,7 @@ export function normalizeHeroDesign(raw: unknown): HeroDesign {
       color2: color(dc.color2, d.decor.color2),
       fill: color(dc.fill, d.decor.fill),
       point: num(dc.point, d.decor.point, 0.02, 1),
+      mirrorShape: bool(dc.mirrorShape, d.decor.mirrorShape),
       opacity: num(dc.opacity, d.decor.opacity, 0, 1),
     },
     badge: {
@@ -650,12 +664,16 @@ export function buildHeroSvg(design: HeroDesign, ctx: HeroRenderCtx): string {
 
   const pattern = patternLayer(design, ctx, clipId)
 
-  // Decorations mirror as a whole in RTL; the copy lays itself out from the right instead.
+  // The art mirrors as a whole in RTL; the copy lays itself out from the right.
   const mirror = rtl ? ` transform="translate(${HERO_ART_W} 0) scale(-1 1)"` : ''
+  // A shape that must keep its facing is flipped back about its own centre, so
+  // it lands in the mirrored position still pointing the way it was drawn.
+  const keepFacing = rtl && design.decor.mirrorShape === false && design.decor.shape !== 'none'
+  const unflip = keepFacing ? ` transform="translate(${n((design.decor.x + design.decor.w / 2) * 2)} 0) scale(-1 1)"` : ''
   const opacity = n(design.decor.opacity)
   const artLayers = asWindow
-    ? `<g class="dc" opacity="${opacity}"><g fill="${design.decor.fill}">${decor.shapes}</g>${pattern.body}</g>`
-    : `${pattern.body}<g class="dc" opacity="${opacity}">${decor.parts}</g>`
+    ? `<g class="dc" opacity="${opacity}"><g${unflip}><g fill="${design.decor.fill}">${decor.shapes}</g>${pattern.body}</g></g>`
+    : `${pattern.body}<g class="dc" opacity="${opacity}"><g${unflip}>${decor.parts}</g></g>`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" id="${uid}" viewBox="0 0 ${HERO_ART_W} ${HERO_ART_H}" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true">${motionCss(design, ctx)}
 <defs>${bg.defs}${clipDefs}${pattern.defs}</defs>
