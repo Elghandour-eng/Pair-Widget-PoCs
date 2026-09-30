@@ -82,9 +82,14 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const quickLinks: Any[] =
     get(v2, 'quick_links.showQuickLinks.value') === false ? [] : (get(v2, 'quick_links.quickLinkCards') ?? []).filter((q: Any) => q.active !== false)
   // The channel's own heading for the cards; the dashboard string is only a fallback.
-  const quickLinksTitle = get(v2, 'quick_links.displaySettings.sectionTitle') || t('preview.help')
+  // A title the channel cleared on purpose must stay cleared: `||` treated an
+  // empty string as absent and put the placeholder back, so a heading the
+  // builder had removed kept showing up here.
+  const storedQlTitle = get(v2, 'quick_links.displaySettings.sectionTitle')
+  const quickLinksTitle = typeof storedQlTitle === 'string' ? storedQlTitle : t('preview.help')
   const prompts: Any[] = get(v2, 'trending_prompts.showTrendingPrompts.value') === false ? [] : (get(v2, 'trending_prompts.promptChips') ?? [])
-  const promptTitle = get(v2, 'trending_prompts.displaySettings.sectionTitle') || t('preview.tryAsking')
+  const storedPromptTitle = get(v2, 'trending_prompts.displaySettings.sectionTitle')
+  const promptTitle = typeof storedPromptTitle === 'string' ? storedPromptTitle : t('preview.tryAsking')
   const placeholder = get(v2, 'chat_input.placeholderText.text') || t('preview.placeholder')
   // The composer's whole look, from the config, with the legacy fields as fallbacks.
   const ci = normalizeChatInput({
@@ -208,7 +213,10 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
         </div>
       )}
 
-      <div className="relative flex-1 space-y-4 overflow-hidden px-3 pt-2">
+      {/* The same padding and block spacing the widget itself uses
+          (widget-content.tsx: p-4 pt-8, intro-content.tsx: gap-6), so the
+          preview is not tighter than the thing it is previewing. */}
+      <div className="relative flex-1 space-y-6 overflow-hidden px-4 pt-8">
         {focus === 'loading' ? (
           <LoadingPreview design={normalizeLoading(get(v2, 'intro_screen.loadingState.design'))} brand={brand} />
         ) : null}
@@ -268,10 +276,12 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
 
         {quickLinks.length > 0 && (
           <div>
-            <p className="mb-2 flex items-center gap-1 text-[11.5px] font-bold">
-              <span style={{ color: brand }} className="rtl:-scale-x-100">‹</span>
-              {quickLinksTitle}
-            </p>
+            {!!quickLinksTitle && (
+              <p className="mb-2 flex items-center gap-1 text-[11.5px] font-bold">
+                <span style={{ color: brand }} className="rtl:-scale-x-100">‹</span>
+                {quickLinksTitle}
+              </p>
+            )}
             <style>{cardHoverCss(ql, brand, '.pv-card')}</style>
             <div
               ref={cardTrackRef}
@@ -322,7 +332,7 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
         {prompts.length > 0 && (
           <div>
             <style>{chipHoverCss(pr, brand, '.pv-chip')}</style>
-            {pr.showTitle && (
+            {pr.showTitle && !!promptTitle && (
               <p
                 className="mb-2 uppercase tracking-[0.09em]"
                 style={{
