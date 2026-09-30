@@ -1,10 +1,10 @@
-name: Deploy — K8S - Staging
+name: Deploy — K8S - producation
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - testing
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
