@@ -73,16 +73,8 @@ export function MenuCategories({ template }: { template: MenuCategoriesTemplate;
                 className="absolute inset-0"
                 style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.05) 70%)' }}
               />
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 p-2.5">
+              <div className="absolute inset-x-0 bottom-0 flex items-end p-2.5">
                 <span className="text-[13px] leading-tight font-bold text-white">{label}</span>
-                {it.count ? (
-                  <span
-                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
-                    style={{ background: brand }}
-                  >
-                    {it.count}
-                  </span>
-                ) : null}
               </div>
             </button>
           )
