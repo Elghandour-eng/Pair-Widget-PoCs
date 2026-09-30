@@ -1,5 +1,5 @@
 import { env } from '../config/env.js'
-import { upstream } from '../lib/errors.js'
+import { notFound, upstream } from '../lib/errors.js'
 import { keys, redis } from '../lib/redis.js'
 import { logger } from '../lib/logger.js'
 
@@ -16,6 +16,13 @@ export async function fetchPairConfig(widgetId: string, baseUrl = env.PAIR_API_B
     const res = await fetch(url, { signal: controller.signal, headers: { accept: 'application/json' } })
     if (!res.ok) {
       const body = await res.text().catch(() => '')
+      // A widget Pair does not have is not a gateway failure. Reporting it as
+      // 502 sent whoever was looking at the dashboard hunting for a broken
+      // proxy, when the answer was that this id does not exist in the Pair
+      // instance this deployment is pointed at.
+      if (res.status === 404) {
+        throw notFound(`Pair has no widget ${widgetId} at ${baseUrl.replace(/\/$/, '')}`)
+      }
       throw upstream(`Pair API responded ${res.status} for widget ${widgetId}`, { status: res.status, body: body.slice(0, 500) })
     }
     return (await res.json()) as WidgetConfig

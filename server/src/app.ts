@@ -17,7 +17,7 @@ import { pairProxyRouter } from './routes/pairProxy.js'
 import { publicRouter, widgetLangRouter, widgetViewRouter } from './routes/public.js'
 import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
-import { uploadsRouter, uploadsStatic } from './routes/uploads.js'
+import { uploadsRouter, uploadsStatic, uploadsStatus } from './routes/uploads.js'
 import { widgetsRouter } from './routes/widgets.js'
 
 export function createApp() {
@@ -58,7 +58,14 @@ export function createApp() {
     const redisOk = redis.status === 'ready'
     // The SDK is reported here because a deployment that silently fell back to
     // someone else's build is otherwise invisible: every page still loads.
-    res.status(redisOk ? 200 : 503).json({ status: redisOk ? 'ok' : 'degraded', redis: redis.status, mongo: mongoStatus(), sdk: localSdkStatus(), uptime: process.uptime() })
+    res.status(redisOk ? 200 : 503).json({
+      status: redisOk ? 'ok' : 'degraded',
+      redis: redis.status,
+      mongo: mongoStatus(),
+      sdk: localSdkStatus(),
+      uploads: uploadsStatus(),
+      uptime: process.uptime(),
+    })
   })
 
   app.use('/api/public/uploads', publicCors, uploadsStatic)

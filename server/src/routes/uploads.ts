@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { accessSync, constants, existsSync, readdirSync } from 'node:fs'
 import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { Router } from 'express'
@@ -24,6 +24,29 @@ const TYPE_BY_EXT = Object.fromEntries(Object.entries(EXT_BY_TYPE).map(([t, e]) 
 const MAX_BYTES = 3 * 1024 * 1024
 
 export const uploadsDir = () => path.resolve(env.UPLOAD_DIR)
+
+/**
+ * What is actually in the upload directory.
+ *
+ * Reported by /api/health because the failure is otherwise invisible from the
+ * outside: the directory is created on first upload, so a deployment that never
+ * mounted a volume looks healthy while every logo and icon a design references
+ * answers 404 — the files were written to a container filesystem and thrown
+ * away with it. A design with uploads and a count of zero is that.
+ */
+export const uploadsStatus = (): { dir: string; writable: boolean; files: number } => {
+  const dir = uploadsDir()
+  try {
+    accessSync(dir, constants.W_OK)
+  } catch {
+    return { dir, writable: false, files: 0 }
+  }
+  try {
+    return { dir, writable: true, files: readdirSync(dir).length }
+  } catch {
+    return { dir, writable: true, files: 0 }
+  }
+}
 const publicUrl = (file: string) => `/api/public/uploads/${file}`
 
 export const uploadsRouter = Router()
