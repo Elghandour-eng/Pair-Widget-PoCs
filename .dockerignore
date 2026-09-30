@@ -1,0 +1,18 @@
+# Installed by the deps/build stages themselves; copying a host tree in is both
+# slow and wrong (it can carry native modules built for another platform).
+node_modules
+**/node_modules
+
+# Build outputs are produced inside the image.
+server/dist
+web/dist
+sdk-src/dist
+sdk-src/dist-local
+
+# Local-only, and .env in particular must never be baked into an image: this
+# deployment's configuration comes from the cluster at runtime.
+.env
+.env.*
+.git
+.github
+*.log

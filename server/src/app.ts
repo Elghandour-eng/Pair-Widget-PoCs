@@ -9,6 +9,7 @@ import { env } from './config/env.js'
 import { logger } from './lib/logger.js'
 import { mongoStatus } from './lib/mongo.js'
 import { redis } from './lib/redis.js'
+import { localSdkDist, localSdkStatus } from './lib/sdkBase.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
@@ -55,7 +56,9 @@ export function createApp() {
 
   app.get('/api/health', async (_req, res) => {
     const redisOk = redis.status === 'ready'
-    res.status(redisOk ? 200 : 503).json({ status: redisOk ? 'ok' : 'degraded', redis: redis.status, mongo: mongoStatus(), uptime: process.uptime() })
+    // The SDK is reported here because a deployment that silently fell back to
+    // someone else's build is otherwise invisible: every page still loads.
+    res.status(redisOk ? 200 : 503).json({ status: redisOk ? 'ok' : 'degraded', redis: redis.status, mongo: mongoStatus(), sdk: localSdkStatus(), uptime: process.uptime() })
   })
 
   app.use('/api/public/uploads', publicCors, uploadsStatic)
@@ -88,47 +91,57 @@ export function createApp() {
   // Serve a local build of the widget SDK, when one is configured. The embed
   // snippet can then point at this origin instead of the hosted SDK, which is
   // the only way a change to the widget itself is visible before it ships.
-  if (env.WIDGET_SDK_DIST) {
-    const sdkDist = path.resolve(env.WIDGET_SDK_DIST)
-    if (existsSync(sdkDist)) {
-      // The widget is a separate app that runs in an iframe on any site, and it
-      // has its own inline bootstrap. The dashboard's policy — script-src 'self'
-      // with no inline — is the wrong one for it and blocks it outright, so
-      // these responses carry a policy of their own.
-      app.use(
-        '/sdk',
-        publicCors,
-        (_req, res, next) => {
-          res.setHeader(
-            'Content-Security-Policy',
-            [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              'font-src https://fonts.gstatic.com data: *',
-              'img-src * data: blob:',
-              'media-src * data: blob:',
-              'connect-src *',
-              'frame-ancestors *',
-            ].join('; '),
-          )
-          next()
+  const sdkDist = localSdkDist()
+  if (sdkDist) {
+    // The widget is a separate app that runs in an iframe on any site, and it
+    // has its own inline bootstrap. The dashboard's policy — script-src 'self'
+    // with no inline — is the wrong one for it and blocks it outright, so
+    // these responses carry a policy of their own.
+    app.use(
+      '/sdk',
+      publicCors,
+      (_req, res, next) => {
+        res.setHeader(
+          'Content-Security-Policy',
+          [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            'font-src https://fonts.gstatic.com data: *',
+            'img-src * data: blob:',
+            'media-src * data: blob:',
+            'connect-src *',
+            'frame-ancestors *',
+          ].join('; '),
+        )
+        next()
+      },
+      // Hashed bundles cache hard; sdk.js, sdk.css and index.html revalidate
+      // on every load, so a rebuilt widget is what the next page view runs —
+      // a browser that cached the old sdk.js for minutes looked exactly like
+      // "the snippet does not work".
+      express.static(sdkDist, {
+        setHeaders: (res, filePath) => {
+          const hashed = /[\\/]assets[\\/]/.test(filePath)
+          res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache')
         },
-        // Hashed bundles cache hard; sdk.js, sdk.css and index.html revalidate
-        // on every load, so a rebuilt widget is what the next page view runs —
-        // a browser that cached the old sdk.js for minutes looked exactly like
-        // "the snippet does not work".
-        express.static(sdkDist, {
-          setHeaders: (res, filePath) => {
-            const hashed = /[\\/]assets[\\/]/.test(filePath)
-            res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache')
-          },
-        }),
-      )
-      logger.info({ sdkDist }, 'serving a local widget SDK at /sdk')
-    } else {
-      logger.warn({ sdkDist }, 'WIDGET_SDK_DIST is set but does not exist; using the hosted SDK')
-    }
+      }),
+    )
+    logger.info({ sdkDist }, 'serving a local widget SDK at /sdk')
+  } else {
+    // Loud in both cases, because neither is a missing feature: embeds are sent
+    // to WIDGET_SDK_BASE_URL — a build this deployment does not control, which
+    // can be older than the config it is handed — or, with nothing configured,
+    // to a /sdk that answers 404.
+    logger.error(
+      {
+        sdkDist: env.WIDGET_SDK_DIST ? path.resolve(env.WIDGET_SDK_DIST) : null,
+        fallback: env.WIDGET_SDK_BASE_URL || null,
+      },
+      env.WIDGET_SDK_DIST
+        ? 'WIDGET_SDK_DIST holds no sdk.js, so this deployment serves no widget of its own'
+        : 'WIDGET_SDK_DIST is not set, so this deployment serves no widget of its own',
+    )
   }
 
   // Serve the built dashboard (web/dist) from the same origin in production.

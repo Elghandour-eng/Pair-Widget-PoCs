@@ -11,10 +11,15 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('12h'),
   PAIR_API_BASE_URL: z.string().url().default('https://system.trypair.ai'),
   PAIR_API_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
-  WIDGET_SDK_BASE_URL: z.string().url().default('https://widgets-test.trypair.ai'),
-  // A local build of the widget SDK to serve at /sdk. Set it and the studio
-  // hands out its own origin as the SDK base, so a design change lands without
-  // waiting for the hosted SDK to be redeployed. Blank = use the hosted one.
+  // A foreign origin to load the widget SDK from, used only when
+  // WIDGET_SDK_DIST holds no build. It has no default on purpose: a default
+  // here is inherited by every deployment that never thought about it, which is
+  // how one ended up serving a widget from an origin nobody had chosen. Blank is
+  // allowed and means "this deployment serves its own SDK at /sdk".
+  WIDGET_SDK_BASE_URL: z.union([z.literal(''), z.string().url()]).default(''),
+  // Where the widget's own build sits on disk. Set, it is served at /sdk and
+  // every embed loads the widget from this same origin — so the widget and the
+  // config it renders always ship together.
   WIDGET_SDK_DIST: z.string().default(''),
   // Optional: when set, system logs are also written to MongoDB.
   MONGODB_URI: z.string().optional(),
