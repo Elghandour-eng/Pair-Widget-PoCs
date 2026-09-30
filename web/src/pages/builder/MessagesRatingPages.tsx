@@ -15,6 +15,7 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const FB = 'widget_v2_config.messages.feedback'
   const SG = 'widget_v2_config.messages.suggestions'
   const QC = 'widget_v2_config.messages.questions'
+  const ES = 'widget_v2_config.messages.emptyState'
   return (
     <div className="space-y-7">
       <section>
@@ -79,6 +80,15 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
           <ColorField label={t('builder.msgs.chipsText')} path={`${SG}.textColor`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.chipsBorder')} path={`${SG}.borderColor`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.chipsSize')} path={`${SG}.fontSize`} min={10} max={18} step={0.5} fallback={13.5} unit="px" get={get} set={set} disabled={disabled} />
+        </div>
+      </section>
+      <section>
+        <SectionHead>{t('builder.msgs.emptyHead')}</SectionHead>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('builder.msgs.emptyEn')} path={`${ES}.text`} placeholder="Send a message to start the conversation!" get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.msgs.emptyAr')} path={`${ES}.text_ar`} placeholder="ابدأ المحادثة برسالة ✨" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.msgs.emptySize')} path={`${ES}.fontSize`} min={10} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ColorField label={t('builder.msgs.emptyColor')} path={`${ES}.color`} get={get} set={set} disabled={disabled} />
         </div>
       </section>
       <section>

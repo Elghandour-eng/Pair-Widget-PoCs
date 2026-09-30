@@ -36,6 +36,7 @@ export function HeaderPage({ get, set, disabled }: PageProps) {
         <p className="callout mb-4">{t('builder.header.controlsHint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.header.langToggle')} path="widget_v2_config.header.controls.lang.show" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.header.resetBtn')} path="widget_v2_config.header.actions.reset" get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.header.themeToggle')} path="widget_v2_config.header.controls.theme.show" get={get} set={set} disabled={disabled} />
           {get('widget_v2_config.header.controls.lang.show') !== false && (
             <IconField
@@ -286,6 +287,7 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
         <div className="grid gap-4 sm:grid-cols-2">
           <ChoiceField label={t('builder.hero.layout')} path={p('layout')} options={[...HERO_LAYOUTS]} keyPrefix="builder.hero.layout" fallback="text-left" get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.mirror')} path={p('mirrorInRtl')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.hero.mirrorShape')} path={p('decor.mirrorShape')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.badge.show')} path={p('badge.show')} get={get} set={set} disabled={disabled} />
           <Field label={t('builder.hero.badge.text')} path={p('badge.text')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.badge.logo')} path={p('badge.showLogo')} get={get} set={set} disabled={disabled} />
