@@ -1,5 +1,6 @@
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { isDarkBackground } from '@/lib/utils'
 import { LocationRequestButton } from './location-request-button'
 import { useDispatchAction } from '@/features/conversation/hooks/use-dispatch-action'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
@@ -58,15 +59,13 @@ export function InteractiveButton({
   index = 0,
 }: InteractiveButtonProps & { index?: number }) {
   const { widgetConfig, view } = useWidgetConfigContext()
-  // chips sit on the messages surface, which follows the VIEW theme — the design's
-  // widgetBgColor (a dark header/panel) must not push them into dark styling
-  const isDark = view.theme === 'dark'
+  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
   const chips = widgetConfig.messagesConfig?.suggestions
   const brand = widgetConfig.primaryColor || '#B3202C'
   const chipStyle = {
-    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.05)' : '#ffffff'),
-    border: `1px solid ${chips?.borderColor ?? (isDark ? `${brand}66` : `${brand}33`)}`,
-    color: chips?.textColor ?? (isDark ? '#eef0f5' : '#26272c'),
+    background: chips?.background ?? (isDark ? `${brand}1f` : '#ffffff'),
+    border: `1px solid ${chips?.borderColor ?? (isDark ? `${brand}73` : `${brand}33`)}`,
+    color: chips?.textColor ?? (isDark ? '#f5f5f7' : '#26272c'),
     borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
     fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
     fontWeight: 500,
