@@ -416,15 +416,34 @@ button.epr-btn.epr-emoji {
   display: none;
 }
 
-/* Suggestion chips: quiet neutral pills; the brand appears on hover only */
+/* Suggestion chips: clean white pills with a brand hairline and spark; staggered entrance */
 .pair-chip {
+  animation: pair-chip-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 }
 .pair-chip:hover {
-  background: color-mix(in srgb, var(--chip-brand, #b3202c) 12%, transparent) !important;
+  background: color-mix(in srgb, var(--chip-brand, #b3202c) 9%, transparent) !important;
+  border-color: var(--chip-brand, #b3202c) !important;
   color: var(--chip-brand, #b3202c) !important;
   transform: translateY(-1px);
+}
+.pair-chip:hover .pair-chip-icon {
+  transform: rotate(45deg) scale(1.1);
+}
+.pair-chip-icon {
+  transition: transform 0.25s ease;
+}
+@keyframes pair-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

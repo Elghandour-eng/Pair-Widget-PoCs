@@ -51,7 +51,12 @@ interface InteractiveButtonProps {
   messageContent?: string
 }
 
-export function InteractiveButton({ option, sourceMessageUlid, messageContent }: InteractiveButtonProps) {
+export function InteractiveButton({
+  option,
+  sourceMessageUlid,
+  messageContent,
+  index = 0,
+}: InteractiveButtonProps & { index?: number }) {
   const { widgetConfig, view } = useWidgetConfigContext()
   // chips sit on the messages surface, which follows the VIEW theme — the design's
   // widgetBgColor (a dark header/panel) must not push them into dark styling
@@ -59,13 +64,13 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
   const chips = widgetConfig.messagesConfig?.suggestions
   const brand = widgetConfig.primaryColor || '#B3202C'
   const chipStyle = {
-    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.08)' : '#f4f4f6'),
-    border: chips?.borderColor ? `1px solid ${chips.borderColor}` : 'none',
-    color: chips?.textColor ?? (isDark ? '#e8eaf0' : '#3c3d42'),
+    background: chips?.background ?? (isDark ? 'rgba(255,255,255,0.05)' : '#ffffff'),
+    border: `1px solid ${chips?.borderColor ?? (isDark ? `${brand}66` : `${brand}33`)}`,
+    color: chips?.textColor ?? (isDark ? '#eef0f5' : '#26272c'),
     borderRadius: chips?.radius != null ? `${chips.radius}px` : '999px',
     fontSize: chips?.fontSize != null ? `${chips.fontSize}px` : undefined,
     fontWeight: 500,
-    padding: '9px 16px',
+    padding: '8px 14px 8px 12px',
     '--chip-brand': brand,
   } as React.CSSProperties
   const { mutateAsync: sendMessageMutation } = useSendMessage()
@@ -152,9 +157,15 @@ export function InteractiveButton({ option, sourceMessageUlid, messageContent }:
       onClick={handleClick}
       dir="auto"
       className="pair-chip flex cursor-pointer items-center gap-1.5 text-start font-(family-name:--Font-primary,'DM_Sans') text-[13.5px] leading-[130%] font-normal transition-all hover:-translate-y-px focus:outline-none active:translate-y-0"
-      style={chipStyle}
+      style={{ ...chipStyle, animationDelay: `${index * 70}ms` }}
     >
-      {iconUrl && <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />}
+      {iconUrl ? (
+        <img src={iconUrl} alt="" className="h-4 w-4 shrink-0 rounded-xs object-cover" />
+      ) : (
+        <svg className="pair-chip-icon shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M12 2l2.1 6.4L20.5 10l-6.4 2.1L12 18.5l-2.1-6.4L3.5 10l6.4-1.6L12 2z" fill={brand} />
+        </svg>
+      )}
       <span>{label}</span>
     </button>
   )
@@ -197,6 +208,7 @@ export function SuggestionsSection({ suggestions, sourceMessageUlid, messageCont
       <div className={`flex w-full flex-wrap gap-2 ${justify}`}>
         {suggestions.options.map((option, idx) => (
           <InteractiveButton
+            index={idx}
             key={idx}
             option={option}
             sourceMessageUlid={sourceMessageUlid}
