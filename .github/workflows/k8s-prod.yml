@@ -1,10 +1,10 @@
-name: Deploy — K8S - Production
+name: Deploy — K8S - Staging
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - master
-      - main
+      - testing
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build-and-push:
-    name: Build and push production image
+    name: Build and push testing image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,18 +39,18 @@ jobs:
       # deploy, the build then skips the widget and the server falls back to
       # WIDGET_SDK_BASE_URL — loudly, in its own logs and in /api/health.
       #
-      # Production reads its own variables. Sharing one set across environments
+      # Staging reads its own variables. Sharing one set across environments
       # would point this environment's visitors at the other one's Pusher, with
       # the widget otherwise working and nothing reporting it.
       - name: Resolve widget build inputs
         id: sdk
         env:
-          VITE_BASE_URL: ${{ vars.VITE_BASE_URL_PROD }}
-          VITE_PUSHER_APP_KEY: ${{ vars.VITE_PUSHER_APP_KEY_PROD }}
+          VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
+          VITE_PUSHER_APP_KEY: ${{ vars.VITE_PUSHER_APP_KEY }}
         run: |
           missing=""
-          [ -n "${VITE_BASE_URL}" ] || missing="${missing} VITE_BASE_URL_PROD"
-          [ -n "${VITE_PUSHER_APP_KEY}" ] || missing="${missing} VITE_PUSHER_APP_KEY_PROD"
+          [ -n "${VITE_BASE_URL}" ] || missing="${missing} VITE_BASE_URL"
+          [ -n "${VITE_PUSHER_APP_KEY}" ] || missing="${missing} VITE_PUSHER_APP_KEY"
           if [ -n "${missing}" ]; then
             echo "::warning title=No widget in this image::Set these repository variables to build it:${missing}"
             echo "build_sdk=0" >> "$GITHUB_OUTPUT"
@@ -74,15 +74,17 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          IMAGE_TAG="production-${SHORT_SHA}"
+          IMAGE_TAG="testing-${SHORT_SHA}"
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          IMG_LATEST=$(echo "ghcr.io/${REPO}:production-latest" | tr '[:upper:]' '[:lower:]')
+          IMG_LATEST=$(echo "ghcr.io/${REPO}:testing-latest" | tr '[:upper:]' '[:lower:]')
           IMG_SHA=$(echo "ghcr.io/${REPO}:${IMAGE_TAG}" | tr '[:upper:]' '[:lower:]')
 
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "img_latest=${IMG_LATEST}" >> "$GITHUB_OUTPUT"
-          echo "img_sha=${IMG_SHA}" >> "$GITHUB_OUTPUT"
-          echo "build_date=${BUILD_DATE}" >> "$GITHUB_OUTPUT"
+          {
+            echo "image_tag=${IMAGE_TAG}"
+            echo "img_latest=${IMG_LATEST}"
+            echo "img_sha=${IMG_SHA}"
+            echo "build_date=${BUILD_DATE}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -96,15 +98,17 @@ jobs:
           platforms: linux/amd64
           build-args: |
             BUILD_SDK=${{ steps.sdk.outputs.build_sdk }}
-            VITE_BASE_URL=${{ vars.VITE_BASE_URL_PROD }}
-            VITE_PUSHER_APP_KEY=${{ vars.VITE_PUSHER_APP_KEY_PROD }}
-            VITE_PUSHER_CLUSTER=${{ vars.VITE_PUSHER_CLUSTER_PROD }}
-            VITE_PUSHER_HOST=${{ vars.VITE_PUSHER_HOST_PROD }}
-            VITE_PUSHER_PORT=${{ vars.VITE_PUSHER_PORT_PROD }}
-            VITE_PUSHER_FORCE_TLS=${{ vars.VITE_PUSHER_FORCE_TLS_PROD }}
+            VITE_BASE_URL=${{ vars.VITE_BASE_URL }}
+            VITE_PUSHER_APP_KEY=${{ vars.VITE_PUSHER_APP_KEY }}
+            VITE_PUSHER_CLUSTER=${{ vars.VITE_PUSHER_CLUSTER }}
+            VITE_PUSHER_HOST=${{ vars.VITE_PUSHER_HOST }}
+            VITE_PUSHER_PORT=${{ vars.VITE_PUSHER_PORT }}
+            VITE_PUSHER_FORCE_TLS=${{ vars.VITE_PUSHER_FORCE_TLS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           annotations: |
             index,manifest:org.opencontainers.image.source=https://github.com/${{ github.repository }}
             index,manifest:org.opencontainers.image.revision=${{ github.sha }}
             index,manifest:org.opencontainers.image.created=${{ steps.img.outputs.build_date }}
+
+
