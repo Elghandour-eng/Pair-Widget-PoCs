@@ -73,6 +73,12 @@ export interface WidgetConfig {
   launcherTitle?: string
   primaryColor: string
   requiresPreChat: boolean
+  /**
+   * Where the pre-chat form sits. 'after_intro' (the default) shows it when the
+   * visitor starts a chat; 'before_intro' makes it the first screen, so nobody
+   * reaches the intro without having filled it.
+   */
+  preChatPlacement: 'before_intro' | 'after_intro'
   welcomeTitle?: string
   welcomeTagline?: string
   greetingEnabled: boolean

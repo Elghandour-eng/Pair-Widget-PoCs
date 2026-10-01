@@ -54,7 +54,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         <p className="callout mb-4">{t('builder.pc.hint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.pc.enable')} path={`${PC}.enabled`} get={get} set={set} disabled={disabled} />
-          <div />
+          <ChoiceField label={t('builder.pc.placement')} path={`${PC}.placement`} options={['after_intro', 'before_intro']} keyPrefix="builder.pc.placement" fallback="after_intro" get={get} set={set} disabled={disabled} />
           <PlainBiField label={t('builder.pc.message')} path={`${PC}.message`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Share your queries or comments here." />
         </div>
       </section>

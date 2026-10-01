@@ -21,7 +21,7 @@ import { hexToRgba } from '@/lib/utils'
 import { uiText } from '@/lib/ui-strings'
 
 export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
-  const { navigateToConversation, initialMessage, setInitialMessage } = useWidgetNavigation()
+  const { navigateToConversation, navigateToIntro, initialMessage, setInitialMessage } = useWidgetNavigation()
   const { widgetConfig } = useWidgetConfigContext()
   const { subscribeToConversation } = useUnreadMessages()
   const preChatMutation = usePreChat()
@@ -194,7 +194,10 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
       // Step 2: Send the message. A fields-only form has none: the contact is
       // registered and the visitor lands in an empty conversation.
       if (!messageValue) {
-        navigateToConversation(null)
+        // Placed before the intro, the form is the door to it rather than to a
+        // conversation: the visitor is registered and now sees the intro.
+        if (widgetConfig.requiresPreChat && widgetConfig.preChatPlacement === 'before_intro') navigateToIntro()
+        else navigateToConversation(null)
         onSuccess?.()
         return
       }

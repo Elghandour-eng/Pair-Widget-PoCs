@@ -1,3 +1,4 @@
+import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { tokenStorage } from '@/core/token-storage'
 import { ConversationsQueryOptions } from '@/features/conversation/queries/use-conversations-queries'
 import { queryClient } from '@/queryClient'
@@ -31,10 +32,12 @@ const WidgetNavigationContext = createContext<WidgetNavigationContextType | unde
  * Where a visitor lands when the widget opens: a returning visitor — one with
  * a token and a previous conversation (prefetched by the route loader) —
  * lands straight in that conversation; everyone else starts on the intro.
+ * A widget whose pre-chat form is placed before the intro sends a visitor who
+ * has not filled it there first; the token is what says they have.
  */
-function initialScreen(): { screen: WidgetScreen; id: string | null } {
+function initialScreen(preChatFirst: boolean): { screen: WidgetScreen; id: string | null } {
   try {
-    if (!tokenStorage.get(getWidgetId())) return { screen: 'intro', id: null }
+    if (!tokenStorage.get(getWidgetId())) return { screen: preChatFirst ? 'pre-chat' : 'intro', id: null }
     const cached = queryClient.getQueryData(ConversationsQueryOptions().queryKey)
     const ulid = cached?.data?.[0]?.ulid
     if (ulid) {
@@ -49,7 +52,9 @@ function initialScreen(): { screen: WidgetScreen; id: string | null } {
 
 export function WidgetNavigationProvider({ children }: { children: ReactNode }) {
   // Returning visitors start in their conversation; new ones on the intro.
-  const [initial] = useState(initialScreen)
+  const { widgetConfig } = useWidgetConfigContext()
+  const preChatFirst = widgetConfig.requiresPreChat && widgetConfig.preChatPlacement === 'before_intro'
+  const [initial] = useState(() => initialScreen(preChatFirst))
   const [currentScreen, setCurrentScreen] = useState<WidgetScreen>(initial.screen)
   const [conversationId, setConversationId] = useState<string | null>(initial.id)
   const [navigationDirection, setNavigationDirection] = useState<NavigationDirection>('forward')
@@ -57,6 +62,15 @@ export function WidgetNavigationProvider({ children }: { children: ReactNode }) 
 
   const navigateToIntro = () => {
     logger.debug('WidgetNavigationProvider', 'Navigating to intro screen')
+    // The form is a gate when it comes first: without a token there is no
+    // intro to go back to, and with one the intro is the next screen forward.
+    if (preChatFirst && currentScreen === 'pre-chat') {
+      if (!tokenStorage.get(getWidgetId())) return
+      setNavigationDirection('forward')
+      setCurrentScreen('intro')
+      setConversationId(null)
+      return
+    }
     setNavigationDirection('backward') // Intro is a backward/start screen
     setCurrentScreen('intro')
     setConversationId(null)
@@ -91,6 +105,7 @@ export function WidgetNavigationProvider({ children }: { children: ReactNode }) 
       setCurrentScreen('pre-chat')
       setConversationId(null)
     } else if (currentScreen === 'pre-chat') {
+      if (preChatFirst && !tokenStorage.get(getWidgetId())) return
       setCurrentScreen('intro')
       setConversationId(null)
     }

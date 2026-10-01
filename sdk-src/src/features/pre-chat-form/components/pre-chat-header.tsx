@@ -13,21 +13,25 @@ function PreChatHeader() {
   // The back chevron follows the theme; ghost hover stays currentColor-based
   // so a dark header never grows a white chip behind it.
   const dark = isDarkBackground(widgetConfig.widgetBgColor)
+  // Before the intro the form is the first screen, so there is nowhere to go back to.
+  const gate = widgetConfig.requiresPreChat && widgetConfig.preChatPlacement === 'before_intro'
   // const isHostOnline = true
   // const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time]
 
   return (
     // Add shadow bottom
     <WidgetHeader className="flex-row items-center gap-2 py-4 shadow-xs">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={navigateToIntro}
-        className="hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)] hover:text-current"
-        style={{ color: dark ? '#FFFFFF' : undefined }}
-      >
-        <BackIcon className="h-5 w-auto" />
-      </Button>
+      {!gate && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={navigateToIntro}
+          className="hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)] hover:text-current"
+          style={{ color: dark ? '#FFFFFF' : undefined }}
+        >
+          <BackIcon className="h-5 w-auto" />
+        </Button>
+      )}
       {/* <div className="flex items-center gap-2">
         <WidgetAvatar />
 

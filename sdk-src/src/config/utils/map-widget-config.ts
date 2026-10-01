@@ -338,6 +338,10 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     launcherTitle: apiResponse.launcher_title || windowSettings?.launcherTitle,
     primaryColor: apiResponse.widget_color,
     requiresPreChat: apiResponse.pre_chat_form_enabled,
+    preChatPlacement:
+      (apiResponse.widget_v2_config?.pre_chat_form as { placement?: string } | undefined)?.placement === 'before_intro'
+        ? 'before_intro'
+        : 'after_intro',
     greetingEnabled: apiResponse.enable_greeting,
     greetingMessage: apiResponse.greeting_message_en || apiResponse.greeting_message_ar || '',
     preChatFormOptions: apiResponse.pre_chat_form_options,
