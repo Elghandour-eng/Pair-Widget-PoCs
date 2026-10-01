@@ -925,6 +925,8 @@ const en = {
   'preview.device.android': 'Android',
   'preview.device.web': 'Website',
   'preview.liveSdk': 'Live',
+  'builder.live.hint': 'Show the real widget as it is served now',
+  'builder.live.note': 'Live shows the saved design as visitors get it — unsaved edits appear after Save.',
   'preview.liveSdk.hint': 'Run the real widget SDK inside the frame',
   'preview.rotate': 'Rotate (portrait / landscape)',
   'preview.help': 'What I can help with',
@@ -1849,6 +1851,8 @@ const ar: Record<MsgKey, string> = {
   'media.hint': 'الصق رابطاً، أو أفلِت ملفاً هنا، أو ارفع صورة. PNG أو JPEG أو WebP أو GIF أو SVG أو ICO، حتى ٣ ميجابايت.',
 
   'preview.none': 'لا يوجد تصميم للمعاينة',
+  'builder.live.hint': 'عرض الويدجت الحقيقي كما يُقدَّم الآن',
+  'builder.live.note': 'الوضع المباشر يعرض التصميم المحفوظ كما يراه الزوار — التعديلات غير المحفوظة تظهر بعد الحفظ.',
   'preview.device.iphone': 'آيفون',
   'preview.device.android': 'أندرويد',
   'preview.device.web': 'موقع ويب',

@@ -24,7 +24,8 @@ export const PREVIEW_FRAME_PATH = '/preview-frame'
  * visible while the widget is closed, so editing it would otherwise change
  * nothing on screen.
  */
-export type PreviewConfigMsg = { type: 'pws:config'; config: WidgetConfig | null; dark: boolean; focus?: string }
+/** `topInset` clears a device frame's camera cutout; the frame cannot see its own bezel. */
+export type PreviewConfigMsg = { type: 'pws:config'; config: WidgetConfig | null; dark: boolean; focus?: string; topInset?: number }
 /**
  * A pushed event: the frame applies it on top of whatever config it holds,
  * the way a host page would drive an embedded widget at runtime

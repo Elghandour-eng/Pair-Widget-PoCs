@@ -1,8 +1,8 @@
 import {
   ArrowLeft, BellRing, Check, ClipboardList, Download, Image as ImageIcon, Languages,
   LayoutGrid, LoaderCircle, MessagesSquare,
-  Moon, Palette, PanelTop, RotateCcw, Rocket, Save, Share2, ShieldCheck, Sparkles, Star, Sun,
-  TextCursorInput,
+  Monitor, Moon, Palette, PanelTop, RotateCcw, Rocket, Save, Share2, ShieldCheck, Smartphone, Sparkles, Star, Sun,
+  Tablet, TextCursorInput, Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { FitScale, Loading, Spinner } from '@/components/ui'
 import { api, type Widget, type WidgetConfig } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { PairWordmark } from '@/components/brand'
+import { stageSize, type PreviewDevice } from '@/components/WidgetPreview'
 import {
   PREVIEW_FRAME_PATH, applyLanguage, applyTheme, deepGet, deepSet,
   isPreviewOutMsg, type PreviewEventMsg, type PreviewInMsg, type ThemeName, type WidgetLang,
@@ -64,6 +65,10 @@ export function Builder() {
   const [draft, setDraft] = useState<WidgetConfig | null>(null)
   const [section, setSection] = useState<Section>('theme')
   const [dark, setDark] = useState(false)
+  const [device, setDevice] = useState<PreviewDevice>('iphone')
+  const [landscape, setLandscape] = useState(false)
+  // Live shows the widget as it is served — the saved design, not the draft.
+  const [live, setLive] = useState(false)
   const [pushedLang, setPushedLang] = useState<WidgetLang | null>(null)
   const [pushedTheme, setPushedTheme] = useState<ThemeName | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -95,10 +100,11 @@ export function Builder() {
   useEffect(() => {
     if (!frameReady) return
     frame.current?.contentWindow?.postMessage(
-      { type: 'pws:config', config: draft, dark, focus: section } satisfies PreviewInMsg,
+      // A phone frame's cutout sits over the top of the screen; a browser has none.
+      { type: 'pws:config', config: draft, dark, focus: section, topInset: device === 'web' ? undefined : landscape ? 12 : 34 } satisfies PreviewInMsg,
       window.location.origin,
     )
-  }, [draft, dark, section, frameReady])
+  }, [draft, dark, section, frameReady, device, landscape])
 
   /** Push a runtime event to the frame — preview only, the draft is untouched. */
   const pushEvent = (msg: PreviewEventMsg) => {
@@ -148,6 +154,8 @@ export function Builder() {
   }
 
   if (!loaded || !widget) return <Loading />
+  const web = device === 'web'
+  const stage = stageSize(device, landscape)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3.5">
@@ -248,22 +256,83 @@ export function Builder() {
 
           {/* Live preview frame, fed over postMessage */}
           <div className="flex min-w-0 flex-col xl:min-h-0">
-            <div className="mb-2.5 flex shrink-0 items-center justify-between gap-2">
+            <div className="mb-2.5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <p className="eyebrow">{t('builder.livePreview')}</p>
-              <button className="btn-ghost btn-sm" onClick={() => setDark((d) => !d)} title={t('detail.preview.dark')} aria-label={t('detail.preview.dark')}>
-                {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              </button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex rounded-lg border border-line bg-code p-0.5" role="group" aria-label={t('builder.livePreview')}>
+                  <DeviceToggle active={device === 'iphone'} onClick={() => setDevice('iphone')} icon={<Smartphone className="size-3.5" />} label={t('preview.device.iphone')} />
+                  <DeviceToggle active={device === 'android'} onClick={() => setDevice('android')} icon={<Tablet className="size-3.5" />} label={t('preview.device.android')} />
+                  <DeviceToggle active={device === 'web'} onClick={() => setDevice('web')} icon={<Monitor className="size-3.5" />} label={t('preview.device.web')} />
+                </div>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => setLandscape((l) => !l)}
+                  disabled={device === 'web'}
+                  aria-pressed={landscape}
+                  title={t('preview.rotate')}
+                  aria-label={t('preview.rotate')}
+                >
+                  <RotateCcw className={`size-4 transition-transform duration-300 ${landscape ? '-rotate-90' : ''}`} />
+                </button>
+                <button
+                  className={`btn-sm ${live ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setLive((v) => !v)}
+                  aria-pressed={live}
+                  title={t('builder.live.hint')}
+                >
+                  <Zap className="size-4" />
+                  <span className="hidden md:inline">{t('preview.liveSdk')}</span>
+                </button>
+                <button className="btn-ghost btn-sm" onClick={() => setDark((d) => !d)} title={t('detail.preview.dark')} aria-label={t('detail.preview.dark')}>
+                  {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                </button>
+              </div>
             </div>
-            <FitScale width={352} height={572} className="max-h-[72dvh] xl:max-h-none xl:flex-1">
-              <div className="size-full overflow-hidden rounded-[14px] bg-ink p-1.5 shadow-[0_18px_50px_rgba(15,18,22,0.35)]">
-                <iframe
-                  ref={frame}
-                  src={PREVIEW_FRAME_PATH}
-                  title={t('builder.livePreview')}
-                  className="size-full rounded-[9px] border-0 bg-white"
-                />
+            <FitScale width={stage.w} height={stage.h} className="max-h-[72dvh] xl:max-h-none xl:flex-1">
+              {/* One tree for every device, so the draft frame is never remounted:
+                  a fresh iframe would sit blank until the next edit re-posted the config. */}
+              <div className={`flex size-full flex-col overflow-hidden ${web ? 'rounded-xl shadow-[0_18px_50px_rgba(15,18,22,0.25)] ring-1 ring-ink/15' : `bg-ink shadow-[0_18px_50px_rgba(15,18,22,0.35)] ${device === 'iphone' ? 'rounded-[54px] p-[11px]' : 'rounded-[36px] p-[9px]'}`}`}>
+                {web && (
+                  <div className="flex shrink-0 items-center gap-2 border-b border-ink/10 px-4 py-2.5" style={{ background: dark ? '#1a1e24' : '#f7f8fa' }}>
+                    <span className="size-3 rounded-full bg-[#ff5f57]" />
+                    <span className="size-3 rounded-full bg-[#febc2e]" />
+                    <span className="size-3 rounded-full bg-[#28c840]" />
+                    <span className="mono ms-3 flex-1 truncate rounded-md px-3 py-1 text-[11px]" style={{ background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(15,18,22,0.07)', color: dark ? 'rgba(255,255,255,0.55)' : 'rgba(15,18,22,0.5)' }}>
+                      customer-site.com
+                    </span>
+                  </div>
+                )}
+                <div
+                  key="screen"
+                  className={`relative min-h-0 flex-1 overflow-hidden ${web ? '' : device === 'iphone' ? 'rounded-[44px] bg-white' : 'rounded-[28px] bg-white'}`}
+                  style={web ? { background: dark ? '#101317' : '#eef1f5' } : undefined}
+                >
+                  <iframe
+                    key="draft"
+                    ref={frame}
+                    src={PREVIEW_FRAME_PATH}
+                    title={t('builder.livePreview')}
+                    className={`border-0 bg-white ${live ? 'invisible' : ''} ${web ? 'absolute bottom-5 end-5 h-[min(620px,calc(100%-40px))] w-[380px] rounded-2xl shadow-[0_12px_40px_rgba(15,18,22,0.28)]' : 'size-full'}`}
+                  />
+                  {live && (
+                    <iframe
+                      key="live"
+                      src={`/api/public/widget/${encodeURIComponent(widgetId)}/embed?frame=1`}
+                      title="Live widget"
+                      className="absolute inset-0 size-full border-0 bg-white"
+                    />
+                  )}
+                  {!web && !landscape && !live && (
+                    device === 'iphone' ? (
+                      <span className="pointer-events-none absolute left-1/2 top-[11px] h-[26px] w-[96px] -translate-x-1/2 rounded-full bg-ink" />
+                    ) : (
+                      <span className="pointer-events-none absolute left-1/2 top-[12px] size-[14px] -translate-x-1/2 rounded-full bg-ink" />
+                    )
+                  )}
+                </div>
               </div>
             </FitScale>
+            {live && <p className="fine mt-2 text-center">{t('builder.live.note')}</p>}
 
             {/* Runtime events, pushed to the frame over postMessage — the draft never changes. */}
             <div className="mt-2.5 flex shrink-0 flex-wrap items-center justify-center gap-2">
@@ -294,6 +363,22 @@ export function Builder() {
         </div>
       )}
     </div>
+  )
+}
+
+function DeviceToggle({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      title={label}
+      className={`flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-bold transition-all duration-200 ${
+        active ? 'bg-white text-accent-deep shadow-[0_1px_2px_rgba(15,18,22,0.06)]' : 'text-muted hover:text-ink'
+      }`}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   )
 }
 
