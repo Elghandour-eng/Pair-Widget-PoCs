@@ -90,11 +90,13 @@ export function ColorField({ label, path, get, set, disabled }: { label: string;
   )
 }
 
-export function ToggleField({ label, path, get, set, disabled }: { label: string; path: string } & PageProps) {
+/** `fallback` is what the widget does when the config says nothing — an unset toggle shows as that. */
+export function ToggleField({ label, path, get, set, disabled, fallback = false }: { label: string; path: string; fallback?: boolean } & PageProps) {
+  const value = get(path)
   return (
     <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-surface/60 px-3.5 py-2.5 text-[12.5px] font-bold text-ink transition-all duration-200 hover:border-accent-300 hover:bg-white">
       {label}
-      <input type="checkbox" className="size-4 shrink-0 accent-[#4d98e2]" checked={get(path) !== false && get(path) !== undefined} onChange={(e) => set(path, e.target.checked)} disabled={disabled} />
+      <input type="checkbox" className="size-4 shrink-0 accent-[#4d98e2]" checked={value === undefined ? fallback : value !== false} onChange={(e) => set(path, e.target.checked)} disabled={disabled} />
     </label>
   )
 }

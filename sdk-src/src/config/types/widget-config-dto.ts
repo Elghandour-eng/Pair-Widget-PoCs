@@ -173,10 +173,11 @@ export interface HeaderControlDto {
   iconUrl?: string
 }
 
-/** The studio's header controls: a language switch and a theme switch. */
+/** The studio's header controls: a language switch, a theme switch and the close button. */
 export interface HeaderControlsDto {
   lang?: HeaderControlDto
   theme?: HeaderControlDto
+  close?: Pick<HeaderControlDto, 'show'>
 }
 
 export interface HeaderDto {

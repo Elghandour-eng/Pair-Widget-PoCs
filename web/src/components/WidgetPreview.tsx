@@ -209,7 +209,9 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
               <SlotIcon name={get(v2, 'header.controls.theme.icon') ?? 'moon'} url={get(v2, 'header.controls.theme.iconUrl')} size={14} />
             </span>
           )}
-          <span className="text-lg leading-none" style={{ color: muted }}>×</span>
+          {get(v2, 'header.controls.close.show') !== false && (
+            <span className="text-lg leading-none" style={{ color: muted }}>×</span>
+          )}
         </div>
       )}
 

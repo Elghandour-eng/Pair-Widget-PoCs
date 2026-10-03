@@ -1,5 +1,8 @@
+import { HeaderActionsRow } from '@/components/header-actions-row'
+import { HeaderControls } from '@/components/header-controls'
 import { BackIcon } from '@/components/icons/back-icon'
 import { Button } from '@/components/ui/button'
+import { WidgetCloseBtn } from '@/components/widget-close-btn'
 import { WidgetHeader } from '@/components/widget-header'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
@@ -49,9 +52,13 @@ function PreChatHeader() {
         </div>
       </div> */}
 
-      {/* <div className="flex flex-1 justify-end self-start">
+      {/* The same language / theme / close row the intro and conversation
+          headers carry, so a visitor who lands on the form first can still
+          switch language or leave. */}
+      <HeaderActionsRow style={{ color: dark ? '#FFFFFF' : undefined }}>
+        <HeaderControls />
         <WidgetCloseBtn />
-      </div> */}
+      </HeaderActionsRow>
     </WidgetHeader>
   )
 }

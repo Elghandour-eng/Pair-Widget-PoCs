@@ -35,9 +35,11 @@ export function HeaderPage({ get, set, disabled }: PageProps) {
         <SectionHead>{t('builder.header.controls')}</SectionHead>
         <p className="callout mb-4">{t('builder.header.controlsHint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.header.langToggle')} path="widget_v2_config.header.controls.lang.show" get={get} set={set} disabled={disabled} />
+          {/* The widget shows all three until told otherwise, so an unset toggle reads as on. */}
+          <ToggleField label={t('builder.header.langToggle')} path="widget_v2_config.header.controls.lang.show" fallback get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.header.resetBtn')} path="widget_v2_config.header.actions.reset" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.header.themeToggle')} path="widget_v2_config.header.controls.theme.show" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.header.themeToggle')} path="widget_v2_config.header.controls.theme.show" fallback get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.header.closeToggle')} path="widget_v2_config.header.controls.close.show" fallback get={get} set={set} disabled={disabled} />
           {get('widget_v2_config.header.controls.lang.show') !== false && (
             <IconField
               label={t('builder.header.langIcon')} set="lang"

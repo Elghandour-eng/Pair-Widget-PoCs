@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 import {
   CircleAlert,
   CircleHelp,
@@ -13,15 +11,20 @@ import {
   ThumbsUp,
 } from 'lucide-react'
 
+import { HeaderControls } from '@/components/header-controls'
+import { WidgetCloseBtn } from '@/components/widget-close-btn'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { acceptConsent, useConsentPending } from '@/core/consent'
 import { hexToRgba } from '@/lib/utils'
-import { getWidgetId } from '@/utils/widget-id'
 
 /**
  * The welcome / consent sheet: shown over the widget on first open, with a
  * short welcome, a few "things to keep in mind" and one agree button. Nothing
  * behind it is usable until it is accepted; the acceptance is kept per widget,
- * per visitor.
+ * per visitor. The header's language, theme and close buttons are redrawn above
+ * the overlay, so a first-time visitor can still read the sheet in their own
+ * language or leave.
  */
 
 const POINT_GLYPHS = {
@@ -37,36 +40,40 @@ const POINT_GLYPHS = {
   help: CircleHelp,
 } as const
 
-const consentKey = (widgetId: string | null) => `pair_widget_consent_${widgetId ?? ''}`
+const rgbOf = (hex: string | undefined) => {
+  const m = /#([0-9a-f]{6})/i.exec(hex ?? '')
+  if (!m) return null
+  const n = parseInt(m[1], 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
 
-function hasAccepted(widgetId: string | null): boolean {
-  try {
-    return localStorage.getItem(consentKey(widgetId)) === '1'
-  } catch {
-    return false
-  }
+/** The glyph colour that reads on the overlay as it lands on the header behind it. */
+function overlayInk(overlay: string, alpha: number, behind: string | undefined): string {
+  const o = rgbOf(overlay) ?? [0, 0, 0]
+  const b = rgbOf(behind) ?? [255, 255, 255]
+  const [r, g, bl] = o.map((c, i) => c * alpha + b[i] * (1 - alpha))
+  return 0.299 * r + 0.587 * g + 0.114 * bl < 128 ? '#FFFFFF' : '#1E1E1E'
 }
 
 export function ConsentGate() {
   const { widgetConfig } = useWidgetConfigContext()
-  const widgetId = getWidgetId()
-  const [accepted, setAccepted] = useState(() => hasAccepted(widgetId))
+  const { currentScreen } = useWidgetNavigation()
+  const pending = useConsentPending()
 
   const cs = widgetConfig.consentScreen
-  if (!cs?.enabled || accepted) return null
+  if (!cs?.enabled || !pending) return null
 
   const d = cs.design ?? {}
   const brand = widgetConfig.primaryColor
   const rs = (c?: string) => (c === '#brand' ? brand : c)
 
-  const agree = () => {
-    try {
-      localStorage.setItem(consentKey(widgetId), '1')
-    } catch {
-      // Private mode: the gate stays dismissed for this load.
-    }
-    setAccepted(true)
-  }
+  // The controls sit where the header underneath keeps its own, in a colour
+  // that reads on the dimmed header rather than on the header itself.
+  const h = widgetConfig.headerConfig
+  const overlayColor = rs(d.overlayColor) ?? '#000000'
+  const overlayOpacity = d.overlayOpacity ?? 0.45
+  const headerBg = currentScreen !== 'pre-chat' && h?.backgroundEnabled ? h.backgroundColor : widgetConfig.widgetBgColor
+  const hasHeader = currentScreen === 'pre-chat' || widgetConfig.showHeader
 
   const points = cs.points ?? []
   const cardShadow = d.card?.shadow
@@ -76,11 +83,25 @@ export function ConsentGate() {
   return (
     <div
       className="absolute inset-0 z-40 flex items-end justify-center p-4"
-      style={{ background: hexToRgba(rs(d.overlayColor) ?? '#000000', d.overlayOpacity ?? 0.45) }}
+      style={{ background: hexToRgba(overlayColor, overlayOpacity) }}
       role="dialog"
       aria-modal="true"
       aria-label={cs.title ?? 'Welcome'}
     >
+      {hasHeader && (
+        <div
+          className="absolute inset-x-0 flex items-center justify-end gap-1 px-5"
+          // The pre-chat header is a plain 16px-padded row; the others centre
+          // their buttons on a 50px avatar under 20px of padding.
+          style={{
+            top: currentScreen === 'pre-chat' ? 16 : 29,
+            color: overlayInk(overlayColor, overlayOpacity, headerBg),
+          }}
+        >
+          <HeaderControls />
+          <WidgetCloseBtn />
+        </div>
+      )}
       <div
         className="anim-consent-rise w-full text-center"
         style={{
@@ -195,7 +216,7 @@ export function ConsentGate() {
 
         <button
           type="button"
-          onClick={agree}
+          onClick={acceptConsent}
           className="mt-4 cursor-pointer transition-opacity hover:opacity-90"
           style={{
             background: rs(d.button?.background) ?? brand,

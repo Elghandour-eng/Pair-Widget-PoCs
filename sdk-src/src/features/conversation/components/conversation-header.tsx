@@ -1,3 +1,4 @@
+import { HeaderActionsRow } from '@/components/header-actions-row'
 import { HeaderControls } from '@/components/header-controls'
 import { BackIcon } from '@/components/icons/back-icon'
 import { CartIcon } from '@/components/icons/cart-icon'
@@ -85,7 +86,7 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
       </div>
 
       {/* Right-side actions: Language/Theme → Cart → Favorites → Close */}
-      <div className="flex flex-1 items-center justify-end gap-1">
+      <HeaderActionsRow>
         {isSseTransport() && (
           <Button
             variant="ghost"
@@ -122,7 +123,7 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
           </Button>
         )}
         <WidgetCloseBtn />
-      </div>
+      </HeaderActionsRow>
     </WidgetHeader>
   )
 }

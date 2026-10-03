@@ -25,10 +25,11 @@ export interface HeaderConfig {
     cart: boolean
     favorites: boolean
   }
-  /** Header controls: the language and theme switches and the glyphs they wear. */
+  /** Header controls: the language and theme switches, the glyphs they wear, and the close button. */
   controls: {
     lang: { show: boolean; icon: string; iconUrl?: string }
     theme: { show: boolean; icon: string; iconUrl?: string }
+    close: { show: boolean }
   }
 }
 

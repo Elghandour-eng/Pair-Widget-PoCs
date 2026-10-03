@@ -1,3 +1,4 @@
+import { HeaderActionsRow } from '@/components/header-actions-row'
 import { HeaderControls } from '@/components/header-controls'
 import { CartIcon } from '@/components/icons/cart-icon'
 import { FavoritesIcon } from '@/components/icons/favorites-icon'
@@ -75,7 +76,7 @@ function IntroHeader({ isHostOnline = true }: IntroHeaderProps) {
       </div>
 
       {/* Right-side actions: Language/Theme → Cart → Favorites → Close */}
-      <div className="flex flex-1 items-center justify-end gap-1">
+      <HeaderActionsRow>
         <HeaderControls />
         {h?.actions?.cart && (
           <Button variant="ghost" size="icon-sm" aria-label="Cart">
@@ -88,7 +89,7 @@ function IntroHeader({ isHostOnline = true }: IntroHeaderProps) {
           </Button>
         )}
         <WidgetCloseBtn />
-      </div>
+      </HeaderActionsRow>
     </WidgetHeader>
   )
 }
