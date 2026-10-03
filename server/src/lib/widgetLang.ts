@@ -156,6 +156,7 @@ const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.csat.body',
   'widget_v2_config.csat.buttonText',
   'widget_v2_config.csat.submitText',
+  'launcher_design.message.text',
 ]
 
 export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): WidgetConfig {

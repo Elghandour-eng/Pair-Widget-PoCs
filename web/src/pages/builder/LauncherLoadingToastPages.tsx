@@ -1,18 +1,21 @@
 import { IconField } from '@/components/IconField'
 import { Disclosure, SectionHead } from '@/components/ui'
+import { type WidgetConfig } from '@/lib/api'
 import { FONT_WEIGHTS, LAUNCHER_ATTENTION, LAUNCHER_ENTRANCES, LOADING_TYPES, TOAST_POSITIONS } from '@/lib/inputDesign'
 import { useI18n } from '@/lib/i18n'
 import {
-  BrandColorField, ChoiceField, Field, FontField, NumField, ShadowFields, ToggleField, type PageProps,
+  BrandColorField, ChoiceField, Field, FontField, NumField, PlainBiField, ShadowFields, ToggleField, type PageProps,
 } from './fields'
 
 const LAUNCHER = 'launcher_design'
 
-export function LauncherPage({ get, set, disabled }: PageProps) {
+export function LauncherPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
   const { t } = useI18n()
   const p = (k: string) => `${LAUNCHER}.${k}`
+  const m = (k: string) => `${LAUNCHER}.message.${k}`
   const icon = get(p('icon')) ?? 'bubble'
-  const expanded = (get(p('type')) ?? 'standard') === 'expanded_bubble'
+  const type = get(p('type')) ?? 'standard'
+  const expanded = type === 'expanded_bubble'
 
   return (
     <div className="space-y-2.5">
@@ -75,7 +78,35 @@ export function LauncherPage({ get, set, disabled }: PageProps) {
           <ChoiceField label={t('builder.input.textWeight')} path={p('label.weight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="500" get={get} set={set} disabled={disabled} />
           <FontField label={t('builder.input.font')} path={p('label.fontFamily')} get={get} set={set} disabled={disabled} allowInherit />
         </div>
-        {!expanded && <p className="fine mt-2">{t('builder.launcher.labelHint')}</p>}
+        <p className="fine mt-2">{t(expanded ? 'builder.launcher.labelSizeHint' : 'builder.launcher.labelHint')}</p>
+      </Disclosure>
+
+      {/* The line that sits above the closed launcher and opens the chat when tapped. */}
+      <Disclosure summary={t('builder.launcher.message')}>
+        <p className="callout mb-3">{t(type === 'none' ? 'builder.launcher.messageNone' : 'builder.launcher.messageHint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ToggleField label={t('builder.launcher.messageShow')} path={m('show')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.launcher.messageDismiss')} path={m('dismissible')} fallback get={get} set={set} disabled={disabled} />
+          <PlainBiField label={t('builder.launcher.messageText')} path={m('text')} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Need a hand? Chat with us" />
+          <BrandColorField label={t('builder.toast.bg')} path={m('background')} get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.textColor')} path={m('color')} get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.textSize')} path={m('size')} min={10} max={24} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.input.textWeight')} path={m('weight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="500" get={get} set={set} disabled={disabled} />
+          <FontField label={t('builder.input.font')} path={m('fontFamily')} get={get} set={set} disabled={disabled} allowInherit />
+          <NumField label={t('builder.input.radius')} path={m('radius')} min={0} max={40} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.messageWidth')} path={m('maxWidth')} min={120} max={360} step={4} fallback={240} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.messageGap')} path={m('gap')} min={0} max={40} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.messagePadX')} path={m('paddingX')} min={4} max={32} step={1} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.messagePadY')} path={m('paddingY')} min={2} max={24} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.input.borderWidth')} path={m('borderWidth')} min={0} max={6} step={0.5} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
+          <BrandColorField label={t('builder.input.borderColor')} path={m('borderColor')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.launcher.messageTail')} path={m('tail')} fallback get={get} set={set} disabled={disabled} />
+          <NumField label={t('builder.launcher.messageDelay')} path={m('delayMs')} min={0} max={20000} step={100} fallback={800} unit="ms" get={get} set={set} disabled={disabled} />
+        </div>
+        <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ShadowFields base={m('shadow')} get={get} set={set} disabled={disabled} />
+        </div>
       </Disclosure>
 
       <Disclosure summary={t('builder.panel.head')}>

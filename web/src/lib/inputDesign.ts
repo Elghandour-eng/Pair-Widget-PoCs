@@ -187,6 +187,35 @@ export interface LauncherLabelDesign {
 }
 
 /**
+ * A short line that sits above the launcher while the chat is closed — "Need a
+ * hand?" — and opens the chat when tapped. Its copy is typed per language
+ * (`text_i18n` beside `text`), like the other plain bilingual fields.
+ */
+export interface LauncherMessageDesign {
+  show: boolean
+  text: string
+  background: string
+  color: string
+  fontFamily: string
+  size: number
+  weight: FontWeight
+  radius: number
+  paddingX: number
+  paddingY: number
+  maxWidth: number
+  /** Space between the message and the launcher under it. */
+  gap: number
+  borderWidth: number
+  borderColor: string
+  shadow: Shadow
+  /** The small pointer toward the launcher. */
+  tail: boolean
+  /** Whether the visitor gets a button to dismiss it. */
+  dismissible: boolean
+  delayMs: number
+}
+
+/**
  * The panel the widget opens into. It was fixed at 400x(100vh-124px) capped at
  * 700px, and an auto-opened panel had no cap at all, which is what made it run
  * the full height of a tall browser window.
@@ -219,6 +248,7 @@ export interface LauncherDesign {
   iconSize: number
   shadow: Shadow
   label: LauncherLabelDesign
+  message: LauncherMessageDesign
   entrance: LauncherEntrance
   attention: LauncherAttention
   hoverScale: number
@@ -472,6 +502,26 @@ export const LAUNCHER_DEFAULTS: LauncherDesign = {
   iconSize: 22,
   shadow: { size: 24, y: 8, blur: 24, color: '#000000', opacity: 0.22 },
   label: { show: true, text: '', color: '#FFFFFF', fontFamily: '', size: 14, weight: '500' },
+  message: {
+    show: false,
+    text: '',
+    background: '#FFFFFF',
+    color: '#1A1A1A',
+    fontFamily: '',
+    size: 14,
+    weight: '500',
+    radius: 14,
+    paddingX: 14,
+    paddingY: 10,
+    maxWidth: 240,
+    gap: 12,
+    borderWidth: 0,
+    borderColor: '#E5E5EA',
+    shadow: { size: 20, y: 6, blur: 20, color: '#000000', opacity: 0.16 },
+    tail: true,
+    dismissible: true,
+    delayMs: 800,
+  },
   entrance: 'pop',
   attention: 'none',
   hoverScale: 1.04,
@@ -786,6 +836,7 @@ export function normalizeLauncher(raw: unknown): LauncherDesign {
   const r = (raw ?? {}) as Record<string, any>
   const d = LAUNCHER_DEFAULTS
   const l = (r.label ?? {}) as Record<string, any>
+  const m = (r.message ?? {}) as Record<string, any>
   return {
     type: pick(r.type, ['standard', 'expanded_bubble', 'chat_icon', 'icon_only', 'none'] as const, d.type),
     position: pick(r.position, ['left', 'right'] as const, d.position),
@@ -811,6 +862,26 @@ export function normalizeLauncher(raw: unknown): LauncherDesign {
       fontFamily: font(l.fontFamily, d.label.fontFamily),
       size: num(l.size, d.label.size, 9, 24),
       weight: pick(String(l.weight), FONT_WEIGHTS, d.label.weight),
+    },
+    message: {
+      show: bool(m.show, d.message.show),
+      text: str(m.text, d.message.text, 200),
+      background: color(m.background, d.message.background),
+      color: color(m.color, d.message.color),
+      fontFamily: font(m.fontFamily, d.message.fontFamily),
+      size: num(m.size, d.message.size, 10, 24),
+      weight: pick(String(m.weight), FONT_WEIGHTS, d.message.weight),
+      radius: num(m.radius, d.message.radius, 0, 40),
+      paddingX: num(m.paddingX, d.message.paddingX, 4, 32),
+      paddingY: num(m.paddingY, d.message.paddingY, 2, 24),
+      maxWidth: num(m.maxWidth, d.message.maxWidth, 120, 360),
+      gap: num(m.gap, d.message.gap, 0, 40),
+      borderWidth: num(m.borderWidth, d.message.borderWidth, 0, 6),
+      borderColor: color(m.borderColor, d.message.borderColor),
+      shadow: shadow(m.shadow, d.message.shadow),
+      tail: bool(m.tail, d.message.tail),
+      dismissible: bool(m.dismissible, d.message.dismissible),
+      delayMs: num(m.delayMs, d.message.delayMs, 0, 20000),
     },
     entrance: pick(r.entrance, LAUNCHER_ENTRANCES, d.entrance),
     attention: pick(r.attention, LAUNCHER_ATTENTION, d.attention),
@@ -924,6 +995,29 @@ export function launcherCss(d: LauncherDesign, brand: string): CSSProperties {
     boxShadow: shadowCss(d.shadow, brand),
     fontFamily: d.label.fontFamily || undefined,
     fontWeight: d.label.weight,
+  }
+}
+
+/**
+ * The message above the launcher, as the CSS the loader spreads onto it. The
+ * loader runs on the customer's page with no design code of its own, so every
+ * colour arrives resolved and the shadow already written out.
+ */
+export function launcherMessageCss(d: LauncherDesign, brand: string): CSSProperties {
+  const m = d.message
+  return {
+    background: resolve(m.background, brand),
+    color: resolve(m.color, brand),
+    fontFamily: m.fontFamily || undefined,
+    fontSize: `${m.size}px`,
+    fontWeight: m.weight,
+    borderRadius: `${m.radius}px`,
+    padding: `${m.paddingY}px ${m.paddingX}px`,
+    maxWidth: `${m.maxWidth}px`,
+    borderWidth: `${m.borderWidth}px`,
+    borderStyle: m.borderWidth > 0 ? 'solid' : undefined,
+    borderColor: resolve(m.borderColor, brand),
+    boxShadow: shadowCss(m.shadow, brand),
   }
 }
 

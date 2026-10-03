@@ -496,6 +496,16 @@ export interface LauncherDesignDto {
   entrance?: 'pop' | 'slide' | 'fade' | 'none'
   attention?: 'none' | 'pulse' | 'bounce' | 'wiggle'
   hoverScale?: number
+  /** The line above the launcher; the SDK draws it from `styles`, compiled by the studio. */
+  message?: {
+    show?: boolean
+    text?: string
+    gap?: number
+    tail?: boolean
+    dismissible?: boolean
+    delayMs?: number
+    styles?: CSSProperties
+  }
   /** The panel the widget opens into; the SDK sizes its holder from this. */
   panel?: { width?: number; height?: number; maxHeight?: number; minHeight?: number; bottom?: number; radius?: number }
 }

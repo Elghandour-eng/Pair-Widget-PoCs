@@ -9,7 +9,7 @@ import { badRequest } from '../lib/errors.js'
 import { addFeedback, logEvent } from '../lib/mongo.js'
 import { normalizeHeroCarousel, normalizeHeroSlides } from '../lib/heroDesign.js'
 import {
-  cardCss, cardSubtitleCss, cardTextCss, chipCss, inputCss, launcherCss, loadingCss,
+  cardCss, cardSubtitleCss, cardTextCss, chipCss, inputCss, launcherCss, launcherMessageCss, loadingCss,
   normalizeChatInput, normalizeConsent, normalizeCsat, normalizeLauncher, normalizePreChat,
   normalizeQuickLinks,
   resolve as resolveColor,
@@ -357,7 +357,9 @@ function materializeChrome<T>(config: T): T {
     // No launcher at all: the panel opens by itself, and there is nothing to
     // close it back into.
     if (design.type === 'none') next.opening_method = 'automatically_open'
-    next.launcher_design = design
+    // The message above the launcher is drawn by the loader on the customer's
+    // page, so its look travels compiled, beside the values it came from.
+    next.launcher_design = { ...design, message: { ...design.message, styles: launcherMessageCss(design, brand) } }
   }
 
   return next as T

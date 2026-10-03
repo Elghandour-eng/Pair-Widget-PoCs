@@ -121,13 +121,8 @@
     bubble.setAttribute('aria-label', config.launcherTitle || 'Open chat')
     bubble.setAttribute('title', config.launcherTitle || 'Open chat')
 
-    // Add icon
-    bubble.innerHTML = chatIcon
-
-    // Add text for expanded bubble
-    if (config.type === 'expanded_bubble' && config.launcherTitle) {
-      bubble.innerHTML = chatIcon + '<span>' + config.launcherTitle + '</span>'
-    }
+    // Icon, plus the label for an expanded bubble
+    bubble.innerHTML = launcherContentHtml()
 
     // Create badge element (initially hidden)
     badgeElement = document.createElement('div')
@@ -303,6 +298,8 @@
   // Show preview card
   function showPreview(data) {
     if (!previewHolder || !data || !data.message) return
+    // An incoming message takes the spot above the launcher.
+    hideTeaser()
     anchorPreviewToBubble()
 
     var position = config.position || 'right'
@@ -439,6 +436,8 @@
       if (!previewHolder.classList.contains('pair-ai-preview--visible')) {
         previewHolder.innerHTML = ''
       }
+      // The spot above the launcher is free again.
+      syncTeaser()
     }, 200)
   }
 
@@ -458,6 +457,8 @@
     setTimeout(function () {
       if (isOpen) {
         hidePreview()
+        // The message above the launcher has done its job once the chat opens.
+        dismissTeaser()
         // Show widget
         widgetHolder.classList.remove('pair-ai--hide')
         // Remove inline styles (CSS will handle it now)
@@ -492,13 +493,8 @@
         // Change bubble to chat icon (preserve badge)
         var existingBadge = bubble.querySelector('.pair-ai-bubble-badge')
         var badgeHTML = existingBadge ? existingBadge.outerHTML : ''
-        if (config.type === 'expanded_bubble') {
-          bubble.innerHTML =
-            launcherIconHtml() + '<span>' + (config.launcherTitle || 'Chat with us!') + '</span>' + badgeHTML
-          bubble.classList.add('pair-ai-bubble--expanded')
-        } else {
-          bubble.innerHTML = launcherIconHtml() + badgeHTML
-        }
+        bubble.innerHTML = launcherContentHtml() + badgeHTML
+        if (config.type === 'expanded_bubble') bubble.classList.add('pair-ai-bubble--expanded')
         // Re-reference badge element after innerHTML change
         badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
         // Show bubble on mobile
@@ -590,6 +586,7 @@
               toggleWidget(true)
             }
             pendingOpen = null
+            syncTeaser()
           })
           // Send config to widget
           sendMessageToWidget('sdk:config', config)
@@ -695,16 +692,212 @@
     return chatIcon
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    })
+  }
+
+  // The label an expanded bubble carries, or '' when it shows the icon alone.
+  function launcherLabel() {
+    if (config.type !== 'expanded_bubble') return ''
+    var d = config.launcherDesign
+    if (d && d.label && d.label.show === false) return ''
+    return config.launcherTitle || ''
+  }
+
+  // What the closed launcher holds: its icon, and its label when it has one.
+  function launcherContentHtml() {
+    var label = launcherLabel()
+    return launcherIconHtml() + (label ? '<span>' + escapeHtml(label) + '</span>' : '')
+  }
+
+  /**
+   * The launcher's box. The design's size is the launcher's height; with a
+   * label it grows sideways to hold the icon and the text, where a bare icon
+   * stays the square it was. Forcing the square onto a labelled launcher is
+   * what used to squeeze the text out over the page.
+   */
+  function applyLauncherGeometry() {
+    if (!bubbleHolder) return
+    var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
+    var d = config.launcherDesign
+    if (!bubble || !d || !d.size) return
+    var span = bubble.querySelector('span')
+    bubble.style.height = d.size + 'px'
+    if (span && !isOpen) {
+      bubble.style.width = 'auto'
+      bubble.style.minWidth = d.size + 'px'
+      bubble.style.maxWidth = 'calc(100vw - 40px)'
+      bubble.style.paddingTop = bubble.style.paddingBottom = '0'
+      bubble.style.paddingInlineStart = Math.round(d.size * 0.29) + 'px'
+      bubble.style.paddingInlineEnd = Math.round(d.size * 0.36) + 'px'
+      var l = d.label || {}
+      if (l.color) span.style.color = l.color === '#brand' ? config.primaryColor || '' : l.color
+      if (l.size) span.style.fontSize = l.size + 'px'
+      if (l.weight) span.style.fontWeight = l.weight
+      if (l.fontFamily) {
+        span.style.fontFamily = l.fontFamily
+        injectGoogleFont(l.fontFamily)
+      }
+    } else {
+      bubble.style.width = d.size + 'px'
+      bubble.style.minWidth = ''
+      bubble.style.maxWidth = ''
+      bubble.style.padding = '0'
+    }
+  }
+
+  // ========== MESSAGE ABOVE THE LAUNCHER ==========
+  // A short line the studio writes — "Need a hand?" — that sits above the
+  // closed launcher and opens the chat when tapped. It goes for good once the
+  // visitor opens the chat or dismisses it, and stays gone for the browser
+  // session unless its copy changes.
+
+  var teaserHolder = null
+  var teaserTimer = null
+  var teaserGone = false
+
+  function teaserKey() {
+    return 'pair_widget_teaser_' + (config.widgetId || '')
+  }
+
+  function teaserMessage() {
+    var m = config.launcherDesign && config.launcherDesign.message
+    return m && m.show && typeof m.text === 'string' && m.text.trim() ? m : null
+  }
+
+  function teaserSeen(m) {
+    if (teaserGone) return true
+    try {
+      return sessionStorage.getItem(teaserKey()) === m.text
+    } catch (e) {
+      return false
+    }
+  }
+
+  function teaserWanted() {
+    var m = teaserMessage()
+    if (!m || !widgetReady || isOpen || config.type === 'none' || teaserSeen(m)) return null
+    if (previewHolder && previewHolder.classList.contains('pair-ai-preview--visible')) return null
+    return m
+  }
+
+  function buildTeaser() {
+    teaserHolder = document.createElement('div')
+    teaserHolder.id = 'pair-ai-teaser-holder'
+    teaserHolder.innerHTML =
+      '<div class="pair-ai-teaser" role="button" tabindex="0">' +
+      '<span class="pair-ai-teaser-text"></span>' +
+      '<button type="button" class="pair-ai-teaser-close" aria-label="Dismiss">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+      '</button>' +
+      '<span class="pair-ai-teaser-tail"></span>' +
+      '</div>'
+    var card = teaserHolder.firstChild
+    card.addEventListener('click', function () {
+      toggleWidget(true)
+    })
+    card.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      e.preventDefault()
+      toggleWidget(true)
+    })
+    teaserHolder.querySelector('.pair-ai-teaser-close').addEventListener('click', function (e) {
+      e.stopPropagation()
+      dismissTeaser()
+    })
+    window.addEventListener('resize', positionTeaser)
+    document.body.appendChild(teaserHolder)
+  }
+
+  // Copy and look, straight from the design the studio compiled.
+  function renderTeaser(m) {
+    if (!teaserHolder) buildTeaser()
+    var card = teaserHolder.firstChild
+    card.querySelector('.pair-ai-teaser-text').textContent = m.text
+    card.setAttribute('dir', /[\u0600-\u06FF]/.test(m.text) ? 'rtl' : 'ltr')
+    card.removeAttribute('style')
+    var styles = m.styles || {}
+    for (var k in styles) {
+      if (Object.prototype.hasOwnProperty.call(styles, k) && styles[k] != null) card.style[k] = styles[k]
+    }
+    if (styles.fontFamily) injectGoogleFont(styles.fontFamily)
+    card.querySelector('.pair-ai-teaser-close').style.display = m.dismissible === false ? 'none' : ''
+    card.querySelector('.pair-ai-teaser-tail').style.display = m.tail === false ? 'none' : ''
+  }
+
+  // Above the launcher, on the launcher's own side, pointer over its centre.
+  function positionTeaser() {
+    var m = teaserMessage()
+    if (!teaserHolder || !bubbleHolder || !m) return
+    // The holder's box, not the bubble's: the bubble scales through its
+    // entrance and hover, the holder does not.
+    var r = bubbleHolder.getBoundingClientRect()
+    if (!r.width) return
+    var vw = document.documentElement.clientWidth || window.innerWidth
+    var onRight = vw - r.right <= r.left
+    teaserHolder.style.bottom = window.innerHeight - r.top + (m.gap != null ? m.gap : 12) + 'px'
+    teaserHolder.style.right = onRight ? Math.max(8, vw - r.right) + 'px' : 'auto'
+    teaserHolder.style.left = onRight ? 'auto' : Math.max(8, r.left) + 'px'
+    var tail = teaserHolder.querySelector('.pair-ai-teaser-tail')
+    var inset = Math.max(10, Math.min(r.width / 2, 28) - 6) + 'px'
+    tail.style.right = onRight ? inset : 'auto'
+    tail.style.left = onRight ? 'auto' : inset
+  }
+
+  // Bring the message in line with the design and the moment: draw it, move
+  // it, or take it away. Safe to call whenever either may have changed.
+  function syncTeaser() {
+    var m = teaserWanted()
+    if (!m) return hideTeaser()
+    renderTeaser(m)
+    if (teaserHolder.classList.contains('pair-ai-teaser--in')) return positionTeaser()
+    if (teaserTimer) return
+    teaserTimer = setTimeout(function () {
+      teaserTimer = null
+      if (!teaserWanted()) return
+      teaserHolder.style.display = 'block'
+      positionTeaser()
+      // A frame later, so the entrance transition has a start to run from.
+      setTimeout(function () {
+        if (teaserWanted()) teaserHolder.classList.add('pair-ai-teaser--in')
+      }, 30)
+    }, m.delayMs || 0)
+  }
+
+  function hideTeaser() {
+    if (teaserTimer) {
+      clearTimeout(teaserTimer)
+      teaserTimer = null
+    }
+    if (!teaserHolder) return
+    teaserHolder.classList.remove('pair-ai-teaser--in')
+    setTimeout(function () {
+      if (teaserHolder && !teaserHolder.classList.contains('pair-ai-teaser--in')) teaserHolder.style.display = 'none'
+    }, 250)
+  }
+
+  // Gone for good: the visitor opened the chat or closed the message.
+  function dismissTeaser() {
+    var m = teaserMessage()
+    teaserGone = true
+    if (m) {
+      try {
+        sessionStorage.setItem(teaserKey(), m.text)
+      } catch (e) {
+        // Private mode: it still stays away for this page.
+      }
+    }
+    hideTeaser()
+  }
+
   // Apply the studio launcher design to the live bubble
   function applyLauncherDesign() {
     if (!bubbleHolder) return
     var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
     var d = config.launcherDesign
     if (!bubble || !d) return
-    if (d.size) {
-      bubble.style.width = d.size + 'px'
-      bubble.style.height = d.size + 'px'
-    }
     if (d.radius != null) bubble.style.borderRadius = d.radius + 'px'
     var bg = d.background
     if (bg === '#brand' || bg === 'brand') bg = config.primaryColor
@@ -712,12 +905,10 @@
     // swap the icon in place when the panel is closed
     if (!isOpen) {
       var badgeHTML = badgeElement && bubble.contains(badgeElement) ? badgeElement.outerHTML : ''
-      bubble.innerHTML =
-        launcherIconHtml() +
-        (config.type === 'expanded_bubble' && config.launcherTitle ? '<span>' + config.launcherTitle + '</span>' : '') +
-        badgeHTML
+      bubble.innerHTML = launcherContentHtml() + badgeHTML
       badgeElement = bubble.querySelector('.pair-ai-bubble-badge') || badgeElement
     }
+    applyLauncherGeometry()
   }
 
   // Update bubble color
@@ -763,6 +954,9 @@
     if (lStyles.fontWeight) {
       bubble.style.fontWeight = lStyles.fontWeight
     }
+    // Every rewrite of the launcher's content ends here, so its box and its
+    // label follow the design however the content just changed.
+    applyLauncherGeometry()
   }
 
   // Inject font from Google Fonts dynamically if requested
@@ -869,17 +1063,16 @@
       if (isOpen) {
         bubble.innerHTML = closeIcon + badgeHTML
       } else {
-        if (config.type === 'expanded_bubble') {
-          bubble.innerHTML = chatIcon + '<span>' + (config.launcherTitle || 'Chat with us!') + '</span>' + badgeHTML
-        } else {
-          bubble.innerHTML = chatIcon + badgeHTML
-        }
+        bubble.innerHTML = launcherContentHtml() + badgeHTML
       }
       badgeElement = bubble.querySelector('.pair-ai-bubble-badge')
 
       // Apply styles
       applyBubbleStyles()
     }
+
+    // The message above the launcher follows the design and the language.
+    syncTeaser()
   }
 
   // Set user information

@@ -251,7 +251,7 @@ export function Builder() {
             {section === 'rating' && <RatingPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'loading' && <LoadingPage get={get} set={set} disabled={!editor} />}
             {section === 'toast' && <ToastPage get={get} set={set} disabled={!editor} />}
-            {section === 'launcher' && <LauncherPage get={get} set={set} disabled={!editor} />}
+            {section === 'launcher' && <LauncherPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
           </div>
 
           {/* Live preview frame, fed over postMessage */}

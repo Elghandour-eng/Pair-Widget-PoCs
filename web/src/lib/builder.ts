@@ -336,6 +336,7 @@ export const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.csat.body',
   'widget_v2_config.csat.buttonText',
   'widget_v2_config.csat.submitText',
+  'launcher_design.message.text',
 ] as const
 
 /** What a plain bilingual field shows for one language (see BILINGUAL_PATHS). */

@@ -337,6 +337,105 @@
   }
 }
 
+/* ========== MESSAGE ABOVE THE LAUNCHER ========== */
+/* Positioned by the loader from where the launcher actually sits; everything
+   about its look (colours, type, radius, shadow) arrives inline from the design. */
+#pair-ai-teaser-holder {
+  position: fixed;
+  z-index: 2147483000;
+  display: none;
+  max-width: calc(100vw - 40px);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#pair-ai-teaser-holder.pair-ai-teaser--in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pair-ai-teaser {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family:
+    'DM Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  border-radius: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pair-ai-teaser-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.pair-ai-teaser-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  margin-inline-end: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+
+.pair-ai-teaser-close:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, 0.18);
+}
+
+.pair-ai-teaser-close svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+/* The pointer toward the launcher: a turned square in the message's own fill,
+   placed by the loader over the launcher's centre. */
+.pair-ai-teaser-tail {
+  position: absolute;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border: inherit;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-radius: 0 0 3px 0;
+  transform: rotate(45deg);
+  /* Only the lower half shows, so the message's own shadow is not doubled. */
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
 /* ========== UNREAD BADGE ========== */
 .pair-ai-bubble-badge {
   position: absolute;

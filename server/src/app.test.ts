@@ -87,6 +87,16 @@ describe('auth + rbac', () => {
     await put({ ...imported, opening_method: 'chat_icon', launcher_design: { type: 'none' } })
     expect(await opening()).toBe('automatically_open')
   })
+  it('the message above the launcher travels compiled, in the language asked for', async () => {
+    const message = { show: true, text: 'Need a hand?', text_i18n: { en: 'Need a hand?', ar: 'محتاج مساعدة؟' }, background: '#brand', radius: 20 }
+    const saved = await api('/api/widgets/TEST_WIDGET_1/config', { method: 'PUT', body: JSON.stringify({ name: 'Cinescape AI', widget_color: '#E50914', locale: 'en', launcher_design: { type: 'standard', message } }) }, adminToken)
+    expect(saved.status).toBe(200)
+    const en = (await (await fetch(`${base}/api/public/widget/TEST_WIDGET_1/config`)).json()).launcher_design.message
+    expect(en.text).toBe('Need a hand?')
+    expect(en.styles).toMatchObject({ background: '#E50914', borderRadius: '20px', fontSize: '14px' })
+    const ar = (await (await fetch(`${base}/pv/ar/x/v1/widget/TEST_WIDGET_1/config`)).json()).launcher_design.message
+    expect(ar.text).toBe('محتاج مساعدة؟')
+  })
   it('the docs page covers opening and closing from the host page', async () => {
     const page = await (await fetch(`${base}/api/public/docs`)).text()
     for (const piece of ['id="open-close"', 'startClosed: true', 'PairWidget.open()', 'pair:toggle', 'opened / closed']) {

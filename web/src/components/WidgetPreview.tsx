@@ -4,7 +4,7 @@ import type { WidgetConfig } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/lib/heroDesign'
 import {
-  actionCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, loadingCss,
+  actionCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, launcherMessageCss, loadingCss,
   cardCss, cardHoverCss, cardSubtitleCss, cardTextCss, chipCss, chipHoverCss,
   normalizeChatInput, normalizeConsent, normalizeCsat, normalizeLauncher, normalizeLoading,
   normalizePreChat, normalizeQuickLinks,
@@ -876,6 +876,32 @@ function LauncherPreview({ design, brand, title }: { design: LauncherDesign; bra
       } as CSSProperties}
     >
       <style>{launcherHoverCss(d, '.pv-launcher')}</style>
+      {/* The message above the launcher, as the loader draws it on a real page. */}
+      {d.message.show && d.message.text.trim() && (
+        <div
+          dir="auto"
+          className="absolute flex w-max items-start gap-2 leading-snug"
+          style={{
+            ...(launcherMessageCss(d, brand) as CSSProperties),
+            bottom: d.size + d.message.gap,
+            [d.position === 'left' ? 'left' : 'right']: 0,
+          } as CSSProperties}
+        >
+          <span className="min-w-0 flex-1 whitespace-pre-line">{d.message.text}</span>
+          {d.message.dismissible && <span className="-me-1 opacity-55" aria-hidden>×</span>}
+          {d.message.tail && (
+            <span
+              className="absolute size-3 rotate-45"
+              style={{
+                bottom: -5,
+                background: 'inherit',
+                clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                [d.position === 'left' ? 'left' : 'right']: Math.max(10, Math.min(d.size / 2, 28) - 6),
+              } as CSSProperties}
+            />
+          )}
+        </div>
+      )}
       <div key={`${d.entrance}-${d.attention}`} className={entrance}>
         <div
           className={`pv-launcher flex items-center justify-center overflow-hidden ${attention}`}
