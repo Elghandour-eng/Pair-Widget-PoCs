@@ -12,6 +12,7 @@ import {
   cardCss, cardSubtitleCss, cardTextCss, chipCss, inputCss, launcherCss, launcherMessageCss, loadingCss,
   normalizeChatInput, normalizeConsent, normalizeCsat, normalizeLauncher, normalizePreChat,
   normalizeQuickLinks,
+  cardHoverCss, chipHoverCss,
   resolve as resolveColor,
   normalizeLoading, normalizePrompts, normalizeToast, placeholderCss, sendCss, toastCss,
 } from '../lib/inputDesign.js'
@@ -78,6 +79,8 @@ function heroRevision(config: Record<string, any>): string {
         brand: config.widget_color,
         locale: config.locale,
         font: config.styles?.fontFamily,
+        // An empty badge falls back to these, so a rename has to redraw it.
+        badge: [config.widget_v2_config?.header?.content?.title, config.name],
       }),
     )
     .digest('base64url')
@@ -134,7 +137,14 @@ function mergeStyles(existing: Record<string, any> | undefined, compiled: Record
 function settleOpening<T>(config: T, source: string): T {
   if (source !== 'redis') return config
   const c = config as Record<string, any>
-  return { ...c, opening_method: c.launcher_style === 'none' ? 'automatically_open' : 'chat_icon' } as T
+  const next: Record<string, any> = { ...c, opening_method: c.launcher_style === 'none' ? 'automatically_open' : 'chat_icon' }
+  // The Theme page's font (and the Arabic stack the Language page swaps in) is
+  // the font of the whole panel. It is stored in `styles`, which a config from
+  // Pair uses for the launcher alone, so it is named for the panel only here,
+  // for a design the studio owns.
+  const font = one(c.styles?.fontFamily)
+  if (font && /^[\w\s,'"-]+$/.test(font)) next.panel_font_family = font
+  return next as T
 }
 
 function materializeChrome<T>(config: T): T {
@@ -187,7 +197,7 @@ function materializeChrome<T>(config: T): T {
     const glyph =
       icon === 'custom'
         ? one(design.send.url) || one(ci.sendButtonIcon?.url)
-        : sendGlyphDataUri(String(icon), design.send.iconColor, rtl) ?? undefined
+        : sendGlyphDataUri(String(icon), resolveColor(design.send.iconColor, brand), rtl) ?? undefined
     if (glyph && (icon === 'custom' ? true : isDrawableSendIcon(icon))) {
       ci.sendButtonIcon.styles = {
         ...ci.sendButtonIcon.styles,
@@ -204,6 +214,9 @@ function materializeChrome<T>(config: T): T {
       voiceMessages: design.actions.voice,
       attachmentMenu: design.actions.attach,
       showEmojiPicker: design.actions.emoji,
+      // An older config's `fileUpload` outranks `attachmentMenu` in the widget.
+      // Once the builder's attach toggle has been set, it is the one that counts.
+      ...(typeof ci.design?.actions?.attach === 'boolean' ? { fileUpload: design.actions.attach } : {}),
     }
     ci.design = design
   }
@@ -212,9 +225,17 @@ function materializeChrome<T>(config: T): T {
     const design = normalizeLoading(next.widget_v2_config.intro_screen.loadingState.design)
     const ls = next.widget_v2_config.intro_screen.loadingState
     // The widget switches on `type`, and reads the rest off custom properties.
+    // It knows two values there; the design's own `type` tells dots from a
+    // spinner and a pulse from a shimmer.
     ls.type = design.type === 'spinner' || design.type === 'dots' ? 'spinner' : 'shimmer'
     ls.styles = mergeStyles(ls.styles, loadingCss(design, brand))
-    ls.design = design
+    // The spinner and the caption are coloured straight from the design, so the
+    // brand token has to be a real colour by the time it gets there.
+    ls.design = {
+      ...design,
+      spinnerColor: resolveColor(design.spinnerColor, brand),
+      labelColor: resolveColor(design.labelColor, brand),
+    }
   }
 
   if (hasCards) {
@@ -230,7 +251,9 @@ function materializeChrome<T>(config: T): T {
       // The widget tells a stack from a carousel by the card's flexDirection.
       carouselLoop: design.loop,
     }
-    ql.design = design
+    // A hover colour cannot ride on an inline style, so it travels as a
+    // compiled rule the widget drops into a scoped <style> next to the cards.
+    ql.design = { ...design, hoverCss: cardHoverCss(design, brand, '.pair-quick-card') }
   }
 
   if (hasPrompts) {
@@ -272,12 +295,14 @@ function materializeChrome<T>(config: T): T {
         iconUrl: c?.icon === 'custom' ? c.iconUrl : c?.iconUrl,
       }))
     }
-    tp.design = design
+    // The chip hover, compiled the same way the card hover is.
+    tp.design = { ...design, hoverCss: chipHoverCss(design, brand, '.pair-prompt-chip') }
   }
 
   if (hasToast) {
     const design = normalizeToast(next.toast_design)
-    next.toast_design = { ...design, styles: toastCss(design, brand) }
+    // The icon colour is read as-is by the widget, so the brand token is resolved here.
+    next.toast_design = { ...design, iconColor: resolveColor(design.iconColor, brand), styles: toastCss(design, brand) }
   }
 
   if (hasPreChat) {
@@ -300,6 +325,11 @@ function materializeChrome<T>(config: T): T {
       }))
     }
     const design = normalizePreChat(pcf.design)
+    // A text cleared in the studio means "use the default": never a blank
+    // button or a label that is only its `*`.
+    if (!design.buttonText.trim()) design.buttonText = 'Start Chat'
+    if (!design.messageLabel.trim()) design.messageLabel = 'Message'
+    if (!design.messagePlaceholder.trim()) design.messagePlaceholder = 'Type your message here...'
     // Untyped defaults follow the config's language: an Arabic widget never
     // says "Start Chat" just because nothing was customised.
     if (/^ar/i.test(one(next.locale) ?? '')) {
@@ -320,8 +350,14 @@ function materializeChrome<T>(config: T): T {
       .map((p: any) => ({ icon: String(p?.icon ?? 'info'), text: String(p?.text ?? '') }))
       .filter((p: any) => p.text.trim() !== '')
     // The privacy / terms links under the footnote. Only http(s) leaves the
-    // server — these become real anchors on a customer's site.
-    const safeUrl = (u: unknown) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : '')
+    // server — these become real anchors on a customer's site. A bare
+    // host/path ("www.site.com/terms") is taken as https; any other scheme
+    // (javascript:, data:, mailto:) is dropped.
+    const safeUrl = (u: unknown) => {
+      const s = typeof u === 'string' ? u.trim() : ''
+      if (/^https?:\/\//i.test(s)) return s
+      return /^[^\s/?#:@.]+(\.[^\s/?#:@.]+)+(:\d+)?([/?#]\S*)?$/.test(s) ? `https://${s}` : ''
+    }
     const link = (raw: any, label: string) => ({
       show: raw?.show !== false,
       label: typeof raw?.label === 'string' && raw.label.trim() ? raw.label : label,
@@ -409,8 +445,12 @@ function materializeHero<T>(config: T, origin: string, widgetId: string, lng?: s
   // The welcome copy is now part of the hero image. An SDK that also renders it
   // as a heading under the hero would show it twice, so its copy of the text is
   // cleared — but only while a hero is actually on screen to carry it.
+  // A design slide with copy of its own keeps it and takes no overlay; when
+  // every slide is like that the welcome copy would appear nowhere, so the
+  // heading stays.
   const overlay = heroOverlayOf(next)
-  if (hs.enabled?.value !== false && (overlay.title || overlay.subtitle)) {
+  const carried = slides.some((s) => !(s.type === 'design' && (s.design.title.show || s.design.subtitle.show)))
+  if (hs.enabled?.value !== false && carried && (overlay.title || overlay.subtitle)) {
     const intro = next.widget_v2_config.intro_screen
     if (intro.welcomeTitle) intro.welcomeTitle = { ...intro.welcomeTitle, text: '' }
     if (intro.welcomeSubtitle) intro.welcomeSubtitle = { ...intro.welcomeSubtitle, text: '' }

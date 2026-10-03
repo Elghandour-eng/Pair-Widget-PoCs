@@ -10,7 +10,8 @@ export function IntroContent() {
   const introConfig = widgetConfig.introScreen
   const quickLinksConfig = widgetConfig.quickLinks
 
-  const hasQuickLinks = !!quickLinksConfig?.show && (quickLinksConfig.links || []).length > 0
+  // Cards switched off do not count: a list of only those draws nothing.
+  const hasQuickLinks = !!quickLinksConfig?.show && (quickLinksConfig.links || []).some((link) => link.active !== false)
 
   const heroImageStyles = introConfig?.heroImage?.styles as Record<string, unknown> | undefined
   // An aspect ratio sizes the hero as much as a height does; `height: 'auto'`

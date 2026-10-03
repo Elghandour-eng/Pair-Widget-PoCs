@@ -13,17 +13,20 @@ export function AiAssistantMessageBody({ content }: AiAssistantMessageBodyProps)
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const cardStyles = aiConfig?.CardStyles
   const textStyles = aiConfig?.TextStyles
-  const hasCardStyles = aiConfig?.messageStyle === 'card' && cardStyles && Object.keys(cardStyles).length > 0
+  // `card` and `bubble` are the studio's two boxed styles; anything else is plain text.
+  const isCard = aiConfig?.messageStyle === 'card'
+  const isBubble = aiConfig?.messageStyle === 'bubble'
 
   return (
     <div
       dir="auto"
       className={cn(
         'ai-md-body w-full text-start text-sm leading-relaxed font-normal text-[#1A1A1A]',
-        hasCardStyles && 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
+        isCard && 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
+        isBubble && 'rounded-2xl rounded-es-none bg-[#F0F1F1] px-4 py-3',
       )}
       style={{
-        ...(hasCardStyles ? cardStyles : {}),
+        ...(isCard ? cardStyles : {}),
         ...textStyles,
       }}
     >

@@ -244,13 +244,13 @@ export function Builder() {
             {section === 'hero' && <HeroPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'quicklinks' && <QuickLinksPage get={get} set={set} disabled={!editor} />}
             {section === 'prompts' && <PromptsPage get={get} set={set} disabled={!editor} />}
-            {section === 'input' && <InputPage get={get} set={set} disabled={!editor} />}
+            {section === 'input' && <InputPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'messages' && <MessagesPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'prechat' && <PreChatPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'consent' && <ConsentPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'rating' && <RatingPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'loading' && <LoadingPage get={get} set={set} disabled={!editor} />}
-            {section === 'toast' && <ToastPage get={get} set={set} disabled={!editor} />}
+            {section === 'toast' && <ToastPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'launcher' && <LauncherPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
           </div>
 

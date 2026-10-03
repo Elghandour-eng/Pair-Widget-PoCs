@@ -19,6 +19,8 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
   const { mutateAsync: sendMessageMutation } = useSendMessage()
   const { widgetConfig } = useWidgetConfigContext()
   const { iconColor, ...buttonStyles } = widgetConfig.chatInput.sendButtonIcon.styles || {}
+  // The studio's send-button design applies to this send button too.
+  const sendDesign = widgetConfig.chatInput.design?.send
   const [isSending, setIsSending] = useState(false)
 
   if (!activeQuestionGroup) return null
@@ -265,9 +267,19 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
             onClick={handleButtonClick}
             className={cn(
               'flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1E1E1E] text-white transition-colors hover:bg-[#333333]',
-              (isButtonDisabled || isSending) && 'cursor-not-allowed opacity-40 hover:bg-[#1E1E1E]',
+              (isButtonDisabled || isSending) && 'cursor-not-allowed hover:bg-[#1E1E1E]',
+              (isButtonDisabled || isSending) && !(isLastQuestion && sendDesign) && 'opacity-40',
             )}
-            style={isLastQuestion ? buttonStyles : undefined}
+            style={
+              isLastQuestion
+                ? {
+                    ...buttonStyles,
+                    ...(sendDesign && (isButtonDisabled || isSending)
+                      ? { opacity: sendDesign.disabledOpacity ?? 0.4 }
+                      : {}),
+                  }
+                : undefined
+            }
             aria-label={isLastQuestion ? 'Send message' : 'Next question'}
           >
             {isLastQuestion ? (
@@ -276,7 +288,12 @@ export function QuestionInput({ conversationId }: QuestionInputProps) {
               ) : (
                 <SendIcon
                   className={cn('size-3', !iconColor && 'text-white')}
-                  style={iconColor ? { color: iconColor } : undefined}
+                  style={{
+                    ...(iconColor ? { color: iconColor } : {}),
+                    ...(sendDesign?.iconSize
+                      ? { width: `${sendDesign.iconSize}px`, height: `${sendDesign.iconSize}px` }
+                      : {}),
+                  }}
                   variant={widgetConfig.chatInput.sendButtonIcon.variant}
                 />
               )

@@ -92,7 +92,9 @@ export function HeroCarousel({
           {carousel.transition === 'slide' ? (
             <div
               className="flex w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
-              style={{ transform: `translateX(-${active * 100}%)` }}
+              // The track lays out from the right in an RTL widget, so the
+              // slides come in from the other side.
+              style={{ transform: `translateX(${document.documentElement.dir === 'rtl' ? '' : '-'}${active * 100}%)` }}
             >
               {slides.map((src, i) => (
                 <div key={i} className="w-full shrink-0">

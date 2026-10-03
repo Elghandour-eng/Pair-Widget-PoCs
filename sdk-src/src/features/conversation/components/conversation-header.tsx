@@ -11,6 +11,7 @@ import { REPLY_TIME_MAP } from '@/constants/reply-time'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { isSseTransport } from '@/core/sse-transport'
+import { resolveConversation } from '@/features/conversation/apis/resolve-conversation'
 
 interface ConversationHeaderProps {
   isHostOnline?: boolean
@@ -18,7 +19,7 @@ interface ConversationHeaderProps {
 
 function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
   const { widgetConfig } = useWidgetConfigContext()
-  const { navigateToIntro, navigateToConversation } = useWidgetNavigation()
+  const { navigateToIntro, navigateToConversation, conversationId } = useWidgetNavigation()
   const replyTimeText = REPLY_TIME_MAP[widgetConfig.reply_time || 'in_a_few_hours']
   const h = widgetConfig.headerConfig
 
@@ -60,7 +61,7 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
             style={h?.iconStyle}
           />
         ) : (
-          <WidgetAvatar showIconFallback={true} style={h?.iconStyle} />
+          <WidgetAvatar showIconFallback={true} useURL style={h?.iconStyle} />
         )}
 
         <div>
@@ -87,13 +88,20 @@ function ConversationHeader({ isHostOnline = true }: ConversationHeaderProps) {
 
       {/* Right-side actions: Language/Theme → Cart → Favorites → Close */}
       <HeaderActionsRow>
-        {isSseTransport() && (
+        {/* Restart: always there on the SSE transport; elsewhere it is the
+            studio's "Restart button" toggle, which closes the session on the
+            platform and returns the visitor to the start. */}
+        {(isSseTransport() || h?.actions?.reset) && (
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="New conversation"
             title="محادثة جديدة"
-            onClick={() => navigateToConversation(null)}
+            onClick={() => {
+              if (isSseTransport()) return navigateToConversation(null)
+              if (conversationId) void resolveConversation(conversationId)
+              navigateToIntro()
+            }}
           >
             <svg
               width="16"

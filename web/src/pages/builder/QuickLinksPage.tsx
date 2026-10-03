@@ -7,7 +7,7 @@ import {
   BrandColorField, ChoiceField, Field, FontField, NumField, ShadowFields, ToggleField, type PageProps,
 } from './fields'
 
-interface QuickLinkCard { id?: string; title?: string; subtitle?: string; url?: string; active?: boolean; message?: string }
+interface QuickLinkCard { id?: string; title?: string; subtitle?: string; url?: string; active?: boolean; message?: string; order?: number }
 
 const QUICKLINKS = 'widget_v2_config.quick_links.design'
 
@@ -16,14 +16,22 @@ export function QuickLinksPage({ get, set, disabled }: PageProps) {
   const q = (k: string) => `${QUICKLINKS}.${k}`
   const carousel = (get(q('layout')) ?? 'carousel') === 'carousel'
   const PATH = 'widget_v2_config.quick_links.quickLinkCards'
-  const cards: QuickLinkCard[] = Array.isArray(get(PATH)) ? get(PATH) : []
+  // The widget draws cards by their `order` where they carry one, and as listed
+  // otherwise — so the list is read the same way here, and what moves a card is
+  // rewriting every `order`, not only its place in the array.
+  const stored: QuickLinkCard[] = Array.isArray(get(PATH)) ? get(PATH) : []
+  const cards = stored
+    .map((c, i) => ({ c, at: c.order ?? i + 1 }))
+    .sort((a, b) => a.at - b.at)
+    .map(({ c }) => c)
+  const renumber = (list: QuickLinkCard[]) => list.map((c, j) => ({ ...c, order: j + 1 }))
   const update = (next: QuickLinkCard[]) => set(PATH, next)
   const patch = (i: number, p: Partial<QuickLinkCard>) => update(cards.map((c, j) => (j === i ? { ...c, ...p } : c)))
   const move = (i: number, dir: -1 | 1) => {
     const next = [...cards]
     const [c] = next.splice(i, 1)
     next.splice(i + dir, 0, c)
-    update(next)
+    update(renumber(next))
   }
 
   return (
@@ -38,7 +46,7 @@ export function QuickLinksPage({ get, set, disabled }: PageProps) {
           !disabled && (
             <button
               className="btn-quiet btn-sm -my-1 normal-case"
-              onClick={() => update([...cards, { id: `card-${Date.now().toString(36)}`, title: '', subtitle: '', url: '', active: true }])}
+              onClick={() => update(renumber([...cards, { id: `card-${Date.now().toString(36)}`, title: '', subtitle: '', url: '', active: true }]))}
             >
               <Plus className="size-3.5" />
               {t('builder.cards.add')}
@@ -128,7 +136,7 @@ export function QuickLinksPage({ get, set, disabled }: PageProps) {
 
       <Disclosure summary={t('builder.cards.imageStyle')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.cards.showImage')} path={q('showImage')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cards.showImage')} path={q('showImage')} fallback get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.cards.imageHeight')} path={q('imageHeight')} min={0} max={260} step={2} fallback={84} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.cards.imageFit')} path={q('imageFit')} options={[...IMAGE_FITS]} keyPrefix="builder.cards.imageFit" fallback="cover" get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.cards.imageRadius')} path={q('imageRadius')} min={0} max={60} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
@@ -137,8 +145,8 @@ export function QuickLinksPage({ get, set, disabled }: PageProps) {
 
       <Disclosure summary={t('builder.cards.text')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.cards.showCardTitle')} path={q('showTitle')} get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.cards.showSubtitle')} path={q('showSubtitle')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cards.showCardTitle')} path={q('showTitle')} fallback get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cards.showSubtitle')} path={q('showSubtitle')} fallback get={get} set={set} disabled={disabled} />
           <BrandColorField label={t('builder.cards.titleColor')} path={q('titleColor')} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.cards.titleSize')} path={q('titleSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.cards.titleWeight')} path={q('titleWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="700" get={get} set={set} disabled={disabled} />

@@ -1,3 +1,4 @@
+import { Spinner } from '@/components/ui/spinner'
 import { env } from '@/core/env'
 import { cn } from '@/lib/utils'
 import { getWidgetId } from '@/utils/widget-id'
@@ -43,6 +44,69 @@ export function HiroLoading(_props: AiAssistantMessageShimmerProps) {
           Thinking
         </span>
       </div>
+    </div>
+  )
+}
+
+interface LoadingIndicatorProps {
+  /** The studio's loading design; without one the widget draws its own spinner and text. */
+  design?: LoadingDesignDto
+  /** Carries the design's speed as a custom property. */
+  containerStyle?: CSSProperties
+  /** The channel's colour, for a spinner the design does not colour itself. */
+  brand?: string
+}
+
+/**
+ * The spinner, or the bouncing dots, shown in place of the skeleton. Colour,
+ * size, stroke and caption come from the design; the speed comes off the
+ * container (see `.pair-load-spin` and `.pair-load-dot` in styles.css).
+ */
+export function LoadingIndicator({ design, containerStyle, brand }: LoadingIndicatorProps) {
+  // No design stored: the placeholder the widget has always drawn.
+  if (!design) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Spinner className="size-4" style={{ color: brand }} />
+          Loading messages...
+        </p>
+      </div>
+    )
+  }
+
+  const color = design.spinnerColor && design.spinnerColor !== '#brand' ? design.spinnerColor : brand
+  const size = design.spinnerSize ?? 22
+  const dot = size / 2.5
+  const caption = design.labelShow && design.labelText?.trim()
+
+  return (
+    <div className="flex flex-1 items-center justify-center gap-2" style={containerStyle}>
+      {design.type === 'dots' ? (
+        <span
+          role="status"
+          aria-label="Loading"
+          className="flex shrink-0 items-end"
+          style={{ color, gap: Math.max(2, size / 4) }}
+        >
+          {[0, 1, 2].map((i) => (
+            <i key={i} className="pair-load-dot" style={{ width: dot, height: dot }} />
+          ))}
+        </span>
+      ) : (
+        <Spinner
+          className="pair-load-spin shrink-0"
+          size={size}
+          strokeWidth={design.spinnerThickness ?? 2.5}
+          absoluteStrokeWidth
+          style={{ color, width: size, height: size }}
+        />
+      )}
+      {caption && (
+        <p style={{ color: design.labelColor, fontSize: design.labelSize ? `${design.labelSize}px` : undefined }}>
+          {design.labelText}
+        </p>
+      )}
     </div>
   )
 }

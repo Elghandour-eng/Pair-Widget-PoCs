@@ -59,8 +59,11 @@ export function TrendingPromptItem({
   const isColumn = isCardLayout ?? chipStyles?.flexDirection === 'column'
   // A chip's own icon wins; otherwise the studio's default for all chips. An
   // upload only counts when it is what the icon actually names — a chip set to
-  // `custom`, a chip with no name at all, or the studio default set to it.
-  const iconName = prompt.icon || defaultIcon
+  // `custom`, a chip with no name at all, or the studio default set to it. A
+  // chip set to `custom` with nothing uploaded falls back to the default too.
+  const iconName = prompt.icon && prompt.icon !== 'custom' ? prompt.icon : defaultIcon
+  // "No icon" in the studio: this chip goes without, whatever the default is.
+  const noIcon = iconName === 'none'
   const iconUrl =
     prompt.icon === 'custom' || !prompt.icon
       ? prompt.iconUrl || (defaultIcon === 'custom' ? defaultIconUrl : undefined)
@@ -73,7 +76,8 @@ export function TrendingPromptItem({
   return (
     <button
       className={cn(
-        'flex cursor-pointer rounded-full border border-[#E5E4E1] bg-[#FFF] px-3 py-2 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50',
+        // `pair-prompt-chip` is what the studio's compiled hover rule targets.
+        'pair-prompt-chip flex cursor-pointer rounded-full border border-[#E5E4E1] bg-[#FFF] px-3 py-2 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50',
         isColumn ? 'h-full w-full flex-col gap-4 pt-4 pb-3' : 'items-center justify-center gap-1.5',
         !isColumn && iconPosition === 'end' && 'flex-row-reverse',
       )}
@@ -85,6 +89,7 @@ export function TrendingPromptItem({
         <Spinner className="size-4" />
       ) : (
         showIcon &&
+        !noIcon &&
         (iconUrl ? (
           <img
             src={iconUrl}

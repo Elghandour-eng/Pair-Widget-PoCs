@@ -133,6 +133,12 @@
       -apple-system,
       sans-serif;
   }
+  /* A studio design can name the panel's font (set on <body>). Several pieces
+     of text ask for DM Sans by name; with a panel font they inherit it instead,
+     so the choice reaches the whole widget and not just the unstyled parts. */
+  body.pair-panel-font [class*='DM_Sans'] {
+    font-family: inherit;
+  }
   #app {
     width: 100%;
     height: 100%;
@@ -292,9 +298,41 @@ button.epr-btn.epr-emoji {
   }
 }
 
+/* The spinner and the bouncing dots of the loading placeholder. One turn, or
+   one bounce, lasts the design's speed — the same custom property the skeleton
+   reads off the container. */
+.pair-load-spin {
+  animation-duration: var(--pair-skel-speed, 1s);
+}
+
+.pair-load-dot {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pair-load-bounce var(--pair-skel-speed, 1.2s) ease-in-out infinite;
+}
+.pair-load-dot:nth-child(2) {
+  animation-delay: calc(var(--pair-skel-speed, 1.2s) / 6);
+}
+.pair-load-dot:nth-child(3) {
+  animation-delay: calc(var(--pair-skel-speed, 1.2s) / 3);
+}
+
+@keyframes pair-load-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-80%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shimmer-skeleton,
-  .skeleton-pulse {
+  .skeleton-pulse,
+  .pair-load-dot {
     animation: none;
   }
 }
@@ -315,14 +353,50 @@ button.epr-btn.epr-emoji {
 }
 
 /* Toast: the studio's design lands as inline style on each toast; these rules
-   cover what inline style cannot reach — the icon colour and the full-width
-   variant. */
+   cover what inline style cannot reach — the icon colour, the text weight and
+   where the toast sits. sonner adds its own sheet after this one, so each rule
+   here has to out-rank the one it replaces rather than rely on order. */
 .pair-toast [data-icon] {
   color: var(--pair-toast-icon, currentColor);
 }
 
-.pair-toast-wide {
-  width: 100%;
+/* sonner pins the title at 500, which would mask the design's weight. */
+[data-sonner-toast][data-styled='true'].pair-toast [data-title] {
+  font-weight: inherit;
+}
+
+/* Placement. The widget is a panel-sized viewport, and at that width sonner
+   stretches every toast edge to edge whatever side was asked for. Instead the
+   list spans the panel inside the design's offset, and a toast is as wide as
+   its text and sits left, centre or right — or, with `pair-toast-wide`, fills
+   the list. */
+[data-sonner-toaster][data-x-position].pair-toaster {
+  right: var(--offset-right);
+  left: var(--offset-left);
+  width: auto;
+  transform: none;
+}
+
+[data-sonner-toaster].pair-toaster [data-sonner-toast].pair-toast {
+  right: 0;
+  left: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+[data-sonner-toaster].pair-toaster [data-sonner-toast].pair-toast[data-x-position='left'] {
+  right: auto;
+}
+[data-sonner-toaster].pair-toaster [data-sonner-toast].pair-toast[data-x-position='right'] {
+  left: auto;
+}
+[data-sonner-toaster].pair-toaster [data-sonner-toast].pair-toast[data-x-position='center'] {
+  margin-inline: auto;
+}
+[data-sonner-toaster].pair-toaster [data-sonner-toast].pair-toast.pair-toast-wide {
+  right: 0;
+  left: 0;
+  width: auto;
+  margin-inline: 0;
 }
 
 /* The widget is a phone-sized surface inside an iframe: its scroll areas pan

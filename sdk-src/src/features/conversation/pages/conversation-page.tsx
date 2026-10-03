@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 
-import { Spinner } from '@/components/ui/spinner'
 import { WidgetFooter } from '@/components/widget-footer'
 import { useUnreadMessages } from '@/contexts/unread-messages-context'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
@@ -8,7 +7,10 @@ import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { useWidgetUIContext } from '@/contexts/widget-ui-context'
 import { createDebugLogger, getFilePathFromUrl } from '@/utils/logger'
 import { ConversationHeader } from '../components/conversation-header'
-import { AiAssistantMessageShimmer } from '../components/conversation-message/ai-assistant-message/ai-assistant-message-shimmer'
+import {
+  AiAssistantMessageShimmer,
+  LoadingIndicator,
+} from '../components/conversation-message/ai-assistant-message/ai-assistant-message-shimmer'
 import { ConversationMessages } from '../components/conversation-messages'
 import { ConversationTextbox } from '../components/conversation-textbox'
 import { QuestionInput } from '../components/question-input'
@@ -114,12 +116,11 @@ function ConversationPageContent({ conversationId }: ConversationPageProps) {
             />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Spinner className="size-4" style={{ color: widgetConfig.primaryColor }} />
-              Loading messages...
-            </p>
-          </div>
+          <LoadingIndicator
+            design={widgetConfig.introScreen?.loadingState?.design}
+            containerStyle={widgetConfig.introScreen?.loadingState?.styles}
+            brand={widgetConfig.primaryColor}
+          />
         )
       ) : (
         <ConversationMessages

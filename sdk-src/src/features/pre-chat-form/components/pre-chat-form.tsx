@@ -55,7 +55,9 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
       border-radius: ${f.radius ?? 10}px;
       color: ${rs(f.textColor) ?? '#1A1A1A'}; font-size: ${f.textSize ?? 14}px;
     }
-    .pair-prechat input { min-height: ${f.height ?? 40}px }
+    /* A real height, not a floor: the input's own fixed height would hold
+       anything under it. */
+    .pair-prechat input { height: ${f.height ?? 40}px }
     .pair-prechat input::placeholder, .pair-prechat textarea::placeholder { color: ${rs(f.placeholderColor) ?? '#98A2B3'} }
     .pair-prechat input:focus, .pair-prechat input:focus-visible,
     .pair-prechat textarea:focus, .pair-prechat textarea:focus-visible {
@@ -70,7 +72,7 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
       background: ${rs(f.background) ?? '#fff'};
       border: ${f.borderWidth ?? 1}px ${f.borderStyle ?? 'solid'} ${rs(f.borderColor) ?? '#D0D5DD'};
       border-radius: ${f.radius ?? 10}px;
-      min-height: ${f.height ?? 40}px;
+      height: ${f.height ?? 40}px;
       align-items: stretch;
       overflow: clip;
       transition: border-color .18s ease, box-shadow .18s ease;
@@ -83,7 +85,7 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
     .pair-prechat .pair-phone input:focus,
     .pair-prechat .pair-phone input:focus-visible {
       border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
-      background: transparent !important; min-height: 0;
+      background: transparent !important; height: auto; min-height: 0;
       direction: ltr; /* a phone number reads left-to-right in any language */
     }
     .pair-prechat .pair-phone .pair-phone-trigger {
@@ -344,6 +346,9 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
     fontSize: btn?.textSize ?? 14,
     fontWeight: (btn?.weight as React.CSSProperties['fontWeight']) ?? 600,
     width: btn?.fullWidth === false ? undefined : '100%',
+    // The form is a flex column, which stretches its children: "off" has to
+    // opt the button out to get a content-width one.
+    alignSelf: btn?.fullWidth === false ? 'flex-start' : undefined,
     boxShadow: btn?.shadow
       ? `0 ${btn.shadow.y ?? 0}px ${btn.shadow.blur ?? 0}px ${hexToRgba(rs(btn.shadow.color) ?? '#000000', btn.shadow.opacity ?? 0)}`
       : undefined,
@@ -402,7 +407,7 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
                   <FormItem>
                     {showLabels && (
                       <FormLabel className="gap-1" style={labelStyle}>
-                        {design?.messageLabel ?? 'Message'}
+                        {design?.messageLabel || 'Message'}
                         <span className="text-destructive" style={requiredStyle}>
                           *
                         </span>
@@ -410,7 +415,7 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
                     )}
                     <FormControl>
                       <Textarea
-                        placeholder={design?.messagePlaceholder ?? 'Type your message here...'}
+                        placeholder={design?.messagePlaceholder || 'Type your message here...'}
                         className="min-h-24"
                         {...formField}
                         value={formField.value as string}
@@ -424,7 +429,7 @@ export function PreChatForm({ onSuccess }: { onSuccess?: () => void }) {
 
             <Button type="submit" disabled={isSubmitting} style={buttonStyle}>
               {isSubmitting && <Spinner />}
-              {isSubmitting ? uiText(widgetConfig.locale, 'submitting') : (design?.buttonText ?? 'Start Chat')}
+              {isSubmitting ? uiText(widgetConfig.locale, 'submitting') : design?.buttonText || 'Start Chat'}
             </Button>
           </form>
         </Form>

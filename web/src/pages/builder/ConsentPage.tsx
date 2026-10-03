@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { ListPlus, Plus, Trash2 } from 'lucide-react'
 import { IconField } from '@/components/IconField'
 import { Disclosure, SectionHead } from '@/components/ui'
 import { type WidgetConfig } from '@/lib/api'
@@ -15,7 +15,11 @@ const CSD = `${CS}.design`
 
 type ConsentPointRow = { icon: string; text: string; i18n?: Partial<Record<WidgetLang, { text?: string }>> }
 
-const CS_DEFAULT_POINTS: ConsentPointRow[] = [
+/**
+ * Three ready-made points, added on request. Nothing shows them until they are
+ * saved: the widget draws only the points the config really carries.
+ */
+const CS_STARTER_POINTS: ConsentPointRow[] = [
   { icon: 'chat-text', text: 'This assistant helps you discover films, get recommendations and track bookings.' },
   { icon: 'alert', text: 'AI suggestions may occasionally be incorrect. Please review details before purchasing.' },
   { icon: 'shield', text: 'Your interactions may be used to improve recommendations and your experience.' },
@@ -29,7 +33,7 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
   const { t } = useI18n()
   const live = currentLang(draft)
   const stored = get(`${CS}.points`)
-  const points: ConsentPointRow[] = Array.isArray(stored) && stored.length ? stored : CS_DEFAULT_POINTS
+  const points: ConsentPointRow[] = Array.isArray(stored) ? stored : []
   const write = (next: ConsentPointRow[]) => set(`${CS}.points`, next)
   const patchPoint = (i: number, patch: Partial<ConsentPointRow>) =>
     write(points.map((pt, j) => (j === i ? { ...pt, ...patch } : pt)))
@@ -48,7 +52,7 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         <p className="callout mb-4">{t('builder.cs.hint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.cs.enable')} path={`${CS}.enabled`} get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.cs.illustration')} path={`${CSD}.showIllustration`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cs.illustration')} path={`${CSD}.showIllustration`} fallback get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.cs.handle')} path={`${CSD}.showHandle`} get={get} set={set} disabled={disabled} />
           <PlainBiField label={t('builder.cs.title')} path={`${CS}.title`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Welcome to your AI Assistant" />
           <PlainBiField label={t('builder.cs.subtitle')} path={`${CS}.subtitle`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="A few things to keep in mind" />
@@ -62,7 +66,7 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         <div className="mb-4 grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.cs.pointCard')} path={`${CSD}.points.card`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.cs.pointGap')} path={`${CSD}.points.gap`} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
-          {get(`${CSD}.points.card`) !== false && (
+          {get(`${CSD}.points.card`) === true && (
             <>
               <BrandColorField label={t('builder.cs.pointBg')} path={`${CSD}.points.cardBackground`} get={get} set={set} disabled={disabled} />
               <BrandColorField label={t('builder.cs.pointBorder')} path={`${CSD}.points.cardBorder`} get={get} set={set} disabled={disabled} />
@@ -72,6 +76,15 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
           )}
         </div>
         <div className="space-y-3">
+          {points.length === 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="callout">{t('builder.cs.points.empty')}</p>
+              <button className="btn-primary btn-sm" onClick={() => write(CS_STARTER_POINTS)} disabled={disabled}>
+                <ListPlus className="size-4" />
+                {t('builder.cs.addStarter')}
+              </button>
+            </div>
+          )}
           {points.map((pt, i) => (
             <div key={i} className="card space-y-3 p-3.5">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -79,13 +92,13 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
                   label={t('builder.pc.field.label')} set="consent"
                   value={pt.icon} url={undefined}
                   onChange={(v) => patchPoint(i, { icon: v })} onUrlChange={() => {}}
-                  disabled={disabled}
+                  disabled={disabled} allowCustom={false}
                 />
                 <div className="flex items-end gap-2">
                   <button
                     className="btn-ghost btn-sm ms-auto"
                     onClick={() => write(points.filter((_, j) => j !== i))}
-                    disabled={disabled || points.length <= 1}
+                    disabled={disabled}
                     aria-label={t('common.delete')}
                   >
                     <Trash2 className="size-4" />
@@ -109,14 +122,14 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
       <Disclosure summary={t('builder.cs.links')}>
         <p className="callout mb-4">{t('builder.cs.links.hint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.terms.show`} get={get} set={set} disabled={disabled} />
-          <ToggleField label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.privacy.show`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.terms.show`} fallback get={get} set={set} disabled={disabled} />
+          <ToggleField label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.show')}`} path={`${CS}.links.privacy.show`} fallback get={get} set={set} disabled={disabled} />
           <PlainBiField label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.label')}`} path={`${CS}.links.terms.label`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Terms of Use" />
           <Field label={`${t('builder.cs.links.terms')} — ${t('builder.cs.links.url')}`} path={`${CS}.links.terms.url`} get={get} set={set} disabled={disabled} placeholder="https://…" />
           <PlainBiField label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.label')}`} path={`${CS}.links.privacy.label`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Privacy Policy" />
           <Field label={`${t('builder.cs.links.privacy')} — ${t('builder.cs.links.url')}`} path={`${CS}.links.privacy.url`} get={get} set={set} disabled={disabled} placeholder="https://…" />
           <ColorField label={t('builder.cs.links.color')} path={`${CS}.links.color`} get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.cs.links.underline')} path={`${CS}.links.underline`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cs.links.underline')} path={`${CS}.links.underline`} fallback get={get} set={set} disabled={disabled} />
         </div>
       </Disclosure>
 
@@ -147,7 +160,6 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
           <NumField label={t('builder.msgs.textSize')} path={`${CSD}.points.textSize`} min={8} max={20} step={0.5} fallback={12.5} unit="px" get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.chips.iconColor')} path={`${CSD}.points.iconColor`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.input.iconSize')} path={`${CSD}.points.iconSize`} min={10} max={32} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
-          <NumField label={t('builder.pc.design.gap')} path={`${CSD}.points.gap`} min={4} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
         </div>
       </Disclosure>
 
@@ -159,7 +171,7 @@ export function ConsentPage({ draft, setDraft, get, set, disabled }: { draft: Wi
           <NumField label={t('builder.pc.design.inputHeight')} path={`${CSD}.button.height`} min={30} max={72} step={1} fallback={44} unit="px" get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.textSize')} path={`${CSD}.button.textSize`} min={9} max={24} step={0.5} fallback={13.5} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.msgs.textWeight')} path={`${CSD}.button.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="600" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${CSD}.button.fullWidth`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${CSD}.button.fullWidth`} fallback get={get} set={set} disabled={disabled} />
         </div>
       </Disclosure>
     </div>

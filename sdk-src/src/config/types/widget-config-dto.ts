@@ -105,6 +105,8 @@ export interface ConsentScreenDto {
   links?: { color?: string; underline?: boolean; terms?: ConsentLinkDto; privacy?: ConsentLinkDto }
   design?: {
     showIllustration?: boolean
+    /** The grab handle at the top of the sheet. */
+    showHandle?: boolean
     overlayColor?: string
     overlayOpacity?: number
     card?: {
@@ -115,7 +117,19 @@ export interface ConsentScreenDto {
     }
     title?: { color?: string; size?: number; weight?: string }
     subtitle?: { color?: string; size?: number; weight?: string }
-    points?: { textColor?: string; textSize?: number; iconColor?: string; iconSize?: number; gap?: number }
+    points?: {
+      textColor?: string
+      textSize?: number
+      iconColor?: string
+      iconSize?: number
+      gap?: number
+      /** Each point in its own bordered card. */
+      card?: boolean
+      cardBackground?: string
+      cardBorder?: string
+      cardRadius?: number
+      cardPadding?: number
+    }
     footnote?: { color?: string; size?: number }
     button?: {
       background?: string
@@ -164,6 +178,8 @@ export interface HeaderContent {
 export interface HeaderActions {
   cart: boolean
   favorites: boolean
+  /** A restart control that resolves the session and returns to the intro. */
+  reset?: boolean
 }
 
 /** One header control: whether it shows, and the glyph (or upload) it wears. */
@@ -312,6 +328,8 @@ export interface QuickLinkCard {
   subtitle: string
   media_ulid: string
   order?: number
+  /** What a tap on the card sends to the chat; the title when empty. */
+  message?: string
 }
 
 export interface QuickLinks {
@@ -359,6 +377,8 @@ export interface QuickLinksDesignDto {
   imageHeight?: number
   imageFit?: 'cover' | 'contain'
   imageRadius?: number
+  /** The card's hover colours, compiled to a rule for `.pair-quick-card`. */
+  hoverCss?: string
 }
 
 /** The studio's compiled prompt-chip design; the surface arrives in `chipStyle`. */
@@ -372,6 +392,10 @@ export interface PromptsDesignDto {
   iconPosition?: 'start' | 'end'
   layout?: 'wrap' | 'stack' | 'scroll'
   gap?: number
+  /** Where the chips sit in their row (or column), and how wrapped text reads. */
+  align?: 'start' | 'center' | 'end'
+  /** The chip's hover colours, compiled to a rule for `.pair-prompt-chip`. */
+  hoverCss?: string
 }
 
 export interface TrendingPrompts {
@@ -416,9 +440,11 @@ export interface SendButtonIconDto {
  * container — the typed text, the action buttons, and the padding around them.
  */
 export interface ChatInputDesignDto {
-  layout?: 'floating_pill' | 'full_width_bar' | 'inset_card'
+  layout?: 'floating_pill' | 'full_width_bar'
   direction?: 'auto' | 'ltr' | 'rtl'
   field?: {
+    borderWidth?: number
+    paddingY?: number
     gap?: number
     focusBorderColor?: string
     focusRingWidth?: number
@@ -525,7 +551,7 @@ export interface ChatInput {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type IconColorType = 'widget' | string
-export type MessageStyle = 'plain' | 'card'
+export type MessageStyle = 'plain' | 'card' | 'bubble'
 export type BubbleType = 'filled' | 'outline'
 
 // TODO: check it with the BE and FE Builder
@@ -588,8 +614,17 @@ export interface QuestionCardDto {
   radius?: number
 }
 
+/** The line shown in a conversation that has no messages yet. */
+export interface EmptyStateDto {
+  text?: string
+  text_ar?: string
+  fontSize?: number
+  color?: string
+}
+
 export interface Messages {
   loadingOlder?: LoadingOlder
+  emptyState?: EmptyStateDto
   feedback: Feedback
   aiMessages: AiMessages
   customerMessages: CustomerMessages
@@ -676,6 +711,8 @@ export interface WidgetConfigDto {
   visitor_credentials: unknown[]
   widget_header?: boolean
   opening_method?: 'automatically_open' | 'chat_icon'
+  /** The studio's font for the whole panel (Theme page), when the design is the studio's. */
+  panel_font_family?: string
   launcher_style?: 'expanded_bubble' | 'chat_icon' | 'standard' | 'icon_only' | 'none'
   launcher_position?: 'left' | 'right'
   styles?: CSSProperties

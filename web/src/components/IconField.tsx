@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactElement } from 'react'
 import {
-  ArrowUp, BookA, Bot, Captions, Check, ChevronLeft, ChevronUp, CircleAlert, CircleHelp, Clapperboard,
+  ArrowUp, BookA, Captions, Check, ChevronLeft, ChevronUp, CircleAlert, CircleHelp, Clapperboard,
   Contrast, Copy, Earth, Eclipse, Ellipsis, FileText, Globe, Heart, Image as ImageIcon, Info, Languages,
-  Lightbulb, Lock, MessageSquareText, Mic, Moon, MoonStar, Paperclip, Palette, Phone, Plus, Popcorn,
+  Lightbulb, Lock, MessageCircleMore, MessageSquareText, Mic, Moon, MoonStar, Paperclip, Palette, Phone, Plus, Popcorn,
   Search, SendHorizontal, ShieldCheck, Smile, Sparkles, Speech, Star, Sun, SunDim, SunMoon, ThumbsDown,
   ThumbsUp, Ticket, Utensils, Volume2, X, type LucideIcon,
 } from 'lucide-react'
@@ -38,7 +38,8 @@ export const GLYPHS: Record<string, Glyph> = {
   send: SendHorizontal, 'arrow-up': ArrowUp, 'chevron-up': ChevronUp, 'chevron-left': ChevronLeft,
   'cine-right': CineRight, 'cine-up': CineUp,
   mic: Mic, volume: Volume2, paperclip: Paperclip, plus: Plus, image: ImageIcon, smile: Smile,
-  bubble: Bot, chat: Ellipsis, spark: Sparkles, star: Star, heart: Heart, help: CircleHelp,
+  // The launcher's default mark is a round speech bubble on a real page, not a robot.
+  bubble: MessageCircleMore, chat: Ellipsis, spark: Sparkles, star: Star, heart: Heart, help: CircleHelp,
   search: Search, phone: Phone, ticket: Ticket, popcorn: Popcorn, film: Clapperboard, food: Utensils,
   'thumbs-up': ThumbsUp, 'thumbs-down': ThumbsDown, copy: Copy, check: Check, close: X, menu: Ellipsis,
   globe: Globe, languages: Languages, earth: Earth, speech: Speech, captions: Captions, 'book-a': BookA,
@@ -51,11 +52,14 @@ export const GLYPHS: Record<string, Glyph> = {
 export const ICON_SETS = {
   send: ['send', 'arrow-up', 'chevron-up', 'cine-right', 'cine-up'],
   voice: ['mic', 'volume'],
-  attach: ['paperclip', 'plus', 'image'],
+  // The plus leads: it is the attach glyph the widget draws when nothing is stored.
+  attach: ['plus', 'paperclip', 'image'],
   emoji: ['smile', 'spark'],
   launcher: ['bubble', 'chat', 'spark', 'chevron-up', 'cine-up', 'star', 'heart', 'help'],
   header: ['menu', 'close', 'chevron-left'],
-  card: ['film', 'food', 'ticket', 'popcorn', 'phone', 'help', 'search', 'star'],
+  // `spark` leads: it is what a prompt chip draws when no icon was ever chosen,
+  // and an unset slot shows the first name of its set.
+  card: ['spark', 'film', 'food', 'ticket', 'popcorn', 'phone', 'help', 'search', 'star'],
   feedback: ['thumbs-up', 'thumbs-down', 'copy', 'check'],
   lang: ['badge', 'globe', 'languages', 'earth', 'speech', 'captions', 'book-a'],
   theme: ['moon', 'sun', 'sun-moon', 'moon-star', 'eclipse', 'contrast', 'sun-dim', 'lightbulb', 'palette'],
@@ -114,6 +118,8 @@ export function IconField({
   onUrlChange,
   disabled,
   allowNone,
+  allowCustom = true,
+  allowDefault,
 }: {
   label: string
   set: IconSet
@@ -125,10 +131,19 @@ export function IconField({
   onUrlChange: (v: string) => void
   disabled?: boolean
   allowNone?: boolean
+  /** False for a slot that only draws glyphs: the upload option is not offered. */
+  allowCustom?: boolean
+  /**
+   * For a slot that inherits its icon from somewhere else: offers `default`
+   * ("no icon of its own") first, and shows it for an unset value. The caller
+   * turns `default` back into an absent value when storing it.
+   */
+  allowDefault?: boolean
 }) {
   const { t } = useI18n()
   const names: string[] = [...ICON_SETS[setName]]
-  const current = value && (names.includes(value) || value === 'custom' || value === 'none') ? value : names[0]
+  const fallback = allowDefault ? 'default' : names[0]
+  const current = value && (names.includes(value) || (value === 'custom' && allowCustom) || value === 'none') ? value : fallback
   void path
   void urlPath
 
@@ -142,13 +157,14 @@ export function IconField({
           onChange={onChange}
           disabled={disabled}
           options={[
+            ...(allowDefault ? [{ value: 'default', label: t('icon.default') }] : []),
             ...names.map((name) => ({
               value: name,
               label: t(`icon.${name}` as MsgKey),
               icon: <SlotIcon name={name} size={14} />,
             })),
             ...(allowNone ? [{ value: 'none', label: t('icon.none') }] : []),
-            { value: 'custom', label: t('icon.custom') },
+            ...(allowCustom ? [{ value: 'custom', label: t('icon.custom') }] : []),
           ]}
         />
       </div>

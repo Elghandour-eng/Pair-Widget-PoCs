@@ -16,23 +16,33 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const SG = 'widget_v2_config.messages.suggestions'
   const QC = 'widget_v2_config.messages.questions'
   const ES = 'widget_v2_config.messages.emptyState'
+  // The card's own controls only act on a card; plain text is what the widget
+  // draws when no style has been chosen.
+  const isCard = get(`${AI}.messageStyle`) === 'card'
+  // An outlined bubble has no fill (brand or otherwise), and only it has a border.
+  const isOutline = get(`${CU}.bubbleType`) === 'outline'
   return (
     <div className="space-y-7">
       <section>
         <SectionHead>{t('builder.msgs.ai')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ChoiceField label={t('builder.msgs.style')} path={`${AI}.messageStyle`} options={['bubble', 'plain', 'card']} keyPrefix="builder.msgs.style" fallback="bubble" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.msgs.style')} path={`${AI}.messageStyle`} options={['bubble', 'plain', 'card']} keyPrefix="builder.msgs.style" fallback="plain" get={get} set={set} disabled={disabled} />
           <div />
-          <ColorField label={t('builder.msgs.cardBg')} path={`${AI}.CardStyles.backgroundColor`} get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.msgs.borderColor')} path={`${AI}.CardStyles.borderColor`} get={get} set={set} disabled={disabled} />
-          <NumField label={t('builder.msgs.borderWidth')} path={`${AI}.CardStyles.borderWidth`} min={0} max={8} step={1} fallback={0} unit="px" get={get} set={set} disabled={disabled} />
-          <NumField label={t('builder.msgs.radius')} path={`${AI}.CardStyles.borderRadius`} min={0} max={40} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
-          <NumField label={t('builder.msgs.padding')} path={`${AI}.CardStyles.padding`} min={0} max={32} step={1} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
+          {isCard && (
+            <>
+              <ColorField label={t('builder.msgs.cardBg')} path={`${AI}.CardStyles.backgroundColor`} get={get} set={set} disabled={disabled} />
+              <ColorField label={t('builder.msgs.borderColor')} path={`${AI}.CardStyles.borderColor`} get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.msgs.borderWidth')} path={`${AI}.CardStyles.borderWidth`} min={0} max={8} step={1} fallback={1} unit="px" get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.msgs.radius')} path={`${AI}.CardStyles.borderRadius`} min={0} max={40} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.msgs.padding')} path={`${AI}.CardStyles.padding`} min={0} max={32} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+              <div />
+            </>
+          )}
           <ColorField label={t('builder.msgs.text')} path={`${AI}.TextStyles.color`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.textSize')} path={`${AI}.TextStyles.fontSize`} min={10} max={22} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.msgs.textWeight')} path={`${AI}.TextStyles.fontWeight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.msgs.showIcon')} path={`${AI}.showAiIcon`} get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.msgs.aiShimmer')} path={`${AI}.showShimmer`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.showIcon')} path={`${AI}.showAiIcon`} fallback get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.aiShimmer')} path={`${AI}.showShimmer`} fallback get={get} set={set} disabled={disabled} />
           <MediaInput label={t('builder.msgs.iconUrl')} value={get(`${AI}.iconUrl`) ?? ''} onChange={(v) => set(`${AI}.iconUrl`, v)} disabled={disabled} />
         </div>
       </section>
@@ -40,9 +50,14 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
         <SectionHead>{t('builder.msgs.user')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
           <ChoiceField label={t('builder.msgs.btype')} path={`${CU}.bubbleType`} options={['filled', 'outline']} keyPrefix="builder.msgs.btype" fallback="filled" get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('builder.msgs.brandColor')} path={`${CU}.useBrandColor`} get={get} set={set} disabled={disabled} />
-          <ColorField label={t('form.userBubbleBg')} path={`${CU}.bubbleStyle.backgroundColor`} get={get} set={set} disabled={disabled} />
-          <ColorField label={t('builder.msgs.borderColor')} path={`${CU}.bubbleStyle.borderColor`} get={get} set={set} disabled={disabled} />
+          {isOutline ? (
+            <ColorField label={t('builder.msgs.borderColor')} path={`${CU}.bubbleStyle.borderColor`} get={get} set={set} disabled={disabled} />
+          ) : (
+            <ToggleField label={t('builder.msgs.brandColor')} path={`${CU}.useBrandColor`} get={get} set={set} disabled={disabled} />
+          )}
+          {!isOutline && get(`${CU}.useBrandColor`) !== true && (
+            <ColorField label={t('form.userBubbleBg')} path={`${CU}.bubbleStyle.backgroundColor`} get={get} set={set} disabled={disabled} />
+          )}
           <ColorField label={t('form.userBubbleText')} path={`${CU}.TextStyles.color`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.textSize')} path={`${CU}.TextStyles.fontSize`} min={10} max={22} step={0.5} fallback={14} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.msgs.textWeight')} path={`${CU}.TextStyles.fontWeight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
@@ -94,8 +109,9 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
       <section>
         <SectionHead>{t('builder.msgs.feedbackHead')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.msgs.feedback')} path={`${FB}.showFeedbackButtons`} get={get} set={set} disabled={disabled} />
-          <Field label={t('builder.msgs.toastMsg')} path={`${FB}.toastMessage`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.msgs.feedback')} path={`${FB}.showFeedbackButtons`} fallback get={get} set={set} disabled={disabled} />
+          <div />
+          <PlainBiField label={t('builder.msgs.toastMsg')} path={`${FB}.toastMessage`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Thanks for your feedback." />
           <NumField label={t('builder.msgs.fbIconSize')} path={`${FB}.style.iconSize`} min={12} max={40} step={1} fallback={24} unit="px" get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.fbIconColor')} path={`${FB}.style.iconColor`} get={get} set={set} disabled={disabled} />
         </div>

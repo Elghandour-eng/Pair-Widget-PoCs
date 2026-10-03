@@ -10,6 +10,9 @@ interface QuickLinkItemProps {
   showSubtitle?: boolean
   /** The studio's card design: whether the image shows, and how it is sized. */
   design?: QuickLinksDesignDto
+  /** A tap sends the card's message to the chat. */
+  onClick?: () => void
+  disabled?: boolean
 }
 
 export function QuickLinkItem({
@@ -20,6 +23,8 @@ export function QuickLinkItem({
   showTitle = true,
   showSubtitle = true,
   design,
+  onClick,
+  disabled,
 }: QuickLinkItemProps) {
   // The image box follows the studio's design; the old fixed height stays the
   // fallback for configs that carry no design at all.
@@ -34,8 +39,12 @@ export function QuickLinkItem({
 
   return (
     <button
-      className="flex h-full w-full min-w-0 flex-[1_0_0] flex-col items-start justify-start gap-2 rounded-xl border border-[#E5E4E1] bg-[#FFF] p-1 text-start transition-colors hover:bg-gray-50"
+      type="button"
+      // `pair-quick-card` is what the studio's compiled hover rule targets.
+      className="pair-quick-card flex h-full w-full min-w-0 flex-[1_0_0] cursor-pointer flex-col items-start justify-start gap-2 rounded-xl border border-[#E5E4E1] bg-[#FFF] p-1 text-start transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       style={cardStyles}
+      onClick={onClick}
+      disabled={disabled}
     >
       {showImage && item.image && (
         <img

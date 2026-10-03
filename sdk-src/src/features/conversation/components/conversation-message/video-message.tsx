@@ -112,7 +112,7 @@ export function VideoMessage({ message, isUnread, primaryColor, websiteName }: V
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const customerConfig = widgetConfig.messagesConfig?.customerMessages
   const cardStyles = aiConfig?.CardStyles
-  const hasCardStyles = aiConfig?.messageStyle === 'card' && cardStyles && Object.keys(cardStyles).length > 0
+  const hasCardStyles = aiConfig?.messageStyle === 'card'
   const customTextStyles = isUser ? customerConfig?.TextStyles : aiConfig?.TextStyles
 
   return (

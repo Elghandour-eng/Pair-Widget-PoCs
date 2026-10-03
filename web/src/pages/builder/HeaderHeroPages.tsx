@@ -26,7 +26,7 @@ export function HeaderPage({ get, set, disabled }: PageProps) {
           <ColorField label={t('form.headerBg')} path="widget_v2_config.header.background.color" get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.header.titleColor')} path="widget_v2_config.header.titleStyle.color" get={get} set={set} disabled={disabled} />
           <div className="grid content-end gap-2">
-            <ToggleField label={t('form.headerShow')} path="widget_v2_config.header.enabled" get={get} set={set} disabled={disabled} />
+            <ToggleField label={t('form.headerShow')} path="widget_v2_config.header.enabled" fallback get={get} set={set} disabled={disabled} />
             <ToggleField label={t('form.headerBgOn')} path="widget_v2_config.header.background.enabled" get={get} set={set} disabled={disabled} />
           </div>
         </div>
@@ -107,8 +107,7 @@ export function HeroPage({ draft, setDraft, get, set, disabled }: { draft: Widge
         <div className="grid gap-4 sm:grid-cols-2">
           <BilingualField label={t('form.welcomeTitle')} path={BILINGUAL_PATHS[0]} draft={draft} setDraft={setDraft} disabled={disabled} />
           <BilingualField label={t('form.welcomeSubtitle')} path={BILINGUAL_PATHS[1]} draft={draft} setDraft={setDraft} disabled={disabled} />
-          <ToggleField label={t('form.heroShow')} path={`${HERO}.enabled.value`} get={get} set={set} disabled={disabled} />
-          <ToggleField label={t('form.introShow')} path="widget_v2_config.intro_screen.showIntroScreen.value" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('form.heroShow')} path={`${HERO}.enabled.value`} fallback get={get} set={set} disabled={disabled} />
         </div>
       </section>
 
@@ -187,14 +186,14 @@ function CarouselSection({ get, set, disabled }: PageProps) {
       <SectionHead>{t('builder.hero.carousel')}</SectionHead>
       <p className="callout mb-3">{t('builder.hero.carouselHint')}</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <ToggleField label={t('builder.hero.autoplay')} path={p('autoplay')} get={get} set={set} disabled={disabled} />
+        <ToggleField label={t('builder.hero.autoplay')} path={p('autoplay')} fallback get={get} set={set} disabled={disabled} />
         <ChoiceField label={t('builder.hero.transition')} path={p('transition')} options={['fade', 'slide']} keyPrefix="builder.hero.transition" fallback="fade" get={get} set={set} disabled={disabled} />
         <NumField label={t('builder.hero.interval')} path={p('intervalMs')} min={800} max={15000} step={100} fallback={3500} unit="ms" get={get} set={set} disabled={disabled} />
       </div>
 
       <p className="eyebrow mt-5 mb-2">{t('builder.hero.dots')}</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <ToggleField label={t('builder.hero.dots.show')} path={d('show')} get={get} set={set} disabled={disabled} />
+        <ToggleField label={t('builder.hero.dots.show')} path={d('show')} fallback get={get} set={set} disabled={disabled} />
         <ChoiceField label={t('builder.hero.dots.shape')} path={d('shape')} options={['pill', 'dot', 'bar']} keyPrefix="builder.hero.dots.shape" fallback="pill" get={get} set={set} disabled={disabled} />
         <ChoiceField label={t('builder.hero.dots.position')} path={d('position')} options={['below', 'overlay']} keyPrefix="builder.hero.dots.position" fallback="below" get={get} set={set} disabled={disabled} />
         <NumField label={t('builder.hero.dots.size')} path={d('size')} min={2} max={20} step={1} fallback={5} unit="px" get={get} set={set} disabled={disabled} />
@@ -216,6 +215,7 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
   const patterned = (get(p('pattern.asset')) ?? 'none') !== 'none'
   const shape = get(p('decor.shape')) ?? 'none'
   const decorated = shape !== 'none'
+  const asWindow = decorated && get(p('pattern.target')) === 'decor'
 
   return (
     <div className="space-y-2.5">
@@ -271,14 +271,20 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
               <NumField label={t('builder.hero.decor.y')} path={p('decor.y')} min={-200} max={300} step={1} fallback={24} get={get} set={set} disabled={disabled} />
               <NumField label={t('builder.hero.decor.w')} path={p('decor.w')} min={8} max={600} step={1} fallback={200} get={get} set={set} disabled={disabled} />
               <NumField label={t('builder.hero.decor.h')} path={p('decor.h')} min={8} max={500} step={1} fallback={173} get={get} set={set} disabled={disabled} />
-              <ColorField label={t('builder.hero.decor.color')} path={p('decor.color')} get={get} set={set} disabled={disabled} />
-              {(shape === 'chevron-pair' || shape === 'triple-chevron') && (
+              {/* A wedge, and a shape used as a window onto the pattern, are drawn
+                  in the fill alone; the chevrons are drawn in the shape colours. */}
+              {shape !== 'wedge' && !asWindow && (
+                <ColorField label={t('builder.hero.decor.color')} path={p('decor.color')} get={get} set={set} disabled={disabled} />
+              )}
+              {(shape === 'chevron-pair' || shape === 'triple-chevron') && !asWindow && (
                 <ColorField label={t('builder.hero.decor.color2')} path={p('decor.color2')} get={get} set={set} disabled={disabled} />
               )}
               {shape === 'wedge' && (
                 <NumField label={t('builder.hero.decor.point')} path={p('decor.point')} min={0.02} max={1} step={0.01} fallback={0.32} get={get} set={set} disabled={disabled} />
               )}
-              <ColorField label={t('builder.hero.decor.fill')} path={p('decor.fill')} get={get} set={set} disabled={disabled} />
+              {(shape === 'wedge' || asWindow) && (
+                <ColorField label={t('builder.hero.decor.fill')} path={p('decor.fill')} get={get} set={set} disabled={disabled} />
+              )}
             </>
           )}
         </div>
@@ -287,7 +293,7 @@ function DesignEditor({ base, onPreset, get, set, disabled }: { base: string; on
 
       <Disclosure summary={t('builder.hero.copy')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ChoiceField label={t('builder.hero.layout')} path={p('layout')} options={[...HERO_LAYOUTS]} keyPrefix="builder.hero.layout" fallback="text-left" get={get} set={set} disabled={disabled} />
+          <ChoiceField label={t('builder.hero.layout')} path={p('layout')} options={HERO_LAYOUTS.filter((l) => l !== 'text-bottom')} keyPrefix="builder.hero.layout" fallback="text-left" get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.mirror')} path={p('mirrorInRtl')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.mirrorShape')} path={p('decor.mirrorShape')} get={get} set={set} disabled={disabled} />
           <ToggleField label={t('builder.hero.badge.show')} path={p('badge.show')} get={get} set={set} disabled={disabled} />

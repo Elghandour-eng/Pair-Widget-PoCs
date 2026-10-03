@@ -33,8 +33,17 @@ const PC_DEFAULT_FIELDS: PreChatFieldRow[] = [
 export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: WidgetConfig; setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void } & PageProps) {
   const { t } = useI18n()
   const live = currentLang(draft)
+  // While this block says nothing, the widget runs on the values Pair imported
+  // at the top level (public.ts only overrides them with a boolean `enabled`
+  // and a non-empty `fields`), so those are what the page shows. With neither,
+  // the widget has no fields at all: the stock three are offered switched off.
   const stored = get(`${PC}.fields`)
-  const fields: PreChatFieldRow[] = Array.isArray(stored) && stored.length ? stored : PC_DEFAULT_FIELDS
+  const imported = get('pre_chat_form_options.pre_chat_fields')
+  const fields: PreChatFieldRow[] = Array.isArray(stored) && stored.length
+    ? stored
+    : Array.isArray(imported) && imported.length
+      ? imported
+      : PC_DEFAULT_FIELDS.map((f) => ({ ...f, enabled: false }))
   const patchField = (i: number, patch: Partial<PreChatFieldRow>) =>
     set(`${PC}.fields`, fields.map((f, j) => (j === i ? { ...f, ...patch } : f)))
   // One language of a field's label/placeholder: the translation is stored on
@@ -53,7 +62,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         <SectionHead>{t('builder.section.prechat')}</SectionHead>
         <p className="callout mb-4">{t('builder.pc.hint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.pc.enable')} path={`${PC}.enabled`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.enable')} path={`${PC}.enabled`} fallback={!!get('pre_chat_form_enabled')} get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.pc.placement')} path={`${PC}.placement`} options={['after_intro', 'before_intro']} keyPrefix="builder.pc.placement" fallback="after_intro" get={get} set={set} disabled={disabled} />
           <PlainBiField label={t('builder.pc.message')} path={`${PC}.message`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Share your queries or comments here." />
         </div>
@@ -106,7 +115,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
 
       <Disclosure summary={t('builder.pc.design.labels')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.pc.design.labelsShow')} path={`${PCD}.labels.show`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.labelsShow')} path={`${PCD}.labels.show`} fallback get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.text')} path={`${PCD}.labels.color`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.textSize')} path={`${PCD}.labels.size`} min={8} max={24} step={0.5} fallback={13} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.msgs.textWeight')} path={`${PCD}.labels.weight`} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="600" get={get} set={set} disabled={disabled} />
@@ -137,7 +146,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
 
       <Disclosure summary={t('builder.pc.design.messageBox')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.pc.design.messageBoxOn')} path={`${PCD}.showMessage`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.messageBoxOn')} path={`${PCD}.showMessage`} fallback get={get} set={set} disabled={disabled} />
           <div />
           <PlainBiField label={t('builder.pc.design.messageLabel')} path={`${PCD}.messageLabel`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Message" />
           <PlainBiField label={t('builder.pc.design.messagePh')} path={`${PCD}.messagePlaceholder`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Type your message here..." />
@@ -147,7 +156,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
       <Disclosure summary={t('builder.pc.design.button')}>
         <div className="grid gap-4 sm:grid-cols-2">
           <PlainBiField label={t('builder.pc.design.buttonText')} path={`${PCD}.buttonText`} draft={draft} setDraft={setDraft} disabled={disabled} placeholder="Start Chat" />
-          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${PCD}.button.fullWidth`} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.pc.design.fullWidth')} path={`${PCD}.button.fullWidth`} fallback get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.input.fieldBg')} path={`${PCD}.button.background`} get={get} set={set} disabled={disabled} />
           <ColorField label={t('builder.msgs.text')} path={`${PCD}.button.textColor`} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.msgs.radius')} path={`${PCD}.button.radius`} min={0} max={999} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
@@ -192,7 +201,7 @@ export function PreChatPage({ draft, setDraft, get, set, disabled }: { draft: Wi
         </div>
         <p className="eyebrow mt-4 mb-2">{t('builder.input.shadow')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ShadowFields base={`${PCD}.card.shadow`} get={get} set={set} disabled={disabled} />
+          <ShadowFields base={`${PCD}.card.shadow`} defaults={{ y: 6, blur: 24, opacity: 0.06 }} get={get} set={set} disabled={disabled} />
         </div>
       </Disclosure>
     </div>

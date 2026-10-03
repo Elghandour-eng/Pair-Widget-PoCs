@@ -114,7 +114,8 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
 /**
  * Toasts follow the channel's design: where they sit, how long they stay, and
  * how they look. `richColors` is dropped once a design is present, since it
- * would otherwise override the chosen colours with sonner's own.
+ * would otherwise override the chosen colours with sonner's own. With no design
+ * the widget keeps sonner's own toast, top-centre.
  */
 function WidgetToaster() {
   const { widgetConfig } = useWidgetConfigContext()
@@ -122,16 +123,28 @@ function WidgetToaster() {
 
   if (!design) return <Toaster position="top-center" richColors />
 
+  const offset = design.offset ?? 16
+  // How wide a toast is, and which side it sits on, is decided by the
+  // `.pair-toaster` rules in styles.css; a compiled inline `width` would
+  // outrank them.
+  const { width: _width, ...box } = (design.styles ?? {}) as React.CSSProperties
+  // The server resolves the brand token; an older config can still carry it raw.
+  const iconColor = design.iconColor === '#brand' ? widgetConfig.primaryColor : design.iconColor
+
   return (
     <Toaster
+      className="toaster group pair-toaster"
       position={design.position ?? 'bottom-center'}
-      offset={design.offset ?? 16}
+      // The panel is a phone-sized viewport, where sonner reads only the mobile
+      // offset; both are set so the distance holds at any panel width.
+      offset={offset}
+      mobileOffset={offset}
       duration={design.durationMs ?? 3000}
       icons={design.showIcon === false ? { success: null, info: null, warning: null, error: null } : undefined}
       toastOptions={{
         style: {
-          ...(design.styles as React.CSSProperties),
-          ...(design.iconColor ? ({ '--pair-toast-icon': design.iconColor } as React.CSSProperties) : {}),
+          ...box,
+          ...(iconColor ? ({ '--pair-toast-icon': iconColor } as React.CSSProperties) : {}),
         },
         className: design.fullWidth ? 'pair-toast pair-toast-wide' : 'pair-toast',
       }}

@@ -152,6 +152,8 @@ const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.consent_screen.links.terms.label',
   'widget_v2_config.consent_screen.links.privacy.label',
   'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.messages.feedback.toastMessage',
+  'widget_v2_config.chat_input.placeholderText.text',
   'widget_v2_config.csat.header',
   'widget_v2_config.csat.body',
   'widget_v2_config.csat.buttonText',
@@ -209,7 +211,11 @@ export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): Wid
   const cards = deepGet(next, 'widget_v2_config.quick_links.quickLinkCards')
   if (Array.isArray(cards)) {
     next = deepSet(next, 'widget_v2_config.quick_links.quickLinkCards',
-      cards.map((c: Any) => ({ ...c, title: swap(c.title), subtitle: swap(c.subtitle) })))
+      // The message a card sends when tapped is copy too, so it follows the switch.
+      cards.map((c: Any) => ({
+        ...c, title: swap(c.title), subtitle: swap(c.subtitle),
+        ...(typeof c.message === 'string' ? { message: swap(c.message) } : {}),
+      })))
   }
   // A designed hero slide carries its own copy, so it follows the switch too.
   // The badge is a brand name and is deliberately left alone.

@@ -1,5 +1,6 @@
 import { BubbleChatIcon } from '@/components/icons/bubble-chat-icon'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { isDarkBackground } from '@/lib/utils'
 import { getInitials } from '@/utils/string-utils'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 
@@ -14,6 +15,10 @@ function WidgetAvatar({
 }) {
   const { widgetConfig } = useWidgetConfigContext()
   const bgStyle = style?.backgroundColor ? { backgroundColor: style.backgroundColor } : {}
+  // The fallback mark is white, which vanishes on a light icon background
+  // (the light theme sets one); it turns dark there.
+  const bg = typeof style?.backgroundColor === 'string' ? style.backgroundColor : undefined
+  const markClass = bg && /^#[0-9a-f]{6}$/i.test(bg) && !isDarkBackground(bg) ? 'text-[#1E1E1E]' : 'text-white'
 
   return showIconFallback ? (
     <Avatar className="h-12.5 w-12.5 rounded-2xl" style={style}>
@@ -22,7 +27,7 @@ function WidgetAvatar({
         className="flex size-full items-center justify-center rounded-[inherit] bg-[#4D98E2] text-sm font-medium text-white"
         style={bgStyle}
       >
-        <BubbleChatIcon className="text-white" />
+        <BubbleChatIcon className={markClass} />
       </AvatarFallback>
     </Avatar>
   ) : (

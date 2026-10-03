@@ -41,7 +41,6 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
     // Validate file type
     if (!WIDGET_ALLOWED_MIME_TYPES.includes(file.type)) {
       toast.error('File type not supported. Please upload an image or video.', {
-        position: 'top-center',
         richColors: true,
       })
       return null
@@ -50,7 +49,6 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
     // Validate file size
     if (file.size > WIDGET_MAX_FILE_SIZE) {
       toast.error(`File size exceeds the limit of ${WIDGET_MAX_FILE_SIZE / (1024 * 1024)}MB.`, {
-        position: 'top-center',
         richColors: true,
       })
       return null
@@ -75,7 +73,6 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
       } catch (err) {
         logger.debug('useMediaMessageSender', 'Failed to auto-register user', err)
         toast.error('Failed to start chat. Please try again.', {
-          position: 'top-center',
           richColors: true,
         })
         throw err
@@ -118,7 +115,6 @@ export function useMediaMessageSender({ conversationId }: UseMediaMessageSenderP
     } catch (error) {
       logger.debug('useMediaMessageSender', 'Failed to upload/send media', error)
       toast.error('Failed to upload file. Please try again.', {
-        position: 'top-center',
         richColors: true,
       })
       throw error

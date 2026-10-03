@@ -37,16 +37,26 @@ const FADE_MS = 700
 /* The pattern tiles ship with the dashboard. They are embedded as data URIs,
  * and as PNG rather than WebP: this file can be rasterised by anything
  * downstream, and not every renderer has a WebP decoder. */
-const patternsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../web/public/hero-patterns')
+// A checkout has them under web/public; the image only carries the built
+// dashboard, where the same files sit under web/dist. Reading just the first
+// is what left every pattern (and the drift that needs one) undrawn once deployed.
+const patternsDirs = ['../../../web/public/hero-patterns', '../../../web/dist/hero-patterns'].map((rel) =>
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), rel),
+)
 const patternHref = (() => {
   const cache = new Map<string, string | null>()
   return (file: string): string | null => {
     if (!cache.has(file)) {
-      try {
-        cache.set(file, `data:image/png;base64,${readFileSync(path.join(patternsDir, `${file}-1x.png`)).toString('base64')}`)
-      } catch {
-        cache.set(file, null)
+      let href: string | null = null
+      for (const dir of patternsDirs) {
+        try {
+          href = `data:image/png;base64,${readFileSync(path.join(dir, `${file}-1x.png`)).toString('base64')}`
+          break
+        } catch {
+          // not in this one
+        }
       }
+      cache.set(file, href)
     }
     return cache.get(file) ?? null
   }

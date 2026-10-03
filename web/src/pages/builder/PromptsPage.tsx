@@ -11,8 +11,23 @@ interface PromptChip { text?: string; icon?: string; iconUrl?: string }
 
 const PROMPTS = 'widget_v2_config.trending_prompts.design'
 
-export function PromptsPage({ get, set, disabled }: PageProps) {
+export function PromptsPage({ get, set: write, disabled }: PageProps) {
   const { t } = useI18n()
+  // A widget that has never had a prompt design (one imported from Pair) draws
+  // its heading and icons the way `displaySettings` says; once a design exists
+  // the design decides. The first design field saved would otherwise flip both
+  // to the design's defaults, so that first write pins them to what the live
+  // widget shows today.
+  const hasDesign = get(PROMPTS) != null
+  const liveTitle = get('widget_v2_config.trending_prompts.displaySettings.showTitle') === true
+  const liveIcons = get('widget_v2_config.trending_prompts.displaySettings.showIcons') === true
+  const set: typeof write = (path, val) => {
+    if (!hasDesign && path.startsWith(`${PROMPTS}.`)) {
+      if (path !== `${PROMPTS}.showTitle`) write(`${PROMPTS}.showTitle`, liveTitle)
+      if (path !== `${PROMPTS}.showIcon`) write(`${PROMPTS}.showIcon`, liveIcons)
+    }
+    write(path, val)
+  }
   const PATH = 'widget_v2_config.trending_prompts.promptChips'
   const chips: PromptChip[] = Array.isArray(get(PATH)) ? get(PATH) : []
   const update = (next: PromptChip[]) => set(PATH, next)
@@ -24,7 +39,9 @@ export function PromptsPage({ get, set, disabled }: PageProps) {
     update(next)
   }
   const p = (k: string) => `${PROMPTS}.${k}`
-  const iconsOn = get(p('showIcon')) === true
+  const iconsOn = hasDesign ? get(p('showIcon')) === true : liveIcons
+  // Alignment places the chips in their row or column; a single scrolling row has no room to place them in.
+  const alignable = (get(p('layout')) ?? 'wrap') !== 'scroll'
 
   return (
     <div className="space-y-2.5">
@@ -69,9 +86,12 @@ export function PromptsPage({ get, set, disabled }: PageProps) {
               {iconsOn && (
                 <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <IconField
-                    label={t('builder.chips.chipIcon', { n: i + 1 })} set="card" allowNone
-                    value={c.icon} url={c.iconUrl}
-                    onChange={(v) => patch(i, { icon: v })} onUrlChange={(v) => patch(i, { iconUrl: v })}
+                    label={t('builder.chips.chipIcon', { n: i + 1 })} set="card" allowNone allowDefault
+                    // An image with no icon name is how Pair stores a chip's icon, and the widget draws it.
+                    value={c.icon || (c.iconUrl ? 'custom' : undefined)} url={c.iconUrl}
+                    // Back to the default means dropping the upload too, or the widget would keep drawing it.
+                    onChange={(v) => patch(i, v === 'default' ? { icon: undefined, iconUrl: undefined } : { icon: v })}
+                    onUrlChange={(v) => patch(i, { iconUrl: v })}
                     disabled={disabled}
                   />
                 </div>
@@ -84,13 +104,16 @@ export function PromptsPage({ get, set, disabled }: PageProps) {
 
       <Disclosure summary={t('builder.chips.section')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.chips.showTitle')} path={p('showTitle')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.chips.showTitle')} path={p('showTitle')} fallback={hasDesign || liveTitle} get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.chips.layout')} path={p('layout')} options={[...CHIP_LAYOUTS]} keyPrefix="builder.chips.layout" fallback="wrap" get={get} set={set} disabled={disabled} />
           <BrandColorField label={t('builder.chips.titleColor')} path={p('titleColor')} get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.chips.titleSize')} path={p('titleSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.chips.titleWeight')} path={p('titleWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="700" get={get} set={set} disabled={disabled} />
           <FontField label={t('builder.chips.titleFont')} path={p('titleFont')} get={get} set={set} disabled={disabled} allowInherit />
           <NumField label={t('builder.chips.gap')} path={p('gap')} min={0} max={32} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
+          {alignable && (
+            <ChoiceField label={t('builder.chips.chipAlign')} path={p('align')} options={[...TEXT_ALIGNS]} keyPrefix="builder.align" fallback="start" get={get} set={set} disabled={disabled} />
+          )}
         </div>
       </Disclosure>
 
@@ -118,13 +141,12 @@ export function PromptsPage({ get, set, disabled }: PageProps) {
           <NumField label={t('builder.input.textSize')} path={p('textSize')} min={8} max={28} step={0.5} fallback={12} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.input.textWeight')} path={p('textWeight')} options={[...FONT_WEIGHTS]} keyPrefix="builder.weight" fallback="400" get={get} set={set} disabled={disabled} />
           <FontField label={t('builder.input.font')} path={p('textFont')} get={get} set={set} disabled={disabled} allowInherit />
-          <ChoiceField label={t('builder.chips.align')} path={p('align')} options={[...TEXT_ALIGNS]} keyPrefix="builder.align" fallback="start" get={get} set={set} disabled={disabled} />
         </div>
       </Disclosure>
 
       <Disclosure summary={t('builder.chips.icon')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleField label={t('builder.chips.showIcon')} path={p('showIcon')} get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.chips.showIcon')} path={p('showIcon')} fallback={!hasDesign && liveIcons} get={get} set={set} disabled={disabled} />
           {iconsOn && (
             <>
               <ChoiceField label={t('builder.chips.iconPos')} path={p('iconPosition')} options={[...ICON_POSITIONS]} keyPrefix="builder.chips.iconPos" fallback="start" get={get} set={set} disabled={disabled} />

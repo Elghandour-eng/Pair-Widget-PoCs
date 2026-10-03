@@ -33,7 +33,7 @@
 
   // SVG icons - custom bubble chat icon
   var chatIcon =
-    '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.75 0C16.6548 0 21.5 4.58906 21.5 10.3174C21.4998 16.0455 16.6547 20.6338 10.75 20.6338C10.0544 20.6347 9.36084 20.5706 8.67773 20.4424C8.44082 20.3978 8.28982 20.3688 8.17773 20.3535C8.12917 20.3468 8.09846 20.3448 8.08203 20.3438C8.06505 20.3503 8.03238 20.364 7.97852 20.3896C7.86403 20.444 7.71093 20.5243 7.47754 20.6484C6.04594 21.4098 4.37561 21.6804 2.76465 21.3809C2.50458 21.3325 2.28858 21.1505 2.19727 20.9023C2.106 20.6539 2.15241 20.3752 2.31934 20.1699C2.78709 19.5945 3.10874 18.9013 3.25098 18.1553C3.28937 17.9501 3.20224 17.6712 2.93457 17.3994C1.12003 15.5566 9.70484e-05 13.0648 0 10.3174C0 4.58917 4.84538 0.000168646 10.75 0ZM8.08008 20.3418C8.07681 20.3423 8.07348 20.3426 8.07129 20.3428C8.06877 20.3431 8.06705 20.3427 8.06641 20.3428C8.06759 20.3428 8.07248 20.3432 8.08203 20.3438L8.09668 20.3379C8.09668 20.3379 8.09048 20.3402 8.08008 20.3418ZM10.75 1.5C5.61048 1.50017 1.5 5.47953 1.5 10.3174C1.5001 12.6463 2.44768 14.7673 4.00391 16.3477C4.47798 16.8292 4.88584 17.5802 4.72461 18.4346V18.4355C4.62072 18.981 4.44451 19.5073 4.20117 19.999C5.0949 19.9779 5.98 19.7462 6.77344 19.3242L6.78906 19.3164C7.00291 19.2027 7.18597 19.1049 7.33496 19.0342C7.47906 18.9657 7.65885 18.8882 7.85352 18.8584C8.04317 18.8294 8.22747 18.8471 8.38086 18.8682C8.53414 18.8892 8.72203 18.9236 8.93652 18.9639L8.9541 18.9678C9.54598 19.079 10.1467 19.1346 10.749 19.1338C15.8886 19.1338 19.9998 15.1552 20 10.3174C20 5.47943 15.8897 1.5 10.75 1.5ZM6.75977 9.75C7.31173 9.75025 7.75959 10.198 7.75977 10.75C7.75977 11.3021 7.31184 11.7497 6.75977 11.75H6.75C6.19787 11.7498 5.75 11.3022 5.75 10.75C5.75018 10.198 6.19798 9.75018 6.75 9.75H6.75977ZM10.7559 9.75C11.3078 9.75024 11.7557 10.198 11.7559 10.75C11.7559 11.3021 11.308 11.7498 10.7559 11.75H10.7461C10.1939 11.7498 9.74609 11.3022 9.74609 10.75C9.74627 10.198 10.194 9.75017 10.7461 9.75H10.7559ZM14.75 9.75C15.302 9.75024 15.7498 10.198 15.75 10.75C15.75 11.3022 15.3021 11.7498 14.75 11.75H14.7402C14.1881 11.7498 13.7402 11.3022 13.7402 10.75C13.7404 10.198 14.1882 9.75018 14.7402 9.75H14.75Z" fill="white"/></svg>'
+    '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.75 0C16.6548 0 21.5 4.58906 21.5 10.3174C21.4998 16.0455 16.6547 20.6338 10.75 20.6338C10.0544 20.6347 9.36084 20.5706 8.67773 20.4424C8.44082 20.3978 8.28982 20.3688 8.17773 20.3535C8.12917 20.3468 8.09846 20.3448 8.08203 20.3438C8.06505 20.3503 8.03238 20.364 7.97852 20.3896C7.86403 20.444 7.71093 20.5243 7.47754 20.6484C6.04594 21.4098 4.37561 21.6804 2.76465 21.3809C2.50458 21.3325 2.28858 21.1505 2.19727 20.9023C2.106 20.6539 2.15241 20.3752 2.31934 20.1699C2.78709 19.5945 3.10874 18.9013 3.25098 18.1553C3.28937 17.9501 3.20224 17.6712 2.93457 17.3994C1.12003 15.5566 9.70484e-05 13.0648 0 10.3174C0 4.58917 4.84538 0.000168646 10.75 0ZM8.08008 20.3418C8.07681 20.3423 8.07348 20.3426 8.07129 20.3428C8.06877 20.3431 8.06705 20.3427 8.06641 20.3428C8.06759 20.3428 8.07248 20.3432 8.08203 20.3438L8.09668 20.3379C8.09668 20.3379 8.09048 20.3402 8.08008 20.3418ZM10.75 1.5C5.61048 1.50017 1.5 5.47953 1.5 10.3174C1.5001 12.6463 2.44768 14.7673 4.00391 16.3477C4.47798 16.8292 4.88584 17.5802 4.72461 18.4346V18.4355C4.62072 18.981 4.44451 19.5073 4.20117 19.999C5.0949 19.9779 5.98 19.7462 6.77344 19.3242L6.78906 19.3164C7.00291 19.2027 7.18597 19.1049 7.33496 19.0342C7.47906 18.9657 7.65885 18.8882 7.85352 18.8584C8.04317 18.8294 8.22747 18.8471 8.38086 18.8682C8.53414 18.8892 8.72203 18.9236 8.93652 18.9639L8.9541 18.9678C9.54598 19.079 10.1467 19.1346 10.749 19.1338C15.8886 19.1338 19.9998 15.1552 20 10.3174C20 5.47943 15.8897 1.5 10.75 1.5ZM6.75977 9.75C7.31173 9.75025 7.75959 10.198 7.75977 10.75C7.75977 11.3021 7.31184 11.7497 6.75977 11.75H6.75C6.19787 11.7498 5.75 11.3022 5.75 10.75C5.75018 10.198 6.19798 9.75018 6.75 9.75H6.75977ZM10.7559 9.75C11.3078 9.75024 11.7557 10.198 11.7559 10.75C11.7559 11.3021 11.308 11.7498 10.7559 11.75H10.7461C10.1939 11.7498 9.74609 11.3022 9.74609 10.75C9.74627 10.198 10.194 9.75017 10.7461 9.75H10.7559ZM14.75 9.75C15.302 9.75024 15.7498 10.198 15.75 10.75C15.75 11.3022 15.3021 11.7498 14.75 11.75H14.7402C14.1881 11.7498 13.7402 11.3022 13.7402 10.75C13.7404 10.198 14.1882 9.75018 14.7402 9.75H14.75Z" fill="white" data-pair-fill="1"/></svg>'
   var closeIcon =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
 
@@ -137,7 +137,12 @@
       toggleWidget()
     })
 
-    bubbleHolder.appendChild(bubble)
+    // The attention loop animates this wrapper, so it never fights the
+    // bubble's own entrance and hover transforms.
+    var motion = document.createElement('div')
+    motion.className = 'pair-ai-bubble-motion'
+    motion.appendChild(bubble)
+    bubbleHolder.appendChild(motion)
     document.body.appendChild(bubbleHolder)
   }
 
@@ -328,7 +333,8 @@
     var iconUrl = config.launcherDesign && config.launcherDesign.iconUrl
     if (iconUrl && iconUrl.indexOf('http') !== 0) iconUrl = (config.beBaseUrl || '').replace(/\/$/, '') + iconUrl
     var tdS = (config.toastDesign && config.toastDesign.styles) || {}
-    var cardBg = tdS.backgroundColor || '#ffffff'
+    // The studio compiles the toast's fill as `background`; older configs carry `backgroundColor`.
+    var cardBg = tdS.background || tdS.backgroundColor || '#ffffff'
     var cardColor = tdS.color || '#1c1d22'
     var cardRadius = tdS.borderRadius || '16px'
     var avatar = iconUrl
@@ -670,9 +676,42 @@
   }
 
   // The launcher icon: the studio's uploaded icon when set, else the stock glyph
+  // The glyphs the builder offers for the launcher, by the name the design
+  // stores. 'bubble' is the launcher's own default mark, kept as it always was.
+  var STROKE =
+    ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+  var LAUNCHER_GLYPHS = {
+    chat:
+      '<svg' +
+      STROKE +
+      '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+    spark:
+      '<svg' +
+      STROKE +
+      '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>',
+    'chevron-up': '<svg' + STROKE + '<path d="m18 15-6-6-6 6"/></svg>',
+    arrow: '<svg' + STROKE + '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>',
+    'cine-up':
+      '<svg viewBox="0 0 547 475" style="transform:rotate(90deg)"><path d="M547 0.1L0 237.3L547 474.4V399.1L164.6 237.3L547 75.4Z" fill="currentColor" stroke="none"/></svg>',
+    star:
+      '<svg' +
+      STROKE +
+      '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>',
+    heart:
+      '<svg' +
+      STROKE +
+      '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>',
+    help:
+      '<svg' +
+      STROKE +
+      '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>',
+  }
+
   function launcherIconHtml() {
     var d = config.launcherDesign
-    if (d && d.iconUrl) {
+    if (d && d.icon === 'none') return ''
+    if (d && d.icon && d.icon !== 'custom' && LAUNCHER_GLYPHS[d.icon]) return LAUNCHER_GLYPHS[d.icon]
+    if (d && d.iconUrl && (d.icon === 'custom' || !d.icon)) {
       var u = d.iconUrl
       if (u.indexOf('http') !== 0) {
         var base = (config.beBaseUrl || '').replace(/\/$/, '')
@@ -712,17 +751,66 @@
     return launcherIconHtml() + (label ? '<span>' + escapeHtml(label) + '</span>' : '')
   }
 
+  // Where the launcher sits: its side, and the design's distance from that
+  // side and from the bottom.
+  function placeLauncher() {
+    if (!bubbleHolder) return
+    var d = config.launcherDesign || {}
+    var x = (d.offsetX != null ? d.offsetX : 20) + 'px'
+    var left = config.position === 'left'
+    bubbleHolder.style.left = left ? x : ''
+    bubbleHolder.style.right = left ? '' : x
+    // Still clears the home-indicator strip on notched phones.
+    if (d.offsetY != null) {
+      bubbleHolder.style.bottom = 'max(' + d.offsetY + 'px, calc(env(safe-area-inset-bottom, 0px) + 12px))'
+    }
+  }
+
+  var LAUNCHER_ENTRANCES = ['slide', 'fade', 'none']
+  var LAUNCHER_ATTENTION = ['pulse', 'bounce', 'wiggle']
+  var ICON_BOX = ['width', 'height', 'min-width', 'min-height', 'max-width', 'max-height']
+
   /**
-   * The launcher's box. The design's size is the launcher's height; with a
-   * label it grows sideways to hold the icon and the text, where a bare icon
-   * stays the square it was. Forcing the square onto a labelled launcher is
-   * what used to squeeze the text out over the page.
+   * Everything about the launcher that follows its content rather than its
+   * fill: its box, its icon's size and colour, its label, and how it moves.
+   *
+   * The design's size is the launcher's height; with a label it grows sideways
+   * to hold the icon and the text, where a bare icon stays the square it was.
+   * Forcing the square onto a labelled launcher is what used to squeeze the
+   * text out over the page.
    */
   function applyLauncherGeometry() {
     if (!bubbleHolder) return
     var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
     var d = config.launcherDesign
     if (!bubble || !d || !d.size) return
+
+    // The icon: the design's colour (the stylesheet pins white) and, while
+    // the launcher is closed, the design's size. The close mark keeps its own.
+    var glyph = bubble.querySelector('svg')
+    if (glyph) {
+      glyph.style.color = 'inherit'
+      if (!isOpen && d.iconSize) {
+        for (var i = 0; i < ICON_BOX.length; i++) glyph.style.setProperty(ICON_BOX[i], d.iconSize + 'px', 'important')
+      }
+    }
+
+    // Motion: how it arrives, what it does while it waits, how far it grows
+    // under the pointer. The waiting loop stops once the chat is open.
+    for (var e = 0; e < LAUNCHER_ENTRANCES.length; e++) {
+      bubble.classList.toggle('pair-ai-bubble--enter-' + LAUNCHER_ENTRANCES[e], d.entrance === LAUNCHER_ENTRANCES[e])
+    }
+    var motion = bubbleHolder.querySelector('.pair-ai-bubble-motion')
+    if (motion) {
+      for (var a = 0; a < LAUNCHER_ATTENTION.length; a++) {
+        motion.classList.toggle(
+          'pair-ai-attn-' + LAUNCHER_ATTENTION[a],
+          !isOpen && d.attention === LAUNCHER_ATTENTION[a],
+        )
+      }
+    }
+    if (d.hoverScale) bubble.style.setProperty('--pair-hover-scale', String(d.hoverScale))
+
     var span = bubble.querySelector('span')
     bubble.style.height = d.size + 'px'
     if (span && !isOpen) {
@@ -730,7 +818,8 @@
       bubble.style.minWidth = d.size + 'px'
       bubble.style.maxWidth = 'calc(100vw - 40px)'
       bubble.style.paddingTop = bubble.style.paddingBottom = '0'
-      bubble.style.paddingInlineStart = Math.round(d.size * 0.29) + 'px'
+      // A little less room on the icon's side; even when there is no icon.
+      bubble.style.paddingInlineStart = Math.round(d.size * (bubble.querySelector('svg, img') ? 0.29 : 0.36)) + 'px'
       bubble.style.paddingInlineEnd = Math.round(d.size * 0.36) + 'px'
       var l = d.label || {}
       if (l.color) span.style.color = l.color === '#brand' ? config.primaryColor || '' : l.color
@@ -899,22 +988,23 @@
     var d = config.launcherDesign
     if (!bubble || !d) return
     if (d.radius != null) bubble.style.borderRadius = d.radius + 'px'
-    var bg = d.background
-    if (bg === '#brand' || bg === 'brand') bg = config.primaryColor
-    if (bg) bubble.style.background = bg
     // swap the icon in place when the panel is closed
     if (!isOpen) {
       var badgeHTML = badgeElement && bubble.contains(badgeElement) ? badgeElement.outerHTML : ''
       bubble.innerHTML = launcherContentHtml() + badgeHTML
       badgeElement = bubble.querySelector('.pair-ai-bubble-badge') || badgeElement
     }
-    applyLauncherGeometry()
+    // Fill, border, shadow and colours, then the box, icon, label and motion.
+    applyBubbleStyles()
+    placeLauncher()
   }
 
   // Update bubble color
   function updateBubbleColor(color) {
     var bubble = bubbleHolder.querySelector('.pair-ai-bubble')
-    if (bubble) {
+    var designed = config.launcherStyles && (config.launcherStyles.background || config.launcherStyles.backgroundColor)
+    // The brand colour is the fill only until the design names its own.
+    if (bubble && !designed) {
       bubble.style.background = color
     }
   }
@@ -926,15 +1016,26 @@
     if (!bubble) return
 
     var lStyles = config.launcherStyles || {}
-    var bubbleBg = lStyles.backgroundColor || config.primaryColor
+    // The design's own fill (a colour or a gradient) wins over the brand colour.
+    var bubbleBg = lStyles.background || lStyles.backgroundColor || config.primaryColor
     if (bubbleBg) {
       bubble.style.background = bubbleBg
+    }
+    if (lStyles.borderWidth) {
+      bubble.style.borderWidth = lStyles.borderWidth
+      bubble.style.borderStyle = lStyles.borderStyle || 'none'
+      bubble.style.borderColor = lStyles.borderColor || 'transparent'
+    }
+    if (lStyles.boxShadow) {
+      bubble.style.boxShadow = lStyles.boxShadow
     }
 
     var bubbleColor = lStyles.color || 'white'
     if (bubbleColor) {
       bubble.style.color = bubbleColor
-      var svgPath = bubble.querySelector('svg path')
+      // Only the launcher's own filled mark takes a fill; the drawn glyphs
+      // are strokes and follow `color`.
+      var svgPath = bubble.querySelector('svg path[data-pair-fill]')
       if (svgPath) {
         svgPath.setAttribute('fill', bubbleColor)
       }
@@ -1012,10 +1113,7 @@
 
     // 1. Update position classes on holders
     if (config.position !== oldPosition) {
-      if (bubbleHolder) {
-        bubbleHolder.style.left = config.position === 'left' ? '20px' : ''
-        bubbleHolder.style.right = config.position === 'right' ? '20px' : ''
-      }
+      placeLauncher()
       if (widgetHolder) {
         widgetHolder.className = widgetHolder.className
           .replace('pair-ai-position-left', '')

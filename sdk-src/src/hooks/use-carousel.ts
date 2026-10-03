@@ -66,6 +66,9 @@ export function useCarousel({
   // Autoplay effect
   useEffect(() => {
     if (!emblaApi || !autoplay || !active) return
+    // A visitor who asked for reduced motion still swipes the track by hand;
+    // it just never moves on its own.
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
     let intervalId: NodeJS.Timeout
 

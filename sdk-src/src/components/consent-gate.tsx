@@ -41,9 +41,10 @@ const POINT_GLYPHS = {
 } as const
 
 const rgbOf = (hex: string | undefined) => {
-  const m = /#([0-9a-f]{6})/i.exec(hex ?? '')
+  // #RRGGBB (an 8-digit colour's alpha is dropped), or the #RGB shorthand.
+  const m = /#([0-9a-f]{6})/i.exec(hex ?? '') ?? /#([0-9a-f]{3})\b/i.exec(hex ?? '')
   if (!m) return null
-  const n = parseInt(m[1], 16)
+  const n = parseInt(m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1], 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
@@ -112,6 +113,14 @@ export function ConsentGate() {
           marginBottom: 8,
         }}
       >
+        {/* The grab handle a bottom sheet carries; off unless the studio asks for it. */}
+        {d.showHandle && (
+          <span
+            className="mx-auto mb-3 block h-1 w-10 rounded-full"
+            style={{ background: rs(d.points?.cardBorder) ?? '#E5E5EA' }}
+            aria-hidden
+          />
+        )}
         {d.showIllustration !== false && (
           <div className="mb-4 flex justify-center">
             <div
@@ -150,7 +159,21 @@ export function ConsentGate() {
             {points.map((p, i) => {
               const Glyph = POINT_GLYPHS[p.icon as keyof typeof POINT_GLYPHS] ?? Info
               return (
-                <li key={i} className="flex items-start gap-3">
+                <li
+                  key={i}
+                  className="flex items-start gap-3"
+                  // Each point in its own bordered card, when the studio asks for it.
+                  style={
+                    d.points?.card
+                      ? {
+                          background: rs(d.points.cardBackground) ?? '#FFFFFF',
+                          border: `1px solid ${rs(d.points.cardBorder) ?? '#E5E5EA'}`,
+                          borderRadius: d.points.cardRadius ?? 12,
+                          padding: d.points.cardPadding ?? 12,
+                        }
+                      : undefined
+                  }
+                >
                   <Glyph
                     className="mt-0.5 shrink-0"
                     style={{

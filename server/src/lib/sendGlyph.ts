@@ -33,7 +33,9 @@ export const isDrawableSendIcon = (icon: unknown): boolean =>
 export function sendGlyphDataUri(icon: string, color: string, rtl: boolean): string | null {
   const paths = PATHS[icon]
   if (!paths) return null
-  const fill = /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : '#FFFFFF'
+  // `color` arrives resolved (a hex, never the brand token); a transparent
+  // glyph is a choice the builder offers, so it is drawn as one.
+  const fill = color === 'transparent' ? 'none' : /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : '#FFFFFF'
   // The horizontal arrow points along the reading direction; the upward ones
   // read the same way round in both.
   const mirror = rtl && icon === 'cinescape-right' ? ' transform="translate(24 0) scale(-1 1)"' : ''

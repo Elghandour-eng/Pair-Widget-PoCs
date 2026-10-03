@@ -128,6 +128,10 @@ const DESIGN_THEME_PATHS: Array<[guard: string, paths: Array<[path: string, toke
     ['widget_v2_config.consent_screen.design.subtitle.color', 'muted'],
     ['widget_v2_config.consent_screen.design.points.textColor', 'text'],
     ['widget_v2_config.consent_screen.design.points.iconColor', 'muted'],
+    // The per-point card, when it is on: without these a dark theme leaves
+    // light text on a white card.
+    ['widget_v2_config.consent_screen.design.points.cardBackground', 'surface2'],
+    ['widget_v2_config.consent_screen.design.points.cardBorder', 'border'],
     ['widget_v2_config.consent_screen.design.footnote.color', 'faint'],
   ]],
 ]

@@ -1,4 +1,9 @@
+import { useState } from 'react'
+
+import type { QuickLinkData } from '@/config/types/widget-config'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { useSendChatMessageFlow } from '@/features/conversation/hooks/use-send-chat-message-flow'
+import { useConversations } from '@/features/conversation/queries/use-conversations-queries'
 import { QuickLinkItem } from '@/features/intro/components/quick-link-item'
 import { useCarousel } from '@/hooks/use-carousel'
 import { isDarkBackground } from '@/lib/utils'
@@ -7,13 +12,18 @@ export function QuickLinksList() {
   const { widgetConfig } = useWidgetConfigContext()
   const quickLinksConfig = widgetConfig.quickLinks
 
+  const { data: conversations, isFetching: isConversationsLoading } = useConversations()
+  const { sendMessageFlow, isPending: isSendPending } = useSendChatMessageFlow()
+  const [loadingLinkId, setLoadingLinkId] = useState<string | null>(null)
+
   if (!quickLinksConfig || !quickLinksConfig.show) {
     return null
   }
 
-  // Sort the links by displayOrder
+  // Sort the links by displayOrder. Only a card switched off outright is
+  // hidden: one that says nothing about `active` is on, as the studio shows it.
   const sortedLinks = quickLinksConfig.links
-    .filter((l) => l.active)
+    .filter((l) => l.active !== false)
     .sort((a, b) => {
       const orderA = a.displayOrder ?? 9999
       const orderB = b.displayOrder ?? 9999
@@ -43,6 +53,33 @@ export function QuickLinksList() {
     return null
   }
 
+  const isPending = isConversationsLoading || isSendPending
+
+  // A tap sends the card's message the way a prompt chip sends its text; a
+  // card with no message of its own sends its title.
+  const messageOf = (item: QuickLinkData) => item.message?.trim() || item.text?.trim() || ''
+  const handleLinkClick = async (item: QuickLinkData) => {
+    const text = messageOf(item)
+    if (!text || isPending) return
+
+    setLoadingLinkId(item.id)
+    try {
+      await sendMessageFlow(text, conversations?.data[0]?.ulid)
+    } catch (error) {
+      console.error('Failed to start conversation with quick link:', error)
+    } finally {
+      setLoadingLinkId(null)
+    }
+  }
+  const clickProps = (item: QuickLinkData) => ({
+    onClick: messageOf(item) ? () => handleLinkClick(item) : undefined,
+    disabled: isPending && loadingLinkId === item.id,
+  })
+
+  // The studio's gap spaces the carousel track too, not only the stacked
+  // layouts; the fixed 8px stays for configs that carry no design.
+  const trackGap = design?.gap
+
   const itemProps = {
     cardStyles: quickLinksConfig.cardStyles,
     textStyle: quickLinksConfig.textStyle,
@@ -54,6 +91,8 @@ export function QuickLinksList() {
 
   return (
     <div ref={containerRef} className="w-full">
+      {/* Hover colours need a rule, not an inline style; the server compiles it. */}
+      {design?.hoverCss && <style>{design.hoverCss}</style>}
       {/* The channel's own heading over the cards, led by a brand chevron —
           the same row the studio's preview draws. */}
       {quickLinksConfig.title && (
@@ -77,10 +116,17 @@ export function QuickLinksList() {
           className="w-full cursor-grab overflow-hidden active:cursor-grabbing"
           ref={emblaRef}
         >
-          <div className="-ms-2 flex">
+          <div className="-ms-2 flex" style={trackGap !== undefined ? { marginInlineStart: -trackGap } : undefined}>
             {sortedLinks.map((item) => (
-              <div key={item.id} className="flex min-w-0 ps-2" style={{ flex: `0 0 ${basisPercentage}%` }}>
-                <QuickLinkItem item={item} {...itemProps} />
+              <div
+                key={item.id}
+                className="flex min-w-0 ps-2"
+                style={{
+                  flex: `0 0 ${basisPercentage}%`,
+                  ...(trackGap !== undefined ? { paddingInlineStart: trackGap } : {}),
+                }}
+              >
+                <QuickLinkItem item={item} {...itemProps} {...clickProps(item)} />
               </div>
             ))}
           </div>
@@ -91,7 +137,7 @@ export function QuickLinksList() {
           style={{ gap: design?.gap ?? 8 }}
         >
           {sortedLinks.map((item) => (
-            <QuickLinkItem key={item.id} item={item} {...itemProps} />
+            <QuickLinkItem key={item.id} item={item} {...itemProps} {...clickProps(item)} />
           ))}
         </div>
       )}

@@ -316,17 +316,24 @@ export function ItemBiInputs({
   )
 }
 
-/** Shadow controls, shared by every surface that casts one. */
-export function ShadowFields({ base, get, set, disabled }: { base: string } & PageProps) {
+/**
+ * Shadow controls, shared by every surface that casts one.
+ *
+ * `defaults` is what that surface casts when nothing is stored (its entry in
+ * lib/inputDesign.ts), so an untouched slider shows the shadow the widget
+ * really has — a flat surface reads 0 opacity rather than a shadow that is not
+ * there. The stored `size` has no control: a shadow is drawn from its offset,
+ * blur, colour and opacity, and `size` never changed what was drawn.
+ */
+export function ShadowFields({ base, get, set, disabled, defaults = { y: 0, blur: 0, opacity: 0 } }: { base: string; defaults?: { y: number; blur: number; opacity: number } } & PageProps) {
   const { t } = useI18n()
   const p = (k: string) => `${base}.${k}`
   return (
     <>
-      <NumField label={t('builder.sh.spread')} path={p('size')} min={0} max={80} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
-      <NumField label={t('builder.sh.y')} path={p('y')} min={-40} max={40} step={1} fallback={8} unit="px" get={get} set={set} disabled={disabled} />
-      <NumField label={t('builder.sh.blur')} path={p('blur')} min={0} max={80} step={1} fallback={16} unit="px" get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.y')} path={p('y')} min={-40} max={40} step={1} fallback={defaults.y} unit="px" get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.blur')} path={p('blur')} min={0} max={80} step={1} fallback={defaults.blur} unit="px" get={get} set={set} disabled={disabled} />
       <BrandColorField label={t('builder.sh.color')} path={p('color')} get={get} set={set} disabled={disabled} />
-      <NumField label={t('builder.sh.opacity')} path={p('opacity')} min={0} max={1} step={0.01} fallback={0.08} get={get} set={set} disabled={disabled} />
+      <NumField label={t('builder.sh.opacity')} path={p('opacity')} min={0} max={1} step={0.01} fallback={defaults.opacity} get={get} set={set} disabled={disabled} />
     </>
   )
 }

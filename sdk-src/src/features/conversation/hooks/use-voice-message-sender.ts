@@ -74,7 +74,6 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
         } catch (err) {
           logger.debug('useVoiceMessageSender', 'Failed to auto-register user', err)
           toast.error('Failed to start chat. Please try again.', {
-            position: 'top-center',
             richColors: true,
           })
           setIsProcessing(false)
@@ -99,7 +98,6 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
             size: blob.size,
           })
           toast.error(`Voice message part ${i + 1} is too large to send (max 5 MB).`, {
-            position: 'top-center',
             richColors: true,
           })
           continue
@@ -146,7 +144,7 @@ export function useVoiceMessageSender({ conversationId }: UseVoiceMessageSenderP
             segments.length > 1
               ? `Failed to send voice part ${i + 1} of ${segments.length}. Please try again.`
               : 'Failed to send voice message. Please try again.',
-            { position: 'top-center', richColors: true },
+            { richColors: true },
           )
           // Continue sending remaining segments even if one fails
         }

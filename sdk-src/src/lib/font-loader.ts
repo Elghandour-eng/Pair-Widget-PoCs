@@ -36,20 +36,6 @@ export function loadFontFamilyAsync(fontFamily?: string): Promise<void> {
     outfit: 'Outfit',
   }
 
-  // Extract the primary font name (e.g. "Outfit" from "Outfit, sans-serif")
-  const rawPrimary = fontFamily.split(',')[0].replace(/['"]/g, '').trim()
-  const lowercaseName = rawPrimary.toLowerCase()
-
-  const primaryFont =
-    commonFontsMap[lowercaseName] ||
-    rawPrimary
-      .split(/\s+/)
-      .map((word) => {
-        if (!word) return ''
-        return word.charAt(0).toUpperCase() + word.slice(1)
-      })
-      .join(' ')
-
   // Standard web-safe/system fonts that do not require loading
   const webSafeFonts = new Set([
     'default',
@@ -59,10 +45,10 @@ export function loadFontFamilyAsync(fontFamily?: string): Promise<void> {
     '-apple-system',
     'blinkmacsystemfont',
     'segoe ui',
-    'roboto',
     'sans-serif',
     'serif',
     'monospace',
+    'ui-monospace',
     'times new roman',
     'times',
     'courier new',
@@ -72,25 +58,54 @@ export function loadFontFamilyAsync(fontFamily?: string): Promise<void> {
     'trebuchet ms',
   ])
 
-  if (webSafeFonts.has(primaryFont.toLowerCase())) return Promise.resolve()
+  // Weights to ask for where a family does not publish the usual set: the
+  // css2 API rejects the whole request for a weight a family lacks, so asking
+  // Lato for 500 loses Lato altogether rather than just that weight.
+  const familyWeights: Record<string, string> = {
+    Lato: '300;400;700;900',
+    Merriweather: '300;400;700;900',
+    Almarai: '300;400;700;800',
+    Tajawal: '300;400;500;700;800',
+  }
 
-  const fontId = `google-font-${primaryFont.toLowerCase().replace(/\s+/g, '-')}`
-  if (document.getElementById(fontId)) return Promise.resolve()
+  // Every family in the stack, not just the first: a pair such as
+  // "'Montserrat', 'Alexandria'" names the second for the Arabic glyphs the
+  // first does not carry.
+  const families = fontFamily
+    .split(',')
+    .map((f) => f.replace(/['"]/g, '').trim())
+    .filter(Boolean)
 
-  return new Promise<void>((resolve) => {
-    const link = document.createElement('link')
-    link.id = fontId
-    link.rel = 'stylesheet'
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(primaryFont)}:wght@300;400;500;600;700&display=swap`
+  const loads = families.map((rawName) => {
+    const family =
+      commonFontsMap[rawName.toLowerCase()] ||
+      rawName
+        .split(/\s+/)
+        .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
+        .join(' ')
 
-    link.onload = () => resolve()
-    link.onerror = () => {
-      console.warn(`[FontLoader] Failed to load font: ${primaryFont}`)
-      resolve()
-    }
+    if (webSafeFonts.has(family.toLowerCase())) return Promise.resolve()
 
-    document.head.appendChild(link)
+    const fontId = `google-font-${family.toLowerCase().replace(/\s+/g, '-')}`
+    if (document.getElementById(fontId)) return Promise.resolve()
+
+    return new Promise<void>((resolve) => {
+      const link = document.createElement('link')
+      link.id = fontId
+      link.rel = 'stylesheet'
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${familyWeights[family] ?? '300;400;500;600;700'}&display=swap`
+
+      link.onload = () => resolve()
+      link.onerror = () => {
+        console.warn(`[FontLoader] Failed to load font: ${family}`)
+        resolve()
+      }
+
+      document.head.appendChild(link)
+    })
   })
+
+  return Promise.all(loads).then(() => undefined)
 }
 
 /**

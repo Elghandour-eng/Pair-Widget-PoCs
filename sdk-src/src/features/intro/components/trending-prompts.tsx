@@ -48,6 +48,9 @@ export function TrendingPrompts() {
 
   const showTitle = config.showTitle ?? true
   const isCardLayout = config.layout === 'card' || chipStyles?.flexDirection === 'column'
+  // Chips are only as wide as their text, so the studio's alignment places
+  // them: along the row when they wrap, across the column when they stack.
+  const flexAlign = { start: 'flex-start', center: 'center', end: 'flex-end' }[config.align ?? 'start']
 
   const { containerRef, emblaRef, basisPercentage } = useCarousel({
     itemCount: prompts.length,
@@ -68,6 +71,8 @@ export function TrendingPrompts() {
           {title}
         </h2>
       )}
+      {/* Hover colours need a rule, not an inline style; the server compiles it. */}
+      {config.hoverCss && <style>{config.hoverCss}</style>}
       <div ref={containerRef} className="w-full">
         {isCardLayout ? (
           <div
@@ -105,7 +110,13 @@ export function TrendingPrompts() {
                   ? 'flex overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
                   : 'flex flex-wrap'
             }
-            style={{ gap: config.gap ?? 8 }}
+            style={{
+              gap: config.gap ?? 8,
+              ...(config.chipLayout === 'stack' && config.align ? { alignItems: flexAlign } : {}),
+              ...(config.chipLayout !== 'stack' && config.chipLayout !== 'scroll' && config.align
+                ? { justifyContent: flexAlign }
+                : {}),
+            }}
           >
             {prompts.map((prompt) => (
               <li key={prompt.id} className="shrink-0">

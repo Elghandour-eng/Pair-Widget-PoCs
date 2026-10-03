@@ -24,6 +24,7 @@ export interface HeaderConfig {
   actions: {
     cart: boolean
     favorites: boolean
+    reset: boolean
   }
   /** Header controls: the language and theme switches, the glyphs they wear, and the close button. */
   controls: {
@@ -109,6 +110,8 @@ export interface WidgetConfig {
   showHeader?: boolean
   showFooter?: boolean
   openAutomatically?: boolean
+  /** The font of the whole panel, when the studio's design names one. */
+  panelStyle?: { fontFamily: string }
   /** The host page opens and closes the panel itself (`startClosed` in its snippet). */
   hostControlsPanel?: boolean
   userId?: string
@@ -154,6 +157,8 @@ export interface QuickLinkData {
   active?: boolean
   subtitle?: string
   media_ulid?: string
+  /** What a tap on the card sends to the chat; the card's text when empty. */
+  message?: string
 }
 
 export interface TrendingPromptsConfig {
@@ -179,6 +184,10 @@ export interface TrendingPromptsConfig {
   chipLayout?: 'wrap' | 'stack' | 'scroll'
   /** Space between chips, in px. */
   gap?: number
+  /** Where the chips sit in their row or column; start when the studio set none. */
+  align?: 'start' | 'center' | 'end'
+  /** The studio's hover colours, as a compiled rule for `.pair-prompt-chip`. */
+  hoverCss?: string
 }
 
 export interface TrendingPromptData {
@@ -273,6 +282,7 @@ export interface ChatInputConfig {
 export interface MessagesConfig {
   suggestions?: import('./widget-config-dto').SuggestionChipsDto
   questions?: import('./widget-config-dto').QuestionCardDto
+  emptyState?: import('./widget-config-dto').EmptyStateDto
   loadingOlder?: {
     text?: string
     textColor?: string

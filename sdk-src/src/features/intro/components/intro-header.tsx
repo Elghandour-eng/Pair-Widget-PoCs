@@ -50,7 +50,7 @@ function IntroHeader({ isHostOnline = true }: IntroHeaderProps) {
             style={h?.iconStyle}
           />
         ) : (
-          <WidgetAvatar showIconFallback={true} style={h?.iconStyle} />
+          <WidgetAvatar showIconFallback={true} useURL style={h?.iconStyle} />
         )}
 
         <div>

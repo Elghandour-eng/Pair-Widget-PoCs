@@ -135,8 +135,8 @@ describe('compiling to what the widget reads', () => {
 
     const withHover = normalizeChatInput({ send: { hoverBackground: '#222222' }, actions: { hoverBackground: '#333333' } })
     const hover = hoverCss(withHover, BRAND, '.s', '.a')
-    expect(hover).toContain('.s:hover{background-color:#222222}')
-    expect(hover).toContain('.a:hover{background-color:#333333}')
+    expect(hover).toContain('.s:hover{background-color:#222222 !important}')
+    expect(hover).toContain('.a:hover{background-color:#333333 !important}')
   })
 
   it('omits a hover rule that was never set', () => {

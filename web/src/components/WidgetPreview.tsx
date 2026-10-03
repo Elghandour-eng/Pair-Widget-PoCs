@@ -1,16 +1,17 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Check } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import type { WidgetConfig } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/lib/heroDesign'
 import {
-  actionCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, launcherMessageCss, loadingCss,
+  actionCss, containerCss, focusCss, hoverCss, inputCss, launcherCss, launcherHoverCss, launcherMessageCss, loadingCss,
   cardCss, cardHoverCss, cardSubtitleCss, cardTextCss, chipCss, chipHoverCss,
   normalizeChatInput, normalizeConsent, normalizeCsat, normalizeLauncher, normalizeLoading,
   normalizePreChat, normalizeQuickLinks,
   normalizePrompts as normalizeChatInputPrompts, normalizeToast, resolve, shadowCss,
   textCss, toastCss, type ChatInputDesign, type ConsentDesign, type CsatDesign, type LauncherDesign,
   type LoadingDesign, type PreChatDesign, type ToastDesign,
+  TOAST_BUILT_IN, builtInLoading,
 } from '@/lib/inputDesign'
 import { SlotIcon } from './IconField'
 import { PairWordmark } from './brand'
@@ -79,8 +80,15 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const heroEnabled = get(v2, 'intro_screen.heroSection.enabled.value') !== false
   const welcomeTitle = get(v2, 'intro_screen.welcomeTitle.text') || c.welcome_title || ''
   const welcomeSub = get(v2, 'intro_screen.welcomeSubtitle.text') || c.welcome_tagline || ''
+  // In the widget's order: by `order` where a card carries one, as listed otherwise.
   const quickLinks: Any[] =
-    get(v2, 'quick_links.showQuickLinks.value') === false ? [] : (get(v2, 'quick_links.quickLinkCards') ?? []).filter((q: Any) => q.active !== false)
+    get(v2, 'quick_links.showQuickLinks.value') === false
+      ? []
+      : (get(v2, 'quick_links.quickLinkCards') ?? [])
+          .map((q: Any, i: number) => ({ q, at: q.order ?? i + 1 }))
+          .filter(({ q }: Any) => q.active !== false)
+          .sort((a: Any, b: Any) => a.at - b.at)
+          .map(({ q }: Any) => q)
   // The channel's own heading for the cards; the dashboard string is only a fallback.
   // A title the channel cleared on purpose must stay cleared: `||` treated an
   // empty string as absent and put the placeholder back, so a heading the
@@ -93,12 +101,20 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   const placeholder = get(v2, 'chat_input.placeholderText.text') || t('preview.placeholder')
   // The composer's whole look, from the config, with the legacy fields as fallbacks.
   const ci = normalizeChatInput({
-    layout: get(v2, 'chat_input.design.layout') ?? get(v2, 'chat_input.inputLayout.type'),
+    // The older layout field only counts until a design exists, as on the server.
+    layout: get(v2, 'chat_input.design.layout') ?? (get(v2, 'chat_input.design') ? undefined : get(v2, 'chat_input.inputLayout.type')),
     direction: get(v2, 'chat_input.design.direction') ?? get(v2, 'chat_input.direction'),
     ...(get(v2, 'chat_input.design') ?? {}),
   })
   const rs = (c: string) => resolve(c, brand)
-  // Action icons default to the muted text colour; a channel can pin its own.
+  // Action icons keep the widget's own grey until a channel pins a colour.
+  const actionStyle = { ...actionCss(ci, brand), color: ci.actions.iconColor ? rs(ci.actions.iconColor) : '#626A6A' } as CSSProperties
+  // Once a design exists the server compiles it over the older `styles` block;
+  // until then that block is all the widget has.
+  const legacyField = (get(v2, 'chat_input.styles') ?? {}) as CSSProperties
+  const fieldStyle = get(v2, 'chat_input.design')
+    ? { ...legacyField, ...(inputCss(ci, brand) as CSSProperties) }
+    : { ...(inputCss(ci, brand) as CSSProperties), ...legacyField }
   const poweredBy = c.powered_by_pair_ai !== false
 
   const locale: string = typeof c.locale === 'string' ? c.locale : 'en'
@@ -158,6 +174,13 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   // layered on last so a config tuned by hand still wins.
   const pr = normalizeChatInputPrompts(get(v2, 'trending_prompts.design'))
   const chipStyle: CSSProperties = { ...(get(v2, 'trending_prompts.chipStyle') ?? {}) }
+  // Until a design exists, the widget takes the heading and the icons from
+  // `displaySettings` — the same state the builder's two toggles show.
+  const hasPromptDesign = get(v2, 'trending_prompts.design') != null
+  const promptShowTitle = hasPromptDesign ? pr.showTitle : get(v2, 'trending_prompts.displaySettings.showTitle') === true
+  const promptShowIcon = hasPromptDesign ? pr.showIcon : get(v2, 'trending_prompts.displaySettings.showIcons') === true
+  // Chips are as wide as their text, so alignment places them in the row or column.
+  const chipAlign = { start: 'flex-start', center: 'center', end: 'flex-end' }[pr.align]
 
   // The launcher only exists while the widget is closed, so it is shown over the
   // preview while that section is the one being edited — otherwise none of its
@@ -220,15 +243,32 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
           preview is not tighter than the thing it is previewing. */}
       <div className="relative flex-1 space-y-6 overflow-hidden px-4 pt-8">
         {focus === 'loading' ? (
-          <LoadingPreview design={normalizeLoading(get(v2, 'intro_screen.loadingState.design'))} brand={brand} />
+          // With no design stored the widget draws its own placeholder, not the studio's defaults.
+          <LoadingPreview
+            design={
+              get(v2, 'intro_screen.loadingState.design')
+                ? normalizeLoading(get(v2, 'intro_screen.loadingState.design'))
+                : builtInLoading(get(v2, 'intro_screen.loadingState.type'))
+            }
+            brand={brand}
+          />
         ) : null}
-        {focus === 'toast' && <ToastPreview design={normalizeToast(c.toast_design)} brand={brand} text={get(v2, 'messages.feedback.toastMessage')} />}
+        {focus === 'toast' && (
+          <ToastPreview
+            design={c.toast_design ? normalizeToast(c.toast_design) : TOAST_BUILT_IN}
+            builtIn={!c.toast_design}
+            brand={brand}
+            text={get(v2, 'messages.feedback.toastMessage')}
+          />
+        )}
         {focus === 'prechat' && (
           <PreChatPreview
             design={normalizePreChat(get(v2, 'pre_chat_form.design'))}
             brand={brand}
-            message={get(v2, 'pre_chat_form.message') || 'Share your queries or comments here.'}
-            fields={get(v2, 'pre_chat_form.fields')}
+            // The same precedence the server applies: this block's own message
+            // and fields, else the ones Pair imported at the top level.
+            message={typeof get(v2, 'pre_chat_form.message') === 'string' ? get(v2, 'pre_chat_form.message') : (get(c, 'pre_chat_form_options.pre_chat_message') ?? '')}
+            fields={get(v2, 'pre_chat_form.fields')?.length ? get(v2, 'pre_chat_form.fields') : get(c, 'pre_chat_form_options.pre_chat_fields')}
           />
         )}
         {focus === 'consent' && (
@@ -334,7 +374,7 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
         {prompts.length > 0 && (
           <div>
             <style>{chipHoverCss(pr, brand, '.pv-chip')}</style>
-            {pr.showTitle && !!promptTitle && (
+            {promptShowTitle && !!promptTitle && (
               <p
                 className="mb-2 uppercase tracking-[0.09em]"
                 style={{
@@ -355,19 +395,23 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
                     ? 'flex overflow-x-auto pb-1'
                     : 'flex flex-wrap items-start'
               }
-              style={{ gap: pr.gap }}
+              style={{
+                gap: pr.gap,
+                ...(pr.layout === 'stack' ? { alignItems: chipAlign } : pr.layout === 'wrap' ? { justifyContent: chipAlign } : {}),
+              }}
             >
               {prompts.slice(0, 4).map((p, i) => (
                 <span
                   key={i}
                   className={`pv-chip inline-flex shrink-0 items-center transition-colors duration-200 ${pr.iconPosition === 'end' ? 'flex-row-reverse' : ''}`}
-                  style={{ ...(chipCss(pr, brand) as CSSProperties), gap: pr.showIcon ? 6 : 0, ...chipStyle }}
+                  style={{ ...(chipCss(pr, brand) as CSSProperties), gap: promptShowIcon ? 6 : 0, ...chipStyle }}
                 >
-                  {pr.showIcon && (
+                  {promptShowIcon && (
                     <SlotIcon
                       // A prompt may carry its own icon; otherwise it takes the one set for all of them.
-                      name={p.icon || pr.icon}
-                      url={p.icon === 'custom' ? p.iconUrl : pr.iconUrl}
+                      // Its upload counts when the chip is `custom` or names no icon at all, as in the widget.
+                      name={(p.icon === 'custom' || !p.icon) && p.iconUrl ? 'custom' : p.icon && p.icon !== 'custom' ? p.icon : pr.icon}
+                      url={(p.icon === 'custom' || !p.icon) && p.iconUrl ? p.iconUrl : pr.iconUrl}
                       size={pr.iconSize}
                       color={rs(pr.iconColor)}
                     />
@@ -385,13 +429,21 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
             <span
               dir="auto"
               className="max-w-[80%] break-words rounded-2xl rounded-ee-md px-3.5 py-2 text-start text-[11.5px] leading-[1.5]"
-              style={{
-                background: get(v2, 'messages.customerMessages.bubbleStyle.backgroundColor') || brand,
-                color: get(v2, 'messages.customerMessages.TextStyles.color') || '#ffffff',
-                border: get(v2, 'messages.customerMessages.bubbleStyle.borderColor')
-                  ? `1px solid ${get(v2, 'messages.customerMessages.bubbleStyle.borderColor')}`
-                  : undefined,
-              }}
+              style={
+                // As in the widget: an outlined bubble has a border and no fill,
+                // a filled one has a fill (the brand's, when asked) and no border.
+                get(v2, 'messages.customerMessages.bubbleType') === 'outline'
+                  ? {
+                      background: 'transparent',
+                      border: `1px solid ${get(v2, 'messages.customerMessages.bubbleStyle.borderColor') || brand}`,
+                      color: get(v2, 'messages.customerMessages.TextStyles.color') || get(v2, 'messages.customerMessages.bubbleStyle.borderColor') || brand,
+                    }
+                  : {
+                      background:
+                        (get(v2, 'messages.customerMessages.useBrandColor') !== true && get(v2, 'messages.customerMessages.bubbleStyle.backgroundColor')) || brand,
+                      color: get(v2, 'messages.customerMessages.TextStyles.color') || '#ffffff',
+                    }
+              }
             >
               {sent}
             </span>
@@ -403,10 +455,8 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
 
       <div
         style={{
-          background: ci.container.background === 'transparent' ? undefined : rs(ci.container.background),
-          paddingInline: ci.container.paddingX,
-          paddingTop: ci.container.paddingTop,
-          paddingBottom: ci.container.paddingBottom,
+          ...(containerCss(ci, brand) as CSSProperties),
+          backgroundColor: ci.container.background === 'transparent' ? undefined : rs(ci.container.background),
         }}
       >
         {/* The composer, drawn from the same compiled values the widget is sent.
@@ -416,11 +466,11 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
           .pv-field::placeholder{color:${rs(ci.placeholder.color)};font-size:${ci.placeholder.size}px;font-weight:${ci.placeholder.weight};font-style:${ci.placeholder.italic ? 'italic' : 'normal'}}`}</style>
         <div dir={inputDir} className="flex items-center" style={{ gap: ci.field.gap }}>
           <div
-            className={`pv-input flex min-w-0 flex-1 items-center transition-all duration-300 ${ci.layout === 'inset_card' ? 'shadow-inner' : ''}`}
-            style={{ ...(inputCss(ci, brand) as CSSProperties), ...(get(v2, 'chat_input.styles') ?? {}) }}
+            className="pv-input flex min-w-0 flex-1 items-center transition-all duration-300"
+            style={fieldStyle}
           >
             {ci.actions.attach && (
-              <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionCss(ci, brand) as CSSProperties}>
+              <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionStyle}>
                 <SlotIcon name={ci.actions.attachIcon} url={ci.actions.attachUrl} size={ci.actions.iconSize} />
               </span>
             )}
@@ -438,12 +488,12 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
             />
             <span className="flex shrink-0 items-center" style={{ gap: ci.actions.gap }}>
               {ci.actions.emoji && (
-                <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionCss(ci, brand) as CSSProperties}>
+                <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionStyle}>
                   <SlotIcon name={ci.actions.emojiIcon} url={ci.actions.emojiUrl} size={ci.actions.iconSize} />
                 </span>
               )}
               {ci.actions.voice && (
-                <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionCss(ci, brand) as CSSProperties}>
+                <span className="pv-action grid shrink-0 place-items-center transition-colors duration-200" style={actionStyle}>
                   <SlotIcon name={ci.actions.voiceIcon} url={ci.actions.voiceUrl} size={ci.actions.iconSize} />
                 </span>
               )}
@@ -464,18 +514,12 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   )
 })
 
-/** The default pre-chat fields, for a config the studio has not seeded yet. */
-const PREVIEW_PC_FIELDS = [
-  { name: 'emailAddress', type: 'email', label: 'Email Id', placeholder: 'emailAddress', required: true, enabled: true },
-  { name: 'fullName', type: 'text', label: 'Full name', placeholder: 'fullName', required: false, enabled: true },
-  { name: 'phoneNumber', type: 'text', label: 'Phone number', placeholder: 'phoneNumber', required: true, enabled: true },
-]
-
 /** The pre-chat form, drawn from the same compiled values the widget is sent. */
 function PreChatPreview({ design, brand, message, fields }: { design: PreChatDesign; brand: string; message: string; fields?: unknown }) {
   const d = design
   const rs = (v: string) => resolve(v, brand)
-  const rows = (Array.isArray(fields) && fields.length ? fields : PREVIEW_PC_FIELDS).filter(
+  // Only the fields the config carries: the widget draws none of its own.
+  const rows = (Array.isArray(fields) ? fields : []).filter(
     (f: Record<string, unknown>) => f.enabled !== false,
   )
   const inputStyle: CSSProperties = {
@@ -528,16 +572,19 @@ function PreChatPreview({ design, brand, message, fields }: { design: PreChatDes
       {d.banner.show && d.banner.url && (
         <img src={d.banner.url} alt="" className="mb-3 w-full" style={{ height: Math.min(d.banner.height, 72), objectFit: d.banner.fit, borderRadius: d.banner.radius }} />
       )}
-      <p
-        className="mb-3"
-        style={{ color: rs(d.message.color), fontSize: Math.min(d.message.size, 12), fontWeight: d.message.weight, textAlign: d.message.align as CSSProperties['textAlign'] }}
-      >
-        {message}
-      </p>
+      {message && (
+        <p
+          className="mb-3"
+          style={{ color: rs(d.message.color), fontSize: Math.min(d.message.size, 12), fontWeight: d.message.weight, textAlign: d.message.align as CSSProperties['textAlign'] }}
+        >
+          {message}
+        </p>
+      )}
       <div className="flex flex-col" style={{ gap: Math.min(d.field.gap, 12) }}>
         {rows.map((f: Record<string, string | boolean>, i: number) => row(String(f.label ?? f.name), String(f.placeholder ?? ''), f.required === true, i))}
+        {/* A cleared text falls back to the default, as the server serves it. */}
         {d.showMessage &&
-          row(d.messageLabel, d.messagePlaceholder, true, 98)}
+          row(d.messageLabel || 'Message', d.messagePlaceholder || 'Type your message here...', true, 98)}
         <span
           className="grid place-items-center"
           style={{
@@ -552,7 +599,7 @@ function PreChatPreview({ design, brand, message, fields }: { design: PreChatDes
             boxShadow: shadowCss(d.button.shadow, brand),
           }}
         >
-          {d.buttonText}
+          {d.buttonText || 'Start Chat'}
         </span>
       </div>
     </div>
@@ -648,13 +695,10 @@ function CsatPreview({ design, brand, texts }: { design: CsatDesign; brand: stri
 function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: string; cs: Record<string, any> }) {
   const d = design
   const rs = (v: string) => resolve(v, brand)
-  const points: Array<{ icon?: string; text?: string }> = Array.isArray(cs.points) && cs.points.length
-    ? cs.points
-    : [
-        { icon: 'chat-text', text: 'This assistant helps you discover films and track bookings.' },
-        { icon: 'alert', text: 'AI suggestions may occasionally be incorrect.' },
-        { icon: 'shield', text: 'Your interactions may be used to improve recommendations.' },
-      ]
+  // Only the saved points with a text, as the server serves them: none saved, none shown.
+  const points: Array<{ icon?: string; text?: string }> = (Array.isArray(cs.points) ? cs.points : []).filter(
+    (pt: { text?: string }) => typeof pt?.text === 'string' && pt.text.trim() !== '',
+  )
   return (
     <div
       className="absolute inset-0 z-10 flex items-end p-3"
@@ -683,6 +727,7 @@ function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: s
             {cs.subtitle || 'A few things to keep in mind'}
           </p>
         )}
+        {points.length > 0 && (
         <div className="mt-2.5 flex flex-col text-start" style={{ gap: Math.min(d.points.gap, 9) }}>
           {points.map((pt, i) => (
             <span
@@ -699,11 +744,12 @@ function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: s
                   : undefined
               }
             >
-              <SlotIcon name={pt.icon || 'info'} size={Math.min(d.points.iconSize, 12)} color={rs(d.points.iconColor)} className="mt-0.5" />
+              <SlotIcon name={pt.icon && pt.icon !== 'custom' ? pt.icon : 'info'} size={Math.min(d.points.iconSize, 12)} color={rs(d.points.iconColor)} className="mt-0.5" />
               <span style={{ color: rs(d.points.textColor), fontSize: Math.min(d.points.textSize, 10), lineHeight: 1.45 }}>{pt.text}</span>
             </span>
           ))}
         </div>
+        )}
         {(() => {
           // One sentence with the links inside it, the way the reference reads —
           // a separate row of bare links looks like an afterthought.
@@ -761,27 +807,25 @@ function ConsentPreview({ design, brand, cs }: { design: ConsentDesign; brand: s
 function LoadingPreview({ design, brand }: { design: LoadingDesign; brand: string }) {
   const d = design
   const label = d.labelShow && d.labelText.trim() ? d.labelText : ''
+  const captionStyle = { color: resolve(d.labelColor, brand), fontSize: d.labelSize }
   const caption = label && (
-    <p className="mt-3 text-center" style={{ color: resolve(d.labelColor, brand), fontSize: d.labelSize }}>
+    <p className="mt-3 text-center" style={captionStyle}>
       {label}
     </p>
   )
 
   if (d.type === 'spinner' || d.type === 'dots') {
+    // As the widget draws it: the indicator with its caption beside it, and the
+    // spinner as an open arc of the given stroke.
     return (
-      <div className="flex h-full flex-col items-center justify-center" style={loadingCss(d, brand) as CSSProperties}>
+      <div className="flex h-full items-center justify-center gap-2" style={loadingCss(d, brand) as CSSProperties}>
         {d.type === 'spinner' ? (
-          <span
-            className="pv-spin inline-block rounded-full"
-            style={{
-              width: d.spinnerSize,
-              height: d.spinnerSize,
-              borderWidth: d.spinnerThickness,
-              borderStyle: 'solid',
-              borderColor: resolve(d.baseColor, brand),
-              borderTopColor: resolve(d.spinnerColor, brand),
-              animationDuration: `${d.speedMs}ms`,
-            }}
+          <Loader2
+            className="pv-spin shrink-0"
+            size={d.spinnerSize}
+            strokeWidth={d.spinnerThickness}
+            absoluteStrokeWidth
+            style={{ color: resolve(d.spinnerColor, brand), animationDuration: `${d.speedMs}ms` }}
           />
         ) : (
           <span className="flex items-end" style={{ gap: Math.max(2, d.spinnerSize / 4) }}>
@@ -800,7 +844,7 @@ function LoadingPreview({ design, brand }: { design: LoadingDesign; brand: strin
             ))}
           </span>
         )}
-        {caption}
+        {label && <p style={captionStyle}>{label}</p>}
       </div>
     )
   }
@@ -825,26 +869,37 @@ function LoadingPreview({ design, brand }: { design: LoadingDesign; brand: strin
   )
 }
 
-/** The toast, pinned where the config puts it so the position is what is judged. */
-function ToastPreview({ design, brand, text }: { design: ToastDesign; brand: string; text?: string }) {
+/**
+ * The toast, pinned where the config puts it so the position is what is judged.
+ * As in the widget, it sits inside the offset on every side: as wide as its
+ * text at the chosen side, or across the panel when stretched. `builtIn` is
+ * the widget's own toast, shown while no design is stored — it tints a
+ * confirmation green.
+ */
+function ToastPreview({ design, brand, text, builtIn }: { design: ToastDesign; brand: string; text?: string; builtIn?: boolean }) {
   const d = design
   const [top, side] = d.position.split('-')
   const message = (text ?? '').trim() || 'Thanks for your feedback.'
+  const { width: _width, ...box } = toastCss(d, brand) as CSSProperties
+  const tint: CSSProperties = builtIn
+    ? { background: 'hsl(143, 85%, 96%)', borderColor: 'hsl(145, 92%, 87%)', color: 'hsl(140, 100%, 27%)' }
+    : {}
   return (
     <div
       className="pointer-events-none absolute z-10 flex"
-      style={{
-        [top === 'top' ? 'top' : 'bottom']: d.offset,
-        left: side === 'left' ? d.offset : side === 'center' ? 0 : undefined,
-        right: side === 'right' ? d.offset : side === 'center' ? 0 : undefined,
-        justifyContent: side === 'center' ? 'center' : undefined,
-      } as CSSProperties}
+      style={{ [top === 'top' ? 'top' : 'bottom']: d.offset, left: d.offset, right: d.offset } as CSSProperties}
     >
       <span
-        className="anim-pop inline-flex items-center gap-2 whitespace-nowrap"
-        style={toastCss(d, brand) as CSSProperties}
+        className="anim-pop inline-flex min-w-0 items-center gap-2"
+        style={{
+          ...box,
+          ...tint,
+          flex: d.fullWidth ? '1 1 auto' : '0 1 auto',
+          marginLeft: !d.fullWidth && side !== 'left' ? 'auto' : undefined,
+          marginRight: !d.fullWidth && side !== 'right' ? 'auto' : undefined,
+        }}
       >
-        {d.showIcon && <Check className="size-3.5 shrink-0" style={{ color: resolve(d.iconColor, brand) }} />}
+        {d.showIcon && <Check className="size-3.5 shrink-0" style={{ color: builtIn ? undefined : resolve(d.iconColor, brand) }} />}
         {message}
       </span>
     </div>

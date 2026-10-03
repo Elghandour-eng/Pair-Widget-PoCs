@@ -26,7 +26,10 @@ export type CSSProperties = Record<string, string | number | undefined>
 
 /* --------------------------------- choices -------------------------------- */
 
-export const INPUT_LAYOUTS = ['floating_pill', 'full_width_bar', 'inset_card'] as const
+// The two the widget draws: a pill floating over the panel, and a bar docked
+// edge to edge. `inset_card` used to be offered but was never drawn any
+// differently from the pill; a stored one falls back to the pill it always was.
+export const INPUT_LAYOUTS = ['floating_pill', 'full_width_bar'] as const
 export type InputLayout = (typeof INPUT_LAYOUTS)[number]
 
 export const BORDER_STYLES = ['solid', 'dashed', 'dotted', 'none'] as const
@@ -41,7 +44,12 @@ export type FontWeight = (typeof FONT_WEIGHTS)[number]
 export const SEND_POSITIONS = ['inside', 'outside'] as const
 export type SendPosition = (typeof SEND_POSITIONS)[number]
 
-export const LAUNCHER_ICONS = ['bubble', 'chat', 'spark', 'arrow', 'custom', 'none'] as const
+// Every glyph the builder's launcher picker offers (ICON_SETS.launcher in
+// web/src/components/IconField.tsx), plus the older `arrow`. A name missing
+// here is silently swapped for the default on the way out.
+export const LAUNCHER_ICONS = [
+  'bubble', 'chat', 'spark', 'chevron-up', 'cine-up', 'star', 'heart', 'help', 'arrow', 'custom', 'none',
+] as const
 export type LauncherIcon = (typeof LAUNCHER_ICONS)[number]
 
 export const LAUNCHER_ENTRANCES = ['pop', 'slide', 'fade', 'none'] as const
@@ -99,6 +107,7 @@ export interface InputFieldDesign {
   /** Space between the field's own controls. */
   gap: number
   shadow: Shadow
+  /** Empty leaves the border as it is while the visitor types. */
   focusBorderColor: string
   focusRingWidth: number
   focusRingColor: string
@@ -152,6 +161,7 @@ export interface InputActionsDesign {
   shape: ButtonShape
   radius: number
   background: string
+  /** Empty keeps each glyph in the grey the widget has always drawn it in. */
   iconColor: string
   iconSize: number
   hoverBackground: string
@@ -440,8 +450,10 @@ export const CHAT_INPUT_DEFAULTS: ChatInputDesign = {
     minHeight: 46,
     gap: 8,
     shadow: { size: 16, y: 8, blur: 16, color: '#030712', opacity: 0.08 },
-    focusBorderColor: BRAND_TOKEN,
-    focusRingWidth: 3,
+    // The widget draws no focus state of its own, so an untouched design draws
+    // none either: the border stays put and the ring has no width.
+    focusBorderColor: '',
+    focusRingWidth: 0,
     focusRingColor: BRAND_TOKEN,
     focusRingOpacity: 0.18,
   },
@@ -467,7 +479,8 @@ export const CHAT_INPUT_DEFAULTS: ChatInputDesign = {
     emoji: false,
     voiceIcon: 'mic',
     voiceUrl: '',
-    attachIcon: 'paperclip',
+    // The widget's own attach glyph is a plus sign.
+    attachIcon: 'plus',
     attachUrl: '',
     emojiIcon: 'smile',
     emojiUrl: '',
@@ -475,7 +488,7 @@ export const CHAT_INPUT_DEFAULTS: ChatInputDesign = {
     shape: 'circle',
     radius: 999,
     background: 'transparent',
-    iconColor: '#626A6A',
+    iconColor: '',
     iconSize: 16,
     hoverBackground: '#F2F2F3',
     gap: 2,
@@ -570,6 +583,32 @@ export function normalizeLoading(raw: unknown): LoadingDesign {
   }
 }
 
+/**
+ * What the widget draws while no loading design is stored: its own skeleton
+ * when the config's older `loadingState.type` says shimmer, otherwise a small
+ * spinner beside "Loading messages...". The builder shows these values until a
+ * design exists and stores them with the first change, so setting one field
+ * leaves the rest of the placeholder as it was.
+ */
+export function builtInLoading(legacyType: unknown): LoadingDesign {
+  const skeleton = legacyType === 'shimmer'
+  return {
+    ...LOADING_DEFAULTS,
+    type: skeleton ? 'shimmer' : 'spinner',
+    baseColor: '#F3F4F6',
+    highlightColor: '#E5E7EB',
+    speedMs: skeleton ? 4000 : 1000,
+    radius: 6,
+    cardHeight: 288,
+    spinnerSize: 16,
+    spinnerThickness: 1.5,
+    labelShow: !skeleton,
+    labelText: skeleton ? '' : 'Loading messages...',
+    labelColor: '#737373',
+    labelSize: 14,
+  }
+}
+
 export const TOAST_DEFAULTS: ToastDesign = {
   position: 'bottom-center',
   offset: 16,
@@ -610,6 +649,32 @@ export function normalizeToast(raw: unknown): ToastDesign {
     iconColor: color(r.iconColor, d.iconColor),
     fullWidth: bool(r.fullWidth, d.fullWidth),
   }
+}
+
+/**
+ * What the widget shows while no toast design is stored: the toast library's
+ * own card, top-centre for four seconds, across the panel. (It also tints the
+ * card by message type — green for a success, red for an error — which a
+ * design replaces with one set of colours.) The builder shows these values
+ * until a design exists and stores them with the first change.
+ */
+export const TOAST_BUILT_IN: ToastDesign = {
+  position: 'top-center',
+  offset: 16,
+  durationMs: 4000,
+  background: '#FFFFFF',
+  textColor: '#0A0A0A',
+  borderColor: '#E5E5E5',
+  borderWidth: 1,
+  radius: 4,
+  paddingX: 16,
+  paddingY: 16,
+  fontSize: 13,
+  fontWeight: '500',
+  shadow: { size: 12, y: 4, blur: 12, color: '#000000', opacity: 0.1 },
+  showIcon: true,
+  iconColor: '#0A0A0A',
+  fullWidth: true,
 }
 
 export const PROMPTS_DEFAULTS: PromptsDesign = {
@@ -748,6 +813,13 @@ export function normalizeQuickLinks(raw: unknown): QuickLinksDesign {
   }
 }
 
+/**
+ * The widget's own send glyph has always been drawn 12px wide; a channel's mark
+ * (a brand glyph or an upload, drawn as a background image) defaults to 14px.
+ */
+export const sendIconSizeDefault = (icon: unknown): number =>
+  icon === 'custom' || /^cinescape-/.test(String(icon)) ? CHAT_INPUT_DEFAULTS.send.iconSize : 12
+
 export function normalizeChatInput(raw: unknown): ChatInputDesign {
   const r = (raw ?? {}) as Record<string, any>
   const d = CHAT_INPUT_DEFAULTS
@@ -796,7 +868,7 @@ export function normalizeChatInput(raw: unknown): ChatInputDesign {
       radius: num(s.radius, d.send.radius, 0, 999),
       background: color(s.background, d.send.background),
       iconColor: color(s.iconColor, d.send.iconColor),
-      iconSize: num(s.iconSize, d.send.iconSize, 6, 40),
+      iconSize: num(s.iconSize, sendIconSizeDefault(s.icon), 6, 40),
       hoverBackground: s.hoverBackground ? color(s.hoverBackground, d.send.hoverBackground) : '',
       disabledOpacity: num(s.disabledOpacity, d.send.disabledOpacity, 0, 1),
       position: pick(s.position, SEND_POSITIONS, d.send.position),
@@ -922,17 +994,30 @@ const radiusOf = (shape: ButtonShape, radius: number): number =>
  * the right way round.
  */
 export function inputCss(d: ChatInputDesign, brand: string): CSSProperties {
+  // A full-width bar is docked to the panel's edges: square, top border only.
+  const bar = d.layout === 'full_width_bar'
   return {
     ...(d.direction === 'auto' ? {} : { direction: d.direction }),
     backgroundColor: resolve(d.field.background, brand),
-    borderWidth: `${d.field.borderWidth}px`,
+    borderWidth: bar ? `${d.field.borderWidth}px 0 0` : `${d.field.borderWidth}px`,
     borderColor: resolve(d.field.borderColor, brand),
     borderStyle: d.field.borderStyle,
-    borderRadius: `${d.field.radius}px`,
+    borderRadius: bar ? '0px' : `${d.field.radius}px`,
     padding: `${d.field.paddingY}px ${d.field.paddingX}px`,
     minHeight: `${d.field.minHeight}px`,
     gap: `${d.field.gap}px`,
     boxShadow: shadowCss(d.field.shadow, brand),
+  }
+}
+
+/** The strip around the composer; a full-width bar reaches the panel's sides and bottom. */
+export function containerCss(d: ChatInputDesign, brand: string): CSSProperties {
+  const bar = d.layout === 'full_width_bar'
+  return {
+    backgroundColor: resolve(d.container.background, brand),
+    paddingInline: bar ? '0px' : `${d.container.paddingX}px`,
+    paddingTop: `${d.container.paddingTop}px`,
+    paddingBottom: bar ? '0px' : `${d.container.paddingBottom}px`,
   }
 }
 
@@ -965,7 +1050,7 @@ export function actionCss(d: ChatInputDesign, brand: string): CSSProperties {
     width: `${d.actions.size}px`,
     height: `${d.actions.size}px`,
     borderRadius: `${radiusOf(d.actions.shape, d.actions.radius)}px`,
-    color: resolve(d.actions.iconColor, brand),
+    color: d.actions.iconColor ? resolve(d.actions.iconColor, brand) : undefined,
   }
 }
 
@@ -1021,25 +1106,35 @@ export function launcherMessageCss(d: LauncherDesign, brand: string): CSSPropert
   }
 }
 
-/** The focus state, which needs a rule rather than inline styles. */
+/**
+ * The focus state, which needs a rule rather than inline styles — and has to
+ * outrank them, because the border and shadow it changes are themselves set
+ * inline. The ring is drawn over the field's own shadow, not instead of it.
+ */
 export function focusCss(d: ChatInputDesign, brand: string, selector: string): string {
   const { focusRingWidth, focusRingColor, focusRingOpacity, focusBorderColor } = d.field
-  const ring =
-    focusRingWidth > 0
-      ? `box-shadow:0 0 0 ${focusRingWidth}px ${withAlpha(resolve(focusRingColor, brand), focusRingOpacity)};`
-      : ''
-  return `${selector}:focus-within,${selector}:focus{border-color:${resolve(focusBorderColor, brand)};${ring}}`
+  const parts: string[] = []
+  if (focusBorderColor) parts.push(`border-color:${resolve(focusBorderColor, brand)} !important`)
+  if (focusRingWidth > 0) {
+    const ring = `0 0 0 ${focusRingWidth}px ${withAlpha(resolve(focusRingColor, brand), focusRingOpacity)}`
+    const drop = shadowCss(d.field.shadow, brand)
+    parts.push(`box-shadow:${drop === 'none' ? ring : `${ring},${drop}`} !important`)
+  }
+  return parts.length ? `${selector}:focus-within,${selector}:focus{${parts.join(';')}}` : ''
 }
 
 /**
- * Hover states, which likewise need rules rather than inline styles. Without
- * these, choosing a hover colour would change nothing anybody could see.
+ * Hover states, which likewise need rules rather than inline styles — and
+ * `!important`, since the resting background they replace is set inline.
+ * Without these, choosing a hover colour would change nothing anybody could see.
  */
 export function hoverCss(d: ChatInputDesign, brand: string, sendSel: string, actionSel: string): string {
   const out: string[] = []
-  if (d.send.hoverBackground) out.push(`${sendSel}:hover{background-color:${resolve(d.send.hoverBackground, brand)}}`)
+  if (d.send.hoverBackground) {
+    out.push(`${sendSel}:hover{background-color:${resolve(d.send.hoverBackground, brand)} !important}`)
+  }
   if (d.actions.hoverBackground && d.actions.hoverBackground !== 'transparent') {
-    out.push(`${actionSel}:hover{background-color:${resolve(d.actions.hoverBackground, brand)}}`)
+    out.push(`${actionSel}:hover{background-color:${resolve(d.actions.hoverBackground, brand)} !important}`)
   }
   return out.join('')
 }
@@ -1092,11 +1187,15 @@ export function cardSubtitleCss(d: QuickLinksDesign, brand: string): CSSProperti
   }
 }
 
-/** The card hover, which needs a rule rather than an inline style. */
+/**
+ * The card hover, which needs a rule rather than an inline style. The card's
+ * resting colours are inline styles, which outrank any rule, so the hover has
+ * to be `!important` to show at all.
+ */
 export function cardHoverCss(d: QuickLinksDesign, brand: string, selector: string): string {
   const parts: string[] = []
-  if (d.hoverBackground) parts.push(`background-color:${resolve(d.hoverBackground, brand)}`)
-  if (d.hoverBorderColor) parts.push(`border-color:${resolve(d.hoverBorderColor, brand)}`)
+  if (d.hoverBackground) parts.push(`background-color:${resolve(d.hoverBackground, brand)} !important`)
+  if (d.hoverBorderColor) parts.push(`border-color:${resolve(d.hoverBorderColor, brand)} !important`)
   return parts.length ? `${selector}:hover{${parts.join(';')}}` : ''
 }
 
@@ -1118,11 +1217,11 @@ export function chipCss(d: PromptsDesign, brand: string): CSSProperties {
   }
 }
 
-/** The chip hover, which needs a rule rather than an inline style. */
+/** The chip hover, which needs a rule rather than an inline style — `!important` for the same reason as a card's. */
 export function chipHoverCss(d: PromptsDesign, brand: string, selector: string): string {
   const parts: string[] = []
-  if (d.hoverBackground) parts.push(`background-color:${resolve(d.hoverBackground, brand)}`)
-  if (d.hoverBorderColor) parts.push(`border-color:${resolve(d.hoverBorderColor, brand)}`)
+  if (d.hoverBackground) parts.push(`background-color:${resolve(d.hoverBackground, brand)} !important`)
+  if (d.hoverBorderColor) parts.push(`border-color:${resolve(d.hoverBorderColor, brand)} !important`)
   return parts.length ? `${selector}:hover{${parts.join(';')}}` : ''
 }
 
@@ -1378,7 +1477,9 @@ export interface ConsentDesign {
 
 export const CONSENT_DEFAULTS: ConsentDesign = {
   showIllustration: true,
-  showHandle: true,
+  // Off until asked for: the widget drew neither the handle nor the point
+  // cards before, so an untouched sheet keeps its look.
+  showHandle: false,
   overlayColor: '#000000',
   overlayOpacity: 0.45,
   card: { background: '#FFFFFF', radius: 20, padding: 20, shadow: { size: 0, y: 10, blur: 40, color: '#000000', opacity: 0.2 } },
@@ -1386,7 +1487,7 @@ export const CONSENT_DEFAULTS: ConsentDesign = {
   subtitle: { color: '#6E6E73', size: 12, weight: '400' },
   points: {
     textColor: '#3A3A3C', textSize: 12.5, iconColor: '#6E6E73', iconSize: 16, gap: 8,
-    card: true, cardBackground: '#FFFFFF', cardBorder: '#E5E5EA', cardRadius: 12, cardPadding: 12,
+    card: false, cardBackground: '#FFFFFF', cardBorder: '#E5E5EA', cardRadius: 12, cardPadding: 12,
   },
   footnote: { color: '#8E8E93', size: 10.5 },
   button: { background: BRAND_TOKEN, textColor: '#FFFFFF', radius: 12, height: 44, textSize: 13.5, weight: '600', fullWidth: true },

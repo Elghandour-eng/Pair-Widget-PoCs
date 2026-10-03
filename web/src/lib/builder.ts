@@ -176,6 +176,10 @@ const DESIGN_THEME_PATHS: Array<[guard: string, paths: Array<[path: string, toke
     ['widget_v2_config.consent_screen.design.subtitle.color', 'muted'],
     ['widget_v2_config.consent_screen.design.points.textColor', 'text'],
     ['widget_v2_config.consent_screen.design.points.iconColor', 'muted'],
+    // The per-point card, when it is on: without these a dark theme leaves
+    // light text on a white card.
+    ['widget_v2_config.consent_screen.design.points.cardBackground', 'surface2'],
+    ['widget_v2_config.consent_screen.design.points.cardBorder', 'border'],
     ['widget_v2_config.consent_screen.design.footnote.color', 'faint'],
   ]],
 ]
@@ -332,6 +336,8 @@ export const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.consent_screen.links.terms.label',
   'widget_v2_config.consent_screen.links.privacy.label',
   'widget_v2_config.messages.loadingOlder.text',
+  'widget_v2_config.messages.feedback.toastMessage',
+  'widget_v2_config.chat_input.placeholderText.text',
   'widget_v2_config.csat.header',
   'widget_v2_config.csat.body',
   'widget_v2_config.csat.buttonText',
@@ -412,7 +418,11 @@ export function applyLanguage(config: WidgetConfig, lang: WidgetLang): WidgetCon
   const cards = deepGet(next, 'widget_v2_config.quick_links.quickLinkCards')
   if (Array.isArray(cards)) {
     next = deepSet(next, 'widget_v2_config.quick_links.quickLinkCards',
-      cards.map((c: Any) => ({ ...c, title: swap(c.title), subtitle: swap(c.subtitle) })))
+      // The message a card sends when tapped is copy too, so it follows the switch.
+      cards.map((c: Any) => ({
+        ...c, title: swap(c.title), subtitle: swap(c.subtitle),
+        ...(typeof c.message === 'string' ? { message: swap(c.message) } : {}),
+      })))
   }
   // A designed hero slide carries its own copy, so it follows the switch too.
   // The badge is a brand name and is deliberately left alone.

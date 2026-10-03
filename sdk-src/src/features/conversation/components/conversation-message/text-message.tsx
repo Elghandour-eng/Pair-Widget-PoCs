@@ -69,9 +69,8 @@ function TextMessage({ message, isUnread = false, primaryColor = '#3b82f6', webs
     // Incoming message
     if (aiConfig) {
       customTextStyles = { ...aiConfig.TextStyles }
-      const hasCardStyles =
-        aiConfig.messageStyle === 'card' && aiConfig.CardStyles && Object.keys(aiConfig.CardStyles).length > 0
-      if (hasCardStyles) {
+      // A card is drawn as one whether or not its styles were customised.
+      if (aiConfig.messageStyle === 'card') {
         isCard = true
         customBubbleStyle = { ...aiConfig.CardStyles }
       }

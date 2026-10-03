@@ -133,6 +133,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         actions: {
           cart: rawHeader.actions?.cart ?? false,
           favorites: rawHeader.actions?.favorites ?? false,
+          reset: rawHeader.actions?.reset ?? false,
         },
         // The language and theme switches are on unless the studio turns them
         // off; their glyphs default to the ones the studio previews.
@@ -166,8 +167,11 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         welcomeTitleStyles: rawIntro.welcomeTitle?.styles,
         welcomeSubtitle: rawIntro.welcomeSubtitle?.text ?? apiResponse.welcome_tagline ?? '',
         welcomeSubtitleStyles: rawIntro.welcomeSubtitle?.styles,
+        // The hero is on unless it was turned off — the same rule the server
+        // and the builder use, so a config that never stored the flag does not
+        // lose its hero (and its welcome copy, which the server moves onto it).
         heroImage:
-          rawIntro.heroSection?.enabled?.value && rawIntro.heroSection?.heroImage?.url
+          rawIntro.heroSection?.enabled?.value !== false && rawIntro.heroSection?.heroImage?.url
             ? {
                 url: rawIntro.heroSection.heroImage.url,
                 position: rawIntro.heroSection.heroImage.position ?? 'top',
@@ -175,8 +179,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
                 containerStyles: rawIntro.heroSection.enabled.styles,
               }
             : undefined,
-        heroSlides: rawIntro.heroSection?.enabled?.value ? hero.slides : undefined,
-        heroCarousel: rawIntro.heroSection?.enabled?.value ? hero.carousel : undefined,
+        heroSlides: rawIntro.heroSection?.enabled?.value !== false ? hero.slides : undefined,
+        heroCarousel: rawIntro.heroSection?.enabled?.value !== false ? hero.carousel : undefined,
         widgetBackground: rawIntro.widgetBackground
           ? {
               type: rawIntro.widgetBackground.type,
@@ -219,6 +223,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       active: card.active,
       subtitle: card.subtitle,
       media_ulid: card.media_ulid,
+      message: card.message,
     })),
   }
 
@@ -247,6 +252,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
         iconPosition: v2Trending.design?.iconPosition,
         chipLayout: v2Trending.design?.layout,
         gap: v2Trending.design?.gap,
+        align: v2Trending.design?.align,
+        hoverCss: v2Trending.design?.hoverCss,
         prompts: (v2Trending.promptChips || []).map((chip, idx) => ({
           id: `trending-prompt-${idx}`,
           text: chip.text,
@@ -288,6 +295,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const rawMessages = apiResponse.widget_v2_config?.messages
   const messagesConfig: MessagesConfig = {
     loadingOlder: rawMessages?.loadingOlder,
+    emptyState: rawMessages?.emptyState,
     suggestions: rawMessages?.suggestions,
     questions: rawMessages?.questions,
     feedback: rawMessages?.feedback
@@ -364,7 +372,8 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       rawIntro?.widgetBackground?.background ??
       'linear-gradient(180deg, var(--Surface-Base, #FFF) -19.27%, var(--Surface-Tertiary, #EEECE1) 99.71%)',
     hideMessageTime: true,
-    showHeader: apiResponse.widget_header ?? true,
+    // Pair's own switch, and the builder's "Show header" toggle.
+    showHeader: (apiResponse.widget_header ?? true) && rawHeader?.enabled !== false,
     showFooter: apiResponse.powered_by_pair_ai ?? true,
     openAutomatically:
       apiResponse.opening_method === 'automatically_open' ||
@@ -372,6 +381,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       windowSettings?.openAutomatically ||
       false,
     hostControlsPanel: !!windowSettings?.startClosed,
+    panelStyle: apiResponse.panel_font_family ? { fontFamily: apiResponse.panel_font_family } : undefined,
     userId: windowSettings?.userId,
     visitorCredential:
       windowSettings?.accessToken || windowSettings?.accessTokenExpiresIn || windowSettings?.refreshFn

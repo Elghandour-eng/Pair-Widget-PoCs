@@ -420,7 +420,7 @@ export function AudioMessage({ message, isUnread, primaryColor, websiteName }: A
   const aiConfig = widgetConfig.messagesConfig?.aiMessages
   const customerConfig = widgetConfig.messagesConfig?.customerMessages
   const cardStyles = aiConfig?.CardStyles
-  const hasCardStyles = aiConfig?.messageStyle === 'card' && cardStyles && Object.keys(cardStyles).length > 0
+  const hasCardStyles = aiConfig?.messageStyle === 'card'
 
   let customBubbleStyle: React.CSSProperties = {}
   let customTextStyles: React.CSSProperties = {}

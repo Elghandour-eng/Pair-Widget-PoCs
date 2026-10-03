@@ -62,6 +62,14 @@ export function WidgetConfigProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = /^(ar|he|fa|ur)/i.test(locale) ? 'rtl' : 'ltr'
   }, [apiConfig.locale])
 
+  // The studio's panel font applies to the whole widget; without one the
+  // stylesheet's own stack stays.
+  useEffect(() => {
+    document.body.style.fontFamily = apiConfig.panel_font_family ?? ''
+    // Text that names DM Sans itself steps aside too (see styles.css).
+    document.body.classList.toggle('pair-panel-font', !!apiConfig.panel_font_family)
+  }, [apiConfig.panel_font_family])
+
   // State to store postMessage settings from host SDK
   const [sdkConfig, setSdkConfig] = useState<Partial<PairAiWidgetSettings> | undefined>(undefined)
 

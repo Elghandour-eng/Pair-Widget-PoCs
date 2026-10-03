@@ -78,7 +78,6 @@ export function useSendChatMessageFlow() {
       } catch (err) {
         logger.debug('useSendChatMessageFlow', 'Failed to auto-register user', err)
         toast.error('Failed to start chat. Please try again.', {
-          position: 'top-center',
           richColors: true,
         })
         throw err
@@ -130,7 +129,6 @@ export function useSendChatMessageFlow() {
     } catch (error) {
       logger.debug('useSendChatMessageFlow', 'Failed to send message', error)
       toast.error('Failed to send message. Please try again.', {
-        position: 'top-center',
         richColors: true,
       })
       throw error

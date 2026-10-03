@@ -248,9 +248,106 @@
   }
 }
 
-/* Hover effect - matches widget-eye whileHover scale(1.05) */
+/* The design's entrance, in place of the default pop. */
+.pair-ai-bubble.pair-ai-bubble--enter-slide {
+  animation-name: pair-ai-bubble-enter-slide;
+}
+
+.pair-ai-bubble.pair-ai-bubble--enter-fade {
+  animation-name: pair-ai-bubble-enter-fade;
+}
+
+.pair-ai-bubble.pair-ai-bubble--enter-none {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes pair-ai-bubble-enter-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pair-ai-bubble-enter-fade {
+  0% {
+    opacity: 0;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The attention loop runs on the launcher's wrapper, so it never fights the
+   launcher's own entrance and hover transforms. */
+.pair-ai-bubble-motion {
+  display: block;
+}
+
+.pair-ai-bubble-motion.pair-ai-attn-pulse {
+  animation: pair-ai-attn-pulse 2s ease-in-out infinite;
+}
+
+.pair-ai-bubble-motion.pair-ai-attn-bounce {
+  animation: pair-ai-attn-bounce 1.6s ease-in-out infinite;
+}
+
+.pair-ai-bubble-motion.pair-ai-attn-wiggle {
+  animation: pair-ai-attn-wiggle 2.4s ease-in-out infinite;
+}
+
+@keyframes pair-ai-attn-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+@keyframes pair-ai-attn-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes pair-ai-attn-wiggle {
+  0%,
+  88%,
+  100% {
+    transform: rotate(0);
+  }
+  92% {
+    transform: rotate(-9deg);
+  }
+  96% {
+    transform: rotate(9deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pair-ai-bubble-motion {
+    animation: none !important;
+  }
+}
+
+/* Hover effect - matches widget-eye whileHover scale(1.05); the design's own
+   hover growth arrives as --pair-hover-scale. */
 .pair-ai-bubble:hover:not(:active) {
-  transform: scale(1.05) rotate(0deg) !important;
+  transform: scale(var(--pair-hover-scale, 1.05)) rotate(0deg) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
 }
 
@@ -305,7 +402,7 @@
 
 /* Expanded bubble hover effect - matches widget-eye whileHover scale(1.02) */
 .pair-ai-bubble.pair-ai-bubble--expanded:hover:not(:active) {
-  transform: scale(1.02) rotate(0deg) !important;
+  transform: scale(var(--pair-hover-scale, 1.02)) rotate(0deg) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
 }
 
