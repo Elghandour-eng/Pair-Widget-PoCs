@@ -1,8 +1,5 @@
 import {
-  ArrowLeft, BellRing, Check, ClipboardList, Download, Image as ImageIcon, Languages,
-  LayoutGrid, LoaderCircle, MessagesSquare,
-  Monitor, Moon, Palette, PanelTop, RotateCcw, Rocket, Save, Share2, ShieldCheck, Smartphone, Sparkles, Star, Sun,
-  Tablet, TextCursorInput, Zap,
+  ArrowLeft, BellRing, Check, ClipboardList, Download, Image as ImageIcon, Languages, LayoutGrid, LoaderCircle, MessagesSquare, Monitor, Moon, Palette, PanelTop, Phone, Rocket, RotateCcw, Save, Share2, ShieldCheck, Smartphone, Sparkles, Star, Sun, Tablet, TextCursorInput, Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -26,10 +23,11 @@ import { PreChatPage } from './PreChatPage'
 import { PromptsPage } from './PromptsPage'
 import { QuickLinksPage } from './QuickLinksPage'
 import { LanguagePage, ThemePage } from './ThemeLanguagePages'
+import { VoiceCallPage } from './VoiceCallPage'
 
 type Section =
   | 'theme' | 'language' | 'header' | 'hero' | 'quicklinks' | 'prompts' | 'input' | 'messages'
-  | 'prechat' | 'consent' | 'rating' | 'loading' | 'toast' | 'launcher'
+  | 'prechat' | 'consent' | 'rating' | 'loading' | 'toast' | 'launcher' | 'call'
 
 const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'theme', icon: <Palette className="size-4" /> },
@@ -46,6 +44,7 @@ const SECTIONS: Array<{ id: Section; icon: React.ReactNode }> = [
   { id: 'loading', icon: <LoaderCircle className="size-4" /> },
   { id: 'toast', icon: <BellRing className="size-4" /> },
   { id: 'launcher', icon: <Rocket className="size-4" /> },
+  { id: 'call', icon: <Phone className="size-4" /> },
 ]
 
 /**
@@ -252,6 +251,7 @@ export function Builder() {
             {section === 'loading' && <LoadingPage get={get} set={set} disabled={!editor} />}
             {section === 'toast' && <ToastPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
             {section === 'launcher' && <LauncherPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
+            {section === 'call' && <VoiceCallPage draft={draft} setDraft={setDraft} get={get} set={set} disabled={!editor} />}
           </div>
 
           {/* Live preview frame, fed over postMessage */}

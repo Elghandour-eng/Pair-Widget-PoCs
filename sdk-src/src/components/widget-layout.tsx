@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { ConsentGate } from '@/components/consent-gate'
+import { VoiceCallHost } from '@/features/voice-call/voice-call-host'
 import { IncomingMessagePreview } from '@/components/incoming-message-preview'
 import { Card } from '@/components/ui/card'
 import { WidgetEye } from '@/components/widget-eye/components/widget-eye'
@@ -50,6 +51,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
           {children}
         </Card>
         <ConsentGate />
+        <VoiceCallHost />
       </motion.div>
     )
   }
@@ -98,6 +100,7 @@ function WidgetLayoutContent({ children }: { children: React.ReactNode }) {
               {children}
             </Card>
             <ConsentGate />
+            <VoiceCallHost />
           </motion.div>
         )}
       </AnimatePresence>

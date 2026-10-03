@@ -660,6 +660,8 @@ export interface WidgetV2Config {
   /** The studio's editable pre-chat block; served flattened onto the top-level fields. */
   pre_chat_form?: unknown
   csat?: CsatSectionDto
+  /** The phone button and call screen, compiled by the studio (routing stays on the server). */
+  voice_call?: VoiceCallDto
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -721,4 +723,73 @@ export interface WidgetConfigDto {
   launcher_title?: string
   launcher_design?: LauncherDesignDto
   toast_design?: ToastDesignDto
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// widget_v2_config — voice_call (studio-compiled: every field present)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface VoiceCallDto {
+  enabled: boolean
+  /** Enabled and given an agent: the button shows only when this is true. */
+  available: boolean
+  entry: { header: boolean; intro: boolean }
+  icon: 'phone' | 'phone-call' | 'headset' | 'mic' | 'audio-lines' | 'custom'
+  iconUrl: string
+  confirm: boolean
+  maxDurationSec: number
+  language: 'widget' | 'en' | 'ar'
+  keepAliveWhenClosed: boolean
+  showTimer: boolean
+  showMute: boolean
+  showCaptions: boolean
+  texts: Record<
+    | 'headerButton'
+    | 'introButton'
+    | 'title'
+    | 'subtitle'
+    | 'confirmTitle'
+    | 'confirmBody'
+    | 'startButton'
+    | 'cancelButton'
+    | 'connecting'
+    | 'listening'
+    | 'thinking'
+    | 'speaking'
+    | 'ended'
+    | 'failed'
+    | 'micDenied'
+    | 'unavailable'
+    | 'timeLimit'
+    | 'endButton'
+    | 'mute'
+    | 'unmute'
+    | 'closeButton'
+    | 'callAgain',
+    string
+  >
+  design: {
+    background: string
+    gradientTo: string
+    useGradient: boolean
+    gradientAngle: number
+    textColor: string
+    mutedColor: string
+    accent: string
+    visualizer: 'orb' | 'bars' | 'wave' | 'none'
+    showAvatar: boolean
+    avatarUrl: string
+    avatarSize: number
+    avatarRadius: number
+    controlBackground: string
+    controlColor: string
+    controlSize: number
+    endBackground: string
+    endColor: string
+    captionBackground: string
+    captionColor: string
+    captionSize: number
+    titleSize: number
+    fontFamily: string
+  }
 }

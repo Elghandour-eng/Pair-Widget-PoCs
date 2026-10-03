@@ -21,6 +21,7 @@
   // The widget has mounted and its CSS is in; before that an open is only remembered.
   var widgetReady = false
   var pendingOpen = null
+  var pendingCall = false
   var widgetLoaded = false
   var widgetIframe = null
   var bubbleHolder = null
@@ -543,9 +544,26 @@
     toggleWidget(state !== undefined ? !!state : undefined)
   }
 
+  /**
+   * Voice calls: open the panel and dial, or hang up. The widget decides
+   * whether calls are available (the design turns them on); a page's own button
+   * counts as the visitor asking, so no confirmation is shown.
+   */
+  function startCall() {
+    setOpen(true)
+    if (widgetReady) sendMessageToWidget('sdk:startCall', {})
+    else pendingCall = true
+  }
+
+  function endCall() {
+    pendingCall = false
+    sendMessageToWidget('sdk:endCall', {})
+  }
+
   // The same three commands, for a page that cannot reach PairWidget itself
   // (another frame, a tag manager): window.postMessage({ type: 'pair:open' }, '*').
   var HOST_COMMANDS = { 'pair:open': true, 'pair:close': false, 'pair:toggle': undefined }
+  var HOST_CALL_COMMANDS = { 'pair:call': startCall, 'pair:hangup': endCall }
 
   // Host subscriptions to widget -> host messages, by event name without the
   // `widget:` prefix ('*' receives every one).
@@ -573,6 +591,10 @@
         setOpen(HOST_COMMANDS[event.data.type])
         return
       }
+      if (Object.prototype.hasOwnProperty.call(HOST_CALL_COMMANDS, event.data.type)) {
+        HOST_CALL_COMMANDS[event.data.type]()
+        return
+      }
       if (!event.data.type.startsWith('widget:')) return
 
       // Every widget message reaches the host's own listeners, whether or not
@@ -593,6 +615,10 @@
             }
             pendingOpen = null
             syncTeaser()
+            if (pendingCall) {
+              pendingCall = false
+              sendMessageToWidget('sdk:startCall', {})
+            }
           })
           // Send config to widget
           sendMessageToWidget('sdk:config', config)
@@ -1487,6 +1513,8 @@
     open: function () {
       setOpen(true)
     },
+    startCall: startCall,
+    endCall: endCall,
     close: function () {
       setOpen(false)
     },

@@ -21,6 +21,7 @@ import { isDrawableSendIcon, sendGlyphDataUri } from '../lib/sendGlyph.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
 import { applyWidgetTheme, isWidgetTheme } from '../lib/widgetTheme.js'
 import { sdkBaseUrl } from '../lib/sdkBase.js'
+import { normalizeVoiceCall, resolveVoiceCallColors } from '../lib/voiceCall.js'
 import { asyncHandler } from '../middleware/error.js'
 import { getWidget, resolveConfig } from '../services/widgets.js'
 import { uploadsDir } from './uploads.js'
@@ -159,7 +160,8 @@ function materializeChrome<T>(config: T): T {
   const hasPreChat = !!c?.widget_v2_config?.pre_chat_form
   const hasConsent = !!c?.widget_v2_config?.consent_screen
   const hasCsat = !!c?.widget_v2_config?.csat
-  if (!hasInput && !hasLauncher && !hasLoading && !hasToast && !hasSendIcon && !hasPrompts && !hasCards && !hasPreChat && !hasConsent && !hasCsat) {
+  const hasCall = !!c?.widget_v2_config?.voice_call
+  if (!hasInput && !hasLauncher && !hasLoading && !hasToast && !hasSendIcon && !hasPrompts && !hasCards && !hasPreChat && !hasConsent && !hasCsat && !hasCall) {
     return config
   }
 
@@ -375,6 +377,15 @@ function materializeChrome<T>(config: T): T {
     if (!one(cs.subtitle)) cs.subtitle = arC ? 'أشياء بسيطة خليك واخد بالك منها' : 'A few things to keep in mind'
     if (!one(cs.buttonText)) cs.buttonText = arC ? 'موافق ومتابعة' : 'Agree & Continue'
     cs.design = normalizeConsent(cs.design)
+  }
+
+  if (hasCall) {
+    // The call design, complete and in the config's language, colours resolved.
+    // The routing (agent number and name) stays on the server: the widget asks
+    // for a call by widget id, and the server knows where to send it.
+    const call = resolveVoiceCallColors(normalizeVoiceCall(next.widget_v2_config.voice_call, one(next.locale)), brand)
+    const { agentNumber: _n, agentName: _a, ...forWidget } = call
+    next.widget_v2_config.voice_call = { ...forWidget, available: call.enabled && !!call.agentNumber }
   }
 
   if (hasCsat) {
@@ -692,6 +703,7 @@ const DOC_API: DocRow[] = [
   { name: 'off(event, fn)', takes: 'string, function', what: 'Removes a subscription.' },
   { name: 'open() / close()', takes: '—', what: 'Opens or closes the panel. Called before the widget is ready, it applies as soon as it is. show() / hide() are the older names.' },
   { name: 'toggle(show?)', takes: 'boolean?', what: 'Flips the panel, or forces a state.' },
+  { name: 'startCall() / endCall()', takes: '—', what: 'Opens the panel and starts a voice call, or hangs up. Works when the design turns voice calls on.' },
   { name: 'isOpen()', takes: '—', what: 'Whether the panel is open right now.' },
   { name: 'setUser(user)', takes: 'object', what: 'Identifies the visitor.' },
 ]
@@ -714,6 +726,9 @@ const DOC_RECEIVE: DocRow[] = [
   { name: 'viewChanged', takes: '{ lang, theme }', what: 'The view changed — by your call, or by the visitor using the header controls.' },
   { name: 'configUpdated', takes: '{ config }', what: 'The design was re-fetched; carries the resolved config.' },
   { name: 'close', takes: '—', what: 'The visitor pressed close inside the widget. Hide your container.' },
+  { name: 'callStarted', takes: '{ room }', what: 'A voice call connected.' },
+  { name: 'callEnded', takes: '{ reason, durationSec? }', what: 'A voice call ended: hangup, remote, timeLimit, failed, micDenied or unavailable.' },
+  { name: 'callState', takes: '{ status }', what: 'A voice call is connecting.' },
   { name: 'opened / closed', takes: '—', what: 'The panel opened or closed — by the launcher, the visitor, or your own call.' },
   { name: 'setColor', takes: '{ color }', what: 'The brand colour, so a launcher outside the iframe can match it.' },
   { name: 'requestTokenRefresh', takes: '—', what: 'The visitor credential expired. Issue a new one and send it back.' },
@@ -906,6 +921,23 @@ publicRouter.get(
       '// Keep your own button in step with the panel.',
       "PairWidget.on('opened', function () { /* … */ })",
       "PairWidget.on('closed', function () { /* … */ })",
+    ].join('\n')
+
+    const voiceCall = [
+      '// Your own "Call us" button. The visitor tapping it',
+      '// is their consent, so no confirmation is shown.',
+      "document.querySelector('#call').onclick = function () {",
+      '  PairWidget.startCall()',
+      '}',
+      '',
+      "PairWidget.on('callStarted', function (d) { /* d.room */ })",
+      "PairWidget.on('callEnded', function (d) {",
+      "  console.log('call ended:', d.reason, d.durationSec)",
+      '})',
+      '',
+      '// Or, from a frame that cannot reach PairWidget:',
+      "window.postMessage({ type: 'pair:call' }, '*')",
+      "window.postMessage({ type: 'pair:hangup' }, '*')",
     ].join('\n')
 
     const metadata = [
@@ -1304,6 +1336,20 @@ publicRouter.get(
         </ul>
       </div>
       <div class="aside">${codeBlock('html', openClose)}${codeBlock('javascript', openCloseMessage)}</div>
+    </section>
+
+    <section id="voice-call">
+      <div class="prose">
+        <h3>Voice calls</h3>
+        <p>Turn voice calls on in the builder's <b>Voice call</b> page and the widget gets a phone button. The visitor talks to your voice agent over LiveKit, inside the widget.</p>
+        <ul class="bul">
+          <li>The browser asks for the microphone first; a visitor who refuses never reaches the agent.</li>
+          <li>The server creates the call and tags it with your agent's number. Your LiveKit keys and that number never reach the page.</li>
+          <li>The agent hears the widget's language (or the one you fix in the builder) with the call.</li>
+          <li><code class="inl">PairWidget.startCall()</code> places a call from your own button; <code class="inl">endCall()</code> hangs up.</li>
+        </ul>
+      </div>
+      <div class="aside">${codeBlock('javascript', voiceCall)}</div>
     </section>
 
     <section id="control-ref" class="wide">

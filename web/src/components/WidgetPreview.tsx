@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Mic, Phone, PhoneOff } from 'lucide-react'
 import type { WidgetConfig } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { normalizeHeroCarousel, normalizeHeroSlides, type HeroSlide } from '@/lib/heroDesign'
@@ -14,6 +14,7 @@ import {
   TOAST_BUILT_IN, builtInLoading,
 } from '@/lib/inputDesign'
 import { SlotIcon } from './IconField'
+import { normalizeVoiceCall, resolveVoiceCallColors, type VoiceCall } from '@/lib/voiceCall'
 import { PairWordmark } from './brand'
 import { SendIcon, asSendIcon } from './sendIcons'
 import { useWebFont } from '@/lib/webfont'
@@ -185,6 +186,20 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
   // The launcher only exists while the widget is closed, so it is shown over the
   // preview while that section is the one being edited — otherwise none of its
   // settings would change anything on screen.
+  // The call screen covers the whole panel, header included, as it does in the widget.
+  if (focus === 'call') {
+    const call = resolveVoiceCallColors(normalizeVoiceCall(get(v2, 'voice_call'), locale), brand)
+    return (
+      <div
+        dir={widgetDir}
+        className={`anim-pop relative size-full overflow-hidden ${frame ? 'rounded-[14px] ring-[6px] ring-ink/85' : ''}`}
+        style={{ paddingTop: topInset, background: call.design.useGradient ? `linear-gradient(${call.design.gradientAngle}deg, ${call.design.background}, ${call.design.gradientTo})` : call.design.background }}
+      >
+        <CallPreview call={call} avatar={call.design.avatarUrl || get(v2, 'header.icon') || c.avatar_url || ''} />
+      </div>
+    )
+  }
+
   if (focus === 'launcher') {
     return (
       <div
@@ -215,6 +230,11 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
             <p className="truncate text-[13px] font-bold" style={titleStyle}>{title}</p>
             {subtitle && <p className="truncate text-[10px]" style={{ color: muted }}>{subtitle}</p>}
           </div>
+          {get(v2, 'voice_call.enabled') === true && get(v2, 'voice_call.entry.header') !== false && (
+            <span className="grid size-5 shrink-0 place-items-center" style={{ color: muted }}>
+              <Phone className="size-3.5" />
+            </span>
+          )}
           {get(v2, 'header.controls.lang.show') !== false && (
             (get(v2, 'header.controls.lang.icon') ?? 'badge') === 'badge' ? (
               // The badge names the language a tap brings, like the real widget.
@@ -1138,4 +1158,77 @@ function shade(hex: string, amt: number): string {
     g = cl(((n >> 8) & 255) + amt),
     b = cl((n & 255) + amt)
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+}
+
+/**
+ * The call screen as it looks mid-call: the agent speaking, a caption, the
+ * timer, mute and end. Static — the builder has no call to animate — but drawn
+ * from the same design the widget uses.
+ */
+function CallPreview({ call, avatar }: { call: VoiceCall; avatar: string }) {
+  const d = call.design
+  const t = call.texts
+  const control = { width: Math.min(d.controlSize, 52), height: Math.min(d.controlSize, 52) }
+  const size = Math.min(d.avatarSize, 110)
+  // As in the widget: an accent that would vanish into the call screen gives way to the text colour.
+  const lum = (h: string) => { const m = /^#([0-9a-f]{6})/i.exec(h); if (!m) return null; const n = parseInt(m[1], 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 }
+  const la = lum(d.accent), lb = lum(d.background)
+  const accent = la !== null && lb !== null && Math.abs(la - lb) < 0.25 ? d.textColor : d.accent
+  return (
+    <div className="flex h-full flex-col" style={{ color: d.textColor, fontFamily: d.fontFamily || undefined }}>
+      <div className="flex items-center justify-end px-3 pt-3">
+        {call.showTimer && (
+          <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold tabular-nums" style={{ background: d.controlBackground }}>
+            1:24
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 text-center">
+        <div className="relative grid place-items-center" style={{ width: size + 44, height: size + 44 }}>
+          {d.visualizer === 'orb' && (
+            <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${accent} 0%, transparent 70%)`, opacity: 0.55, transform: 'scale(1.15)' }} />
+          )}
+          {d.showAvatar &&
+            (avatar ? (
+              <img src={avatar} alt="" className="relative object-cover" style={{ width: size, height: size, borderRadius: d.avatarRadius }} />
+            ) : (
+              <span className="relative grid place-items-center" style={{ width: size, height: size, borderRadius: d.avatarRadius, background: d.accent, color: d.endColor }}>
+                <Phone className="size-7" />
+              </span>
+            ))}
+        </div>
+        {d.visualizer === 'bars' && (
+          <div className="-mt-2 flex h-8 items-center gap-1">
+            {[10, 22, 30, 18, 26, 14, 8].map((h, i) => (
+              <span key={i} className="w-1 rounded-full" style={{ height: h, background: accent }} />
+            ))}
+          </div>
+        )}
+        {d.visualizer === 'wave' && (
+          <svg viewBox="0 0 200 60" className="-mt-2 h-8 w-36" aria-hidden>
+            <path d="M0 30 Q25 8 50 30 T100 30 T150 30 T200 30" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        )}
+        <div>
+          <p className="font-bold" style={{ fontSize: Math.min(d.titleSize, 22) }}>{t.title}</p>
+          <p className="mt-0.5 text-[11.5px]" style={{ color: d.mutedColor }}>{t.speaking}</p>
+        </div>
+        {call.showCaptions && (
+          <p className="w-full rounded-xl p-2.5 text-start" style={{ background: d.captionBackground, color: d.captionColor, fontSize: Math.min(d.captionSize, 14) }}>
+            {t.subtitle}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center justify-center gap-4 pt-1 pb-6">
+        {call.showMute && (
+          <span className="grid place-items-center rounded-full" style={{ ...control, background: d.controlBackground, color: d.controlColor }} title={t.mute}>
+            <Mic className="size-4" />
+          </span>
+        )}
+        <span className="grid place-items-center rounded-full" style={{ ...control, background: d.endBackground, color: d.endColor }} title={t.endButton}>
+          <PhoneOff className="size-4" />
+        </span>
+      </div>
+    </div>
+  )
 }

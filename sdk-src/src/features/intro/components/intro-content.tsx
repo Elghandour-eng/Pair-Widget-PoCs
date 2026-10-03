@@ -1,6 +1,7 @@
 import { WidgetContent } from '@/components/widget-content'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
 import { HeroCarousel } from '@/features/intro/components/hero-carousel'
+import { IntroCallButton } from '@/features/voice-call/call-button'
 import { QuickLinksList } from '@/features/intro/components/quick-links-list'
 import { TrendingPrompts } from '@/features/intro/components/trending-prompts'
 import { cn } from '@/lib/utils'
@@ -71,6 +72,9 @@ export function IntroContent() {
             >
               {introConfig?.welcomeSubtitle ?? 'Please add a subtitle'}
             </p>
+            <div className="mt-4 empty:hidden">
+              <IntroCallButton />
+            </div>
           </div>
           {introConfig?.heroImage?.position === 'bottom' && heroImage}
           {showQuickLinksUnder && <QuickLinksList />}
@@ -94,6 +98,9 @@ export function IntroContent() {
               >
                 {introConfig?.welcomeSubtitle ?? 'Please add a subtitle'}
               </p>
+              <div className="mt-4 empty:hidden">
+                <IntroCallButton />
+              </div>
             </div>
             {introConfig?.heroImage?.position === 'bottom' && heroImage}
           </div>

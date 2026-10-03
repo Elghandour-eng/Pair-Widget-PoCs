@@ -395,6 +395,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
     metadata: windowSettings?.metadata,
     consentScreen: apiResponse.widget_v2_config?.consent_screen,
     csat: apiResponse.widget_v2_config?.csat,
+    voiceCall: apiResponse.widget_v2_config?.voice_call,
     hostHeaderMappings: apiResponse.headers,
     hostParamMappings: apiResponse.params,
     // Deprecated used for Welcome Screen

@@ -235,7 +235,7 @@ export function BrandColorField({ label, path, get, set, disabled }: { label: st
 
 /** Like BilingualField, but for plain string paths (value at `<path>`, translations at `<path>_i18n`). */
 export function PlainBiField({
-  label, path, draft, setDraft, disabled, placeholder,
+  label, path, draft, setDraft, disabled, placeholder, placeholderAr,
 }: {
   label: string
   path: string
@@ -243,6 +243,8 @@ export function PlainBiField({
   setDraft: (fn: (d: WidgetConfig | null) => WidgetConfig | null) => void
   disabled?: boolean
   placeholder?: string
+  /** The Arabic field's own placeholder; without it the Arabic field has none. */
+  placeholderAr?: string
 }) {
   const { t } = useI18n()
   const live = currentLang(draft)
@@ -259,7 +261,7 @@ export function PlainBiField({
               value={plainBilingualText(draft, path, lang)}
               onChange={(e) => write(lang, e.target.value)}
               disabled={disabled}
-              placeholder={lang === 'en' ? placeholder : undefined}
+              placeholder={lang === 'en' ? placeholder : placeholderAr}
               aria-label={`${label} — ${t(`locale.${lang}`)}`}
             />
             <span

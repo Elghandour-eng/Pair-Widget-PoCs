@@ -103,6 +103,26 @@ describe('auth + rbac', () => {
       expect(page).toContain(piece)
     }
   })
+  it('voice calls: the config hides the routing, and the call route says why it cannot call', async () => {
+    const put = (voice_call: Record<string, unknown>) =>
+      api('/api/widgets/TEST_WIDGET_1/config', { method: 'PUT', body: JSON.stringify({ name: 'Cinescape AI', widget_color: '#E50914', widget_v2_config: { voice_call } }) }, adminToken)
+    const call = () => fetch(`${base}/v1/widget/TEST_WIDGET_1/call`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"lang":"en"}' })
+
+    await put({ enabled: false, agentNumber: '+9001' })
+    expect((await (await call()).json()).error.message).toMatch(/turned off/)
+
+    await put({ enabled: true })
+    expect((await (await call()).json()).error.message).toMatch(/No voice agent/)
+
+    await put({ enabled: true, agentNumber: '+90 01', design: { accent: '#brand' }, texts: { title: '' } })
+    const vc = (await (await fetch(`${base}/api/public/widget/TEST_WIDGET_1/config`)).json()).widget_v2_config.voice_call
+    expect(vc).toMatchObject({ enabled: true, available: true, texts: { title: 'Voice assistant' }, design: { accent: '#E50914' } })
+    expect(vc.agentNumber).toBeUndefined()
+    // No LiveKit keys in this environment: the call is refused, not attempted.
+    const r = await call()
+    expect(r.status).toBe(503)
+    expect((await r.json()).error.message).toMatch(/not configured/)
+  })
   it('protects the last admin', async () => {
     const list = await (await api('/api/users', {}, adminToken)).json()
     const admin = list.users.find((u: { role: string }) => u.role === 'admin')

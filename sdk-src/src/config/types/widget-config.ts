@@ -131,6 +131,7 @@ export interface WidgetConfig {
   consentScreen?: import('./widget-config-dto').ConsentScreenDto
   /** The CSAT rating survey's studio overrides and design. */
   csat?: import('./widget-config-dto').CsatSectionDto
+  voiceCall?: import('./widget-config-dto').VoiceCallDto
 }
 
 export interface QuickLinksConfig {

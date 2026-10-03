@@ -15,6 +15,8 @@ import { authRouter } from './routes/auth.js'
 import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
 import { pairProxyRouter } from './routes/pairProxy.js'
 import { publicRouter, widgetLangRouter, widgetViewRouter } from './routes/public.js'
+import { voiceCallRouter } from './routes/voiceCall.js'
+import { livekitStatus } from './lib/livekit.js'
 import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
 import { uploadsRouter, uploadsStatic, uploadsStatus } from './routes/uploads.js'
@@ -64,6 +66,7 @@ export function createApp() {
       mongo: mongoStatus(),
       sdk: localSdkStatus(),
       uploads: uploadsStatus(),
+      livekit: livekitStatus(),
       uptime: process.uptime(),
     })
   })
@@ -71,12 +74,15 @@ export function createApp() {
   app.use('/api/public/uploads', publicCors, uploadsStatic)
   // agent-engine chat demo: isolated surface, does not touch the Pair proxy or any widget
   app.use('/api/public/engine', cors({ origin: '*' }), engineChatRouter)
+  // Voice calls: the widget asks for a LiveKit room here, beside its config.
+  app.use('/api/public', cors({ origin: '*' }), voiceCallRouter)
   app.use('/api/public', publicCors, publicRouter)
   // Alias with Pair's own path shape (GET /v1/widget/:id/config), so the widget's
   // beBaseUrl can point at this server and the design is served per the widget's source.
   // The widget iframe (on the SDK's origin) POSTs chat messages here too, so this
   // mount needs full CORS; whatever the studio doesn't serve itself is proxied to Pair.
   const widgetCors = cors({ origin: '*' })
+  app.use('/v1', widgetCors, voiceCallRouter)
   app.use('/v1', widgetCors, publicRouter)
   // agent-engine widgets (Redis record has engine:"agent-engine") — everything else falls through to the Pair proxy
   app.use('/v1', widgetCors, engineWidgetRouter)

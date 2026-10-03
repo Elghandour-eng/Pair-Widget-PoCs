@@ -18,6 +18,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { CallButton } from '@/features/voice-call/call-button'
 import { isDarkBackground } from '@/lib/utils'
 
 /**
@@ -70,13 +71,16 @@ function ControlGlyph({ name, url, fallback }: { name?: string; url?: string; fa
 export function HeaderControls() {
   const { widgetConfig, view, setView } = useWidgetConfigContext()
   const controls = widgetConfig.headerConfig?.controls
-  if (!controls || (!controls.lang.show && !controls.theme.show)) return null
+  // The phone button rides with these on every screen's header, and shows
+  // whether or not the language and theme switches do.
+  if (!controls || (!controls.lang.show && !controls.theme.show)) return <CallButton className={CONTROL_BTN} />
 
   const isArabic = /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
   const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
 
   return (
     <>
+      <CallButton className={CONTROL_BTN} />
       {controls.lang.show && (
         <Button
           variant="ghost"

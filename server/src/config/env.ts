@@ -33,6 +33,12 @@ const schema = z.object({
   VITE_PUSHER_PORT: z.string().default(''),
   VITE_PUSHER_FORCE_TLS: z.string().default(''),
   VITE_HIRO_WIDGET_ID: z.string().default(''),
+  // LiveKit, for voice calls from the widget. All three or none: without them
+  // the call button still shows, and a call reports that calls are unavailable.
+  // The secret signs tokens here and never leaves this server.
+  LIVEKIT_URL: z.union([z.literal(''), z.string().regex(/^wss?:\/\//, 'LIVEKIT_URL must start with ws:// or wss://')]).default(''),
+  LIVEKIT_API_KEY: z.string().default(''),
+  LIVEKIT_API_SECRET: z.string().default(''),
   // Optional: when set, system logs are also written to MongoDB.
   MONGODB_URI: z.string().optional(),
   MONGODB_DB: z.string().default('pair_widget_studio'),
