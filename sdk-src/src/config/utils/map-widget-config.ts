@@ -371,6 +371,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
       apiResponse.launcher_style === 'none' ||
       windowSettings?.openAutomatically ||
       false,
+    hostControlsPanel: !!windowSettings?.startClosed,
     userId: windowSettings?.userId,
     visitorCredential:
       windowSettings?.accessToken || windowSettings?.accessTokenExpiresIn || windowSettings?.refreshFn

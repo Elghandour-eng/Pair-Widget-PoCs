@@ -18,6 +18,9 @@
 
   // State
   var isOpen = false
+  // The widget has mounted and its CSS is in; before that an open is only remembered.
+  var widgetReady = false
+  var pendingOpen = null
   var widgetLoaded = false
   var widgetIframe = null
   var bubbleHolder = null
@@ -237,6 +240,8 @@
     if (config.transport) params.push('transport=' + encodeURIComponent(config.transport))
     if (config.userId) params.push('userId=' + encodeURIComponent(config.userId))
     if (config.welcome_title_var) params.push('welcome_title_var=' + encodeURIComponent(config.welcome_title_var))
+    // The page opens and closes the panel itself, so the widget keeps a close button.
+    if (config.startClosed) params.push('startClosed=true')
     // Pass sdkMode=true so widget knows it's embedded and doesn't render bubble
     params.push('sdkMode=true')
 
@@ -479,6 +484,7 @@
         }
         // Notify widget
         sendMessageToWidget('sdk:opened', {})
+        emitToHost('widget:opened', {})
         console.log('[PairAI SDK] Widget opened')
       } else {
         // Hide widget
@@ -507,6 +513,7 @@
         }
         // Notify widget
         sendMessageToWidget('sdk:closed', {})
+        emitToHost('widget:closed', {})
         console.log('[PairAI SDK] Widget closed')
       }
 
@@ -519,6 +526,24 @@
       }, 50)
     }, 100) // Half of transition duration
   }
+
+  /**
+   * Open, close or flip the panel on the host's behalf. A call that lands
+   * before the widget is ready is remembered and applied once it is, so a page
+   * can ask for the panel as early as it likes without showing it unstyled.
+   */
+  function setOpen(state) {
+    if (!widgetLoaded) return console.warn('[PairAI SDK] Call run() before opening or closing the widget')
+    if (!widgetReady) {
+      pendingOpen = state !== undefined ? !!state : !(pendingOpen !== null ? pendingOpen : isOpen)
+      return
+    }
+    toggleWidget(state !== undefined ? !!state : undefined)
+  }
+
+  // The same three commands, for a page that cannot reach PairWidget itself
+  // (another frame, a tag manager): window.postMessage({ type: 'pair:open' }, '*').
+  var HOST_COMMANDS = { 'pair:open': true, 'pair:close': false, 'pair:toggle': undefined }
 
   // Host subscriptions to widget -> host messages, by event name without the
   // `widget:` prefix ('*' receives every one).
@@ -541,7 +566,12 @@
     window.addEventListener('message', function (event) {
       // Only process messages that look like widget messages
       if (!event.data || typeof event.data !== 'object') return
-      if (!event.data.type || !event.data.type.startsWith('widget:')) return
+      if (typeof event.data.type !== 'string') return
+      if (Object.prototype.hasOwnProperty.call(HOST_COMMANDS, event.data.type)) {
+        setOpen(HOST_COMMANDS[event.data.type])
+        return
+      }
+      if (!event.data.type.startsWith('widget:')) return
 
       // Every widget message reaches the host's own listeners, whether or not
       // the switch below acts on it.
@@ -553,9 +583,13 @@
           // Inject CSS now (widget is ready, will receive color soon)
           injectCSS(null, function () {
             showBubble()
-            if (config.openAutomatically) {
+            widgetReady = true
+            // What the page asked for while the widget was loading wins over
+            // the design's own opening.
+            if (pendingOpen !== null ? pendingOpen : config.openAutomatically) {
               toggleWidget(true)
             }
+            pendingOpen = null
           })
           // Send config to widget
           sendMessageToWidget('sdk:config', config)
@@ -765,6 +799,8 @@
     if (newConfig.openAutomatically !== undefined) config.openAutomatically = newConfig.openAutomatically
     // No launcher at all: the panel opens and stays; the bubble never shows.
     if (config.type === 'none') config.openAutomatically = true
+    // The page asked to open the panel itself, so nothing opens it for it.
+    if (config.startClosed) config.openAutomatically = false
     if (newConfig.primaryColor) config.primaryColor = newConfig.primaryColor
     if (newConfig.launcherStyles) config.launcherStyles = newConfig.launcherStyles
     if (newConfig.launcherDesign) {
@@ -811,6 +847,9 @@
         }
       }
     }
+
+    // No launcher never shows a bubble, whether or not the panel opens by itself.
+    if (config.type === 'none' && bubbleHolder) bubbleHolder.style.display = 'none'
 
     // 3. Update bubble elements and classes
     var bubble = bubbleHolder ? bubbleHolder.querySelector('.pair-ai-bubble') : null
@@ -875,6 +914,8 @@
       panel: settings.panel || options.panel,
       user: options.user,
       openAutomatically: settings.openAutomatically || options.openAutomatically || false,
+      // The panel never opens by itself; the page opens it with open() / pair:open.
+      startClosed: !!(settings.startClosed || options.startClosed),
       userId: settings.userId || options.userId || null,
       accessToken: settings.accessToken,
       accessTokenExpiresIn: settings.accessTokenExpiresIn,
@@ -884,6 +925,7 @@
 
     // A 'none' launcher means the panel opens by itself and there is no bubble.
     if (config.type === 'none') config.openAutomatically = true
+    if (config.startClosed) config.openAutomatically = false
 
     console.log('[PairAI SDK] Initializing with config:', config)
 
@@ -1149,13 +1191,20 @@
     on: on,
     off: off,
     toggle: function (show) {
-      toggleWidget(show)
+      setOpen(show)
     },
+    open: function () {
+      setOpen(true)
+    },
+    close: function () {
+      setOpen(false)
+    },
+    // The older names for open() and close().
     show: function () {
-      toggleWidget(true)
+      setOpen(true)
     },
     hide: function () {
-      toggleWidget(false)
+      setOpen(false)
     },
     setUser: setUser,
     isOpen: function () {

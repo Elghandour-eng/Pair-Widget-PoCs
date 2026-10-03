@@ -25,6 +25,7 @@ export function LauncherPage({ get, set, disabled }: PageProps) {
           <NumField label={t('builder.launcher.offsetY')} path={p('offsetY')} min={0} max={120} step={1} fallback={20} unit="px" get={get} set={set} disabled={disabled} />
           <ToggleField label={t('form.poweredBy')} path="powered_by_pair_ai" get={get} set={set} disabled={disabled} />
         </div>
+        <p className="callout mt-4">{t(get(p('type')) === 'none' ? 'builder.launcher.openHint.none' : 'builder.launcher.openHint')}</p>
       </section>
 
       <Disclosure summary={t('builder.launcher.shape')}>

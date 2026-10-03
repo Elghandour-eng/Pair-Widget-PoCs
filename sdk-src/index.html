@@ -26,6 +26,10 @@
       if (userId) {
         window.PairAiWidgetSettings.userId = userId
       }
+      // The host page opens and closes the panel itself (startClosed in its snippet)
+      if (urlParams.get('startClosed') === 'true') {
+        window.PairAiWidgetSettings.startClosed = true
+      }
       var transport = urlParams.get('transport')
       if (transport) {
         window.PairAiWidgetSettings.transport = transport

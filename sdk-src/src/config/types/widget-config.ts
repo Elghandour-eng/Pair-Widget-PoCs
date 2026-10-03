@@ -48,6 +48,8 @@ export interface PairAiWidgetSettings {
   sdkMode?: boolean // When true, SDK handles bubble button, widget just shows panel
   beBaseUrl?: string
   openAutomatically?: boolean
+  /** The host page opens and closes the panel itself; nothing opens it for it. */
+  startClosed?: boolean
   userId?: string
   accessToken?: string
   accessTokenExpiresIn?: number
@@ -107,6 +109,8 @@ export interface WidgetConfig {
   showHeader?: boolean
   showFooter?: boolean
   openAutomatically?: boolean
+  /** The host page opens and closes the panel itself (`startClosed` in its snippet). */
+  hostControlsPanel?: boolean
   userId?: string
   visitorCredential?: VisitorCredential
   metadata?: Record<string, unknown>

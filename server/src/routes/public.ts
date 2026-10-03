@@ -122,6 +122,21 @@ function mergeStyles(existing: Record<string, any> | undefined, compiled: Record
  * structured block travels alongside for the parts the widget had to be taught
  * (the typed text, the action buttons, the launcher's icon and geometry).
  */
+/**
+ * How the panel opens follows the launcher, for a design the studio owns: a
+ * launcher of any kind waits to be tapped, and only "no launcher" opens by
+ * itself. A config imported from Pair can carry `automatically_open` from
+ * Pair's own dashboard, which the builder has no field for — left alone, the
+ * panel opens over a launcher the builder says is there. A design served
+ * straight from Pair keeps what Pair says. Runs after materializeChrome, which
+ * has already written the builder's launcher type into `launcher_style`.
+ */
+function settleOpening<T>(config: T, source: string): T {
+  if (source !== 'redis') return config
+  const c = config as Record<string, any>
+  return { ...c, opening_method: c.launcher_style === 'none' ? 'automatically_open' : 'chat_icon' } as T
+}
+
 function materializeChrome<T>(config: T): T {
   const c = config as Record<string, any>
   const hasInput = !!c?.widget_v2_config?.chat_input?.design
@@ -489,7 +504,7 @@ publicRouter.get(
     // leave here.
     const own = one((config as Record<string, any>).locale)
     const settled = own && /^ar/i.test(own) ? applyWidgetLanguage(config, 'ar') : applyWidgetLanguage(config, 'en')
-    res.json(materializeChrome(materializeHero(absolutizeUploads(settled, origin), origin, req.params.widgetId)))
+    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(settled, origin), origin, req.params.widgetId)), source))
   }),
 )
 
@@ -508,7 +523,7 @@ widgetLangRouter.get(
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
     const origin = `${req.protocol}://${req.get('host')}`
-    res.json(materializeChrome(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng)))
+    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng)), source))
   }),
 )
 
@@ -532,7 +547,7 @@ widgetViewRouter.get(
     let c = config
     if (lng) c = applyWidgetLanguage(c, lng)
     if (theme) c = applyWidgetTheme(c, theme)
-    res.json(materializeChrome(materializeHero(absolutizeUploads(c, origin), origin, req.params.widgetId, lng)))
+    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(c, origin), origin, req.params.widgetId, lng)), source))
   }),
 )
 
@@ -633,7 +648,7 @@ const DOC_API: DocRow[] = [
   { name: 'send(type, data)', takes: 'string, any', what: 'Sends any message yourself, for anything this API does not wrap.' },
   { name: 'on(event, fn)', takes: 'string, function', what: 'Subscribes to what the widget sends back. Returns an unsubscribe function.' },
   { name: 'off(event, fn)', takes: 'string, function', what: 'Removes a subscription.' },
-  { name: 'show() / hide()', takes: '—', what: 'Opens or closes the panel.' },
+  { name: 'open() / close()', takes: '—', what: 'Opens or closes the panel. Called before the widget is ready, it applies as soon as it is. show() / hide() are the older names.' },
   { name: 'toggle(show?)', takes: 'boolean?', what: 'Flips the panel, or forces a state.' },
   { name: 'isOpen()', takes: '—', what: 'Whether the panel is open right now.' },
   { name: 'setUser(user)', takes: 'object', what: 'Identifies the visitor.' },
@@ -657,6 +672,7 @@ const DOC_RECEIVE: DocRow[] = [
   { name: 'viewChanged', takes: '{ lang, theme }', what: 'The view changed — by your call, or by the visitor using the header controls.' },
   { name: 'configUpdated', takes: '{ config }', what: 'The design was re-fetched; carries the resolved config.' },
   { name: 'close', takes: '—', what: 'The visitor pressed close inside the widget. Hide your container.' },
+  { name: 'opened / closed', takes: '—', what: 'The panel opened or closed — by the launcher, the visitor, or your own call.' },
   { name: 'setColor', takes: '{ color }', what: 'The brand colour, so a launcher outside the iframe can match it.' },
   { name: 'requestTokenRefresh', takes: '—', what: 'The visitor credential expired. Issue a new one and send it back.' },
 ]
@@ -749,6 +765,7 @@ const DOC_ICONS: Record<string, string> = {
   receive: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   headers: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
   mobile: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  launcher: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
 }
 
@@ -819,6 +836,34 @@ publicRouter.get(
       "  lang: 'en',",
       "  theme: 'light',",
       '})',
+    ].join('\n')
+
+    const openClose = [
+      '<script>',
+      '  window.PairAiWidgetSettings = {',
+      `    beBaseUrl: '${origin}',`,
+      '    // Nothing opens the chat for you: no launcher',
+      '    // tap, no opening by itself. Your page does.',
+      '    startClosed: true,',
+      '  }',
+      '<\/script>',
+      '',
+      '<button onclick="PairWidget.open()">Chat with us</button>',
+      '<button onclick="PairWidget.close()">Close</button>',
+      '<button onclick="PairWidget.toggle()">Toggle</button>',
+    ].join('\n')
+
+    const openCloseMessage = [
+      '// From anywhere that cannot reach PairWidget —',
+      '// another frame, a tag manager — post to the',
+      '// page that holds the snippet instead.',
+      "window.postMessage({ type: 'pair:open' }, '*')",
+      "window.postMessage({ type: 'pair:close' }, '*')",
+      "window.postMessage({ type: 'pair:toggle' }, '*')",
+      '',
+      '// Keep your own button in step with the panel.',
+      "PairWidget.on('opened', function () { /* … */ })",
+      "PairWidget.on('closed', function () { /* … */ })",
     ].join('\n')
 
     const metadata = [
@@ -1163,6 +1208,7 @@ publicRouter.get(
     <p>Guide</p>
     <a href="#install">${ico('install')}Install</a>
     <a href="#control">${ico('control')}Control API</a>
+    <a href="#open-close">${ico('launcher')}Open &amp; close</a>
     <a href="#send">${ico('send')}Messages you send</a>
     <a href="#receive">${ico('receive')}Messages you receive</a>
     <a href="#headers">${ico('headers')}Headers &amp; params</a>
@@ -1202,6 +1248,20 @@ publicRouter.get(
         <p>Every call is a <code class="inl">postMessage</code> underneath, so nothing here is privileged: you can send the same messages yourself.</p>
       </div>
       <div class="aside">${codeBlock('javascript', usage)}${codeBlock('javascript', custom)}</div>
+    </section>
+
+    <section id="open-close">
+      <div class="prose">
+        <h3>Open and close from your page</h3>
+        <p>The launcher is one way to open the chat; your page is another. <code class="inl">PairWidget.open()</code>, <code class="inl">close()</code> and <code class="inl">toggle()</code> work with every launcher style, and <code class="inl">isOpen()</code> tells you where it stands.</p>
+        <ul class="bul">
+          <li>With a launcher, the chat stays closed until the visitor taps it — or your page opens it.</li>
+          <li><b>No launcher — always open</b> draws no icon and opens the chat by itself.</li>
+          <li>For no icon <em>and</em> your own button, pick <b>No launcher</b> in the builder and add <b>startClosed: true</b> to the snippet. The chat then waits for your call, and its header keeps a close button so the visitor can always leave.</li>
+          <li>The same three commands exist as messages — <code class="inl">pair:open</code>, <code class="inl">pair:close</code>, <code class="inl">pair:toggle</code> — posted to the page that holds the snippet.</li>
+        </ul>
+      </div>
+      <div class="aside">${codeBlock('html', openClose)}${codeBlock('javascript', openCloseMessage)}</div>
     </section>
 
     <section id="control-ref" class="wide">

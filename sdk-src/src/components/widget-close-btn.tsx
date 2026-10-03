@@ -19,13 +19,22 @@ function WidgetCloseBtn() {
   }
 
   // With no launcher at all there is nothing to reopen the panel with, so the
-  // close button goes too — the panel simply stays.
-  if (widgetConfig.type === 'none') return null
+  // close button goes too — the panel simply stays. Unless the host page opens
+  // and closes the panel itself: then this is the visitor's own way out, and it
+  // shows at every width because there is no launcher to close it with.
+  const hostControlled = widgetConfig.type === 'none' && !!widgetConfig.hostControlsPanel
+  if (widgetConfig.type === 'none' && !hostControlled) return null
   // The studio can turn the close button off, like the other header controls.
   if (widgetConfig.headerConfig?.controls.close.show === false) return null
 
   return (
-    <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={handleClose} className="min-[668px]:hidden">
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Close"
+      onClick={handleClose}
+      className={hostControlled ? undefined : 'min-[668px]:hidden'}
+    >
       <X className="size-5" />
     </Button>
   )

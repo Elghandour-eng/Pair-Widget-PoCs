@@ -74,6 +74,25 @@ describe('auth + rbac', () => {
     expect(pub.headers.get('x-config-source')).toBe('redis')
     expect((await pub.json()).widget_color).toBe('#E50914')
   })
+  it('a studio design opens by its launcher: a tap for any launcher, by itself only with none', async () => {
+    const put = (config: Record<string, unknown>) =>
+      api('/api/widgets/TEST_WIDGET_1/config', { method: 'PUT', body: JSON.stringify(config) }, adminToken)
+    const opening = async () => (await (await fetch(`${base}/api/public/widget/TEST_WIDGET_1/config`)).json()).opening_method
+    const imported = { name: 'Cinescape AI', widget_color: '#E50914', opening_method: 'automatically_open', launcher_style: 'standard' }
+    // Imported from Pair with its own "open automatically", launcher never touched in the builder.
+    await put(imported)
+    expect(await opening()).toBe('chat_icon')
+    await put({ ...imported, launcher_design: { type: 'chat_icon' } })
+    expect(await opening()).toBe('chat_icon')
+    await put({ ...imported, opening_method: 'chat_icon', launcher_design: { type: 'none' } })
+    expect(await opening()).toBe('automatically_open')
+  })
+  it('the docs page covers opening and closing from the host page', async () => {
+    const page = await (await fetch(`${base}/api/public/docs`)).text()
+    for (const piece of ['id="open-close"', 'startClosed: true', 'PairWidget.open()', 'pair:toggle', 'opened / closed']) {
+      expect(page).toContain(piece)
+    }
+  })
   it('protects the last admin', async () => {
     const list = await (await api('/api/users', {}, adminToken)).json()
     const admin = list.users.find((u: { role: string }) => u.role === 'admin')
