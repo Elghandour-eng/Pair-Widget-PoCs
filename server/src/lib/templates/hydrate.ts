@@ -90,6 +90,14 @@ export function hydrateComponents(list: unknown, binding: TemplateBinding = ALL_
  */
 export function componentsToTemplate(comps: Array<Row>, replyText: string): Row | undefined {
   const lang = /[؀-ۿ]/.test(replyText) ? 'ar' : 'en'
+  // Stackable cards (Hiro's) travel together, in the order the agent sent them:
+  // a trend and the scan behind it answer one question, and dropping the second
+  // would answer half of it.
+  const stacked = comps
+    .filter((c) => c.type === 'template' && TEMPLATES_BY_NAME.get(String(c.template ?? ''))?.stackable)
+    .map((c) => ({ type: TEMPLATES_BY_NAME.get(String(c.template))!.widgetType, content: { lang, ...((c.data ?? {}) as Row) } }))
+  if (stacked.length > 1) return { type: 'stack', content: { lang, items: stacked.slice(0, 4) } }
+  if (stacked.length === 1) return stacked[0]
   for (const def of TEMPLATES) {
     const matches = comps.filter((c) => c.type === 'template' && c.template === def.name)
     if (matches.length === 0) continue

@@ -122,6 +122,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const headerConfig: HeaderConfig | undefined = rawHeader
     ? {
         enabled: rawHeader.enabled,
+        showIcon: rawHeader.showIcon !== false,
         backgroundEnabled: rawHeader.background?.enabled ?? false,
         backgroundColor: rawHeader.background?.color ?? '',
         title: rawHeader.content?.title ?? '',
@@ -160,6 +161,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
   const introScreen: IntroScreenConfig | undefined = rawIntro
     ? {
         show: rawIntro.showIntroScreen.value,
+        showPattern: rawIntro.showPattern !== false,
         welcomeTitle: formatWelcomeTitle(
           rawIntro.welcomeTitle?.text ?? apiResponse.welcome_title ?? '',
           welcomeTitleVar,
@@ -294,6 +296,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
 
   const rawMessages = apiResponse.widget_v2_config?.messages
   const messagesConfig: MessagesConfig = {
+    thinking: rawMessages?.thinking,
     loadingOlder: rawMessages?.loadingOlder,
     emptyState: rawMessages?.emptyState,
     suggestions: rawMessages?.suggestions,

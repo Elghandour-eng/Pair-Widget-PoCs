@@ -68,6 +68,7 @@ widgetsRouter.post(
         engine: z.enum(['pair', 'agent-engine']).optional(),
         agentId: z.string().max(80).optional(),
         engineKey: z.string().max(200).optional(),
+        engineUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
         importFromApi: z.boolean().default(true),
       })
       .parse(req.body)
@@ -134,6 +135,7 @@ widgetsRouter.patch(
         engine: z.enum(['pair', 'agent-engine']).optional(),
         agentId: z.string().max(80).optional(),
         engineKey: z.string().max(200).optional(),
+        engineUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
       })
       .parse(req.body)
     res.json({ widget: await updateWidget(req.params.widgetId, body, req.user!.email) })

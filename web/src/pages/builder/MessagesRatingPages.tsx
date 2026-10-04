@@ -16,6 +16,8 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const SG = 'widget_v2_config.messages.suggestions'
   const QC = 'widget_v2_config.messages.questions'
   const ES = 'widget_v2_config.messages.emptyState'
+  const TH = 'widget_v2_config.messages.thinking'
+  const pill = get(`${TH}.style`) === 'pill'
   // The card's own controls only act on a card; plain text is what the widget
   // draws when no style has been chosen.
   const isCard = get(`${AI}.messageStyle`) === 'card'
@@ -23,6 +25,23 @@ export function MessagesPage({ draft, setDraft, get, set, disabled }: { draft: W
   const isOutline = get(`${CU}.bubbleType`) === 'outline'
   return (
     <div className="space-y-7">
+      <section>
+        <SectionHead>{t('builder.msgs.thinking')}</SectionHead>
+        <p className="callout mb-3">{t('builder.msgs.thinkingHint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ChoiceField label={t('builder.msgs.thinkingStyle')} path={`${TH}.style`} options={['reel', 'pill']} keyPrefix="builder.msgs.thinkingStyle" fallback="reel" get={get} set={set} disabled={disabled} />
+          {pill && (
+            <>
+              <Field label={t('builder.msgs.thinkingLabel')} path={`${TH}.label`} placeholder="Thinking" get={get} set={set} disabled={disabled} />
+              <ToggleField label={t('builder.msgs.thinkingNarrate')} path={`${TH}.narrate`} get={get} set={set} disabled={disabled} />
+              <ColorField label={t('builder.msgs.thinkingFrom')} path={`${TH}.from`} get={get} set={set} disabled={disabled} />
+              <ColorField label={t('builder.msgs.thinkingTo')} path={`${TH}.to`} get={get} set={set} disabled={disabled} />
+              <ColorField label={t('builder.input.textColor')} path={`${TH}.textColor`} get={get} set={set} disabled={disabled} />
+              <NumField label={t('builder.msgs.thinkingHeight')} path={`${TH}.height`} min={36} max={80} step={1} fallback={56} unit="px" get={get} set={set} disabled={disabled} />
+            </>
+          )}
+        </div>
+      </section>
       <section>
         <SectionHead>{t('builder.msgs.ai')}</SectionHead>
         <div className="grid gap-4 sm:grid-cols-2">

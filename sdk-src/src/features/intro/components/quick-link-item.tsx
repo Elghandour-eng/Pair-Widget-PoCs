@@ -46,7 +46,16 @@ export function QuickLinkItem({
       onClick={onClick}
       disabled={disabled}
     >
-      {showImage && item.image && (
+      {showImage && item.image && design?.imageAsIcon && (
+        // An icon, not a photo: small, at the card's start, never cropped.
+        <img
+          src={item.image}
+          alt=""
+          className="m-1 shrink-0 object-contain"
+          style={{ width: design.iconSize ?? 24, height: design.iconSize ?? 24 }}
+        />
+      )}
+      {showImage && item.image && !design?.imageAsIcon && (
         <img
           src={item.image}
           alt={item.text}

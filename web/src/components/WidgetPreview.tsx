@@ -221,11 +221,12 @@ export const WidgetPreview = memo(function WidgetPreview({ config, dark, frame =
         // Mirrors the real widget header: avatar · title, then the header
         // controls (language / theme, as configured) and the close button.
         <div className="flex items-center gap-2 px-3 py-3 transition-colors duration-300" style={{ background: headerBg }}>
-          {c.avatar_url ? (
-            <img src={c.avatar_url} alt="" className="size-6 shrink-0 rounded-full object-cover" />
-          ) : (
-            <span className="size-6 shrink-0 rounded-full transition-colors duration-300" style={{ background: brand }} />
-          )}
+          {get(v2, 'header.showIcon') !== false &&
+            (c.avatar_url ? (
+              <img src={c.avatar_url} alt="" className="size-6 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="size-6 shrink-0 rounded-full transition-colors duration-300" style={{ background: brand }} />
+            ))}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-bold" style={titleStyle}>{title}</p>
             {subtitle && <p className="truncate text-[10px]" style={{ color: muted }}>{subtitle}</p>}

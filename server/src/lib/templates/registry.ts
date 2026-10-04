@@ -2,6 +2,7 @@ import type { Row } from '../dataSource.js'
 import type { TemplateDesign } from './design.js'
 import { menuItems } from '../../routes/cinescapeMenuSource.js'
 import { PAIR_PLUGIN_TEMPLATES, type PluginRef } from './pairPlugin.js'
+import { HIRO_TEMPLATES } from './hiro.js'
 import { APP_LINKS, CINEMA_ROWS, EXPERIENCE_ITEMS, PRICE_ITEMS } from './seeds.js'
 
 /**
@@ -49,6 +50,12 @@ export interface TemplateDef {
   /** True when the rows come from the agent alone and no source applies. */
   passthrough?: boolean
   /**
+   * True when one reply may carry several cards of this kind and of other
+   * stackable kinds: they are drawn one under the other, in the order the agent
+   * sent them, instead of only the first being shown.
+   */
+  stackable?: boolean
+  /**
    * Set on a plugin component: the orchestrator plugin, tool group and tool
    * whose call this template renders (see pairPlugin.ts). The card is produced
    * from the tool call, so it only ever appears for an agent with that group
@@ -94,6 +101,7 @@ export const TEMPLATES: TemplateDef[] = [
   // Plugin components first: a ticket the agent just opened is the point of the
   // reply it arrives in, and must not lose its place to a card emitted beside it.
   ...PAIR_PLUGIN_TEMPLATES,
+  ...HIRO_TEMPLATES,
   {
     name: 'location_card',
     design: ['accent', 'surface', 'border', 'radius', 'padding', 'titleSize', 'imageRatio', 'showImage'],

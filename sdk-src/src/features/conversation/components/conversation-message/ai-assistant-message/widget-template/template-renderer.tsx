@@ -16,6 +16,19 @@ import { MenuCards } from './menu-cards'
 import { MovieCards } from './movie-cards'
 import { MenuCategories } from './menu-categories'
 import { ImageCard, LinkCard, TicketCard, TicketList } from './pair-plugin-cards'
+import {
+  HiroBodyComposition,
+  HiroBodySnapshot,
+  HiroExerciseCards,
+  HiroGoalProgress,
+  HiroInsight,
+  HiroMacroTargets,
+  HiroMealCards,
+  HiroMealPlan,
+  HiroMuscleBalance,
+  HiroProgressTrend,
+  HiroWorkoutPlan,
+} from './hiro-cards'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -67,6 +80,43 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <LinkCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'image_card':
       return <ImageCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_body_snapshot':
+      return <HiroBodySnapshot template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_progress_trend':
+      return <HiroProgressTrend template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_body_composition':
+      return <HiroBodyComposition template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_goal_progress':
+      return <HiroGoalProgress template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_macro_targets':
+      return <HiroMacroTargets template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_muscle_balance':
+      return <HiroMuscleBalance template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_meal_cards':
+      return <HiroMealCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_meal_plan':
+      return <HiroMealPlan template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_workout_plan':
+      return <HiroWorkoutPlan template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_exercise_cards':
+      return <HiroExerciseCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'hiro_insight':
+      return <HiroInsight template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'stack':
+      // Several cards in one reply, in the order the agent sent them.
+      return (
+        <div className="flex w-full flex-col gap-1">
+          {(widgetTemplate.content?.items ?? []).map((item, i) => (
+            <TemplateRenderer
+              key={i}
+              widgetTemplate={
+                { ...item, content: { lang: widgetTemplate.content?.lang, ...item.content } } as WidgetTemplate
+              }
+              sourceMessageUlid={sourceMessageUlid}
+            />
+          ))}
+        </div>
+      )
     default:
       return null
   }

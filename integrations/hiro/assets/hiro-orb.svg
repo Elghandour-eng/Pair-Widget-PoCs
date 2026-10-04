@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="45%" stop-color="#4FA8FF" stop-opacity="0"/>
+      <stop offset="62%" stop-color="#4FA8FF" stop-opacity="0.55"/>
+      <stop offset="78%" stop-color="#7C8CFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7C8CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9FDBFF"/>
+      <stop offset="35%" stop-color="#2F8BFF"/>
+      <stop offset="70%" stop-color="#5B6CFF"/>
+      <stop offset="100%" stop-color="#B6A8FF"/>
+    </linearGradient>
+    <filter id="blur18" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="blur6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="blur2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
+  </defs>
+  <style>
+    .spin { transform-origin: 160px 120px; animation: spin 9s linear infinite; }
+    .spin2 { transform-origin: 160px 120px; animation: spin 14s linear infinite reverse; }
+    .breathe { transform-origin: 160px 120px; animation: breathe 3.6s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes breathe { 0%, 100% { transform: scale(0.96); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .spin, .spin2, .breathe { animation: none; } }
+  </style>
+  <g class="breathe">
+    <circle cx="160" cy="120" r="92" fill="url(#halo)"/>
+    <g class="spin">
+      <ellipse cx="160" cy="120" rx="66" ry="70" fill="none" stroke="url(#ring)" stroke-width="22" filter="url(#blur18)" opacity="0.9"/>
+      <ellipse cx="160" cy="120" rx="64" ry="68" fill="none" stroke="url(#ring)" stroke-width="10" filter="url(#blur6)"/>
+    </g>
+    <g class="spin2">
+      <ellipse cx="160" cy="121" rx="60" ry="64" fill="none" stroke="#E6F4FF" stroke-width="2.4" stroke-dasharray="210 190" filter="url(#blur2)" opacity="0.95"/>
+      <ellipse cx="161" cy="119" rx="67" ry="70" fill="none" stroke="#7FD0FF" stroke-width="1.6" stroke-dasharray="120 300" filter="url(#blur2)" opacity="0.8"/>
+    </g>
+  </g>
+</svg>

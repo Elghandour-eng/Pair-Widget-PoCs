@@ -135,6 +135,16 @@ function mergeStyles(existing: Record<string, any> | undefined, compiled: Record
  * straight from Pair keeps what Pair says. Runs after materializeChrome, which
  * has already written the builder's launcher type into `launcher_style`.
  */
+/**
+ * A widget whose chat runs on the orchestrator streams its replies over SSE.
+ * The config says so, so the widget switches itself over and the page that
+ * embeds it never has to know (`transport: 'sse'` in its snippet stays an
+ * override, not a requirement).
+ */
+function withTransport<T>(config: T, engine: string | undefined): T {
+  return engine === 'agent-engine' ? ({ ...(config as Record<string, unknown>), transport: 'sse' } as T) : config
+}
+
 function settleOpening<T>(config: T, source: string): T {
   if (source !== 'redis') return config
   const c = config as Record<string, any>
@@ -545,7 +555,7 @@ publicRouter.get('/hero.svg', asyncHandler(async (req, res) => {
 publicRouter.get(
   '/widget/:widgetId/config',
   asyncHandler(async (req, res) => {
-    const { source, cached, config } = await resolveConfig(req.params.widgetId)
+    const { source, cached, config, engine } = await resolveConfig(req.params.widgetId)
     res.setHeader('X-Config-Source', source)
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
@@ -557,7 +567,7 @@ publicRouter.get(
     // leave here.
     const own = one((config as Record<string, any>).locale)
     const settled = own && /^ar/i.test(own) ? applyWidgetLanguage(config, 'ar') : applyWidgetLanguage(config, 'en')
-    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(settled, origin), origin, req.params.widgetId)), source))
+    res.json(withTransport(settleOpening(materializeChrome(materializeHero(absolutizeUploads(settled, origin), origin, req.params.widgetId)), source), engine))
   }),
 )
 
@@ -571,12 +581,12 @@ widgetLangRouter.get(
   '/widget/:widgetId/config',
   asyncHandler(async (req, res) => {
     const lng: WidgetLangName = (req.params as { lng?: string }).lng === 'ar' ? 'ar' : 'en'
-    const { source, cached, config } = await resolveConfig(req.params.widgetId)
+    const { source, cached, config, engine } = await resolveConfig(req.params.widgetId)
     res.setHeader('X-Config-Source', source)
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
     const origin = `${req.protocol}://${req.get('host')}`
-    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng)), source))
+    res.json(withTransport(settleOpening(materializeChrome(materializeHero(absolutizeUploads(applyWidgetLanguage(config, lng), origin), origin, req.params.widgetId, lng)), source), engine))
   }),
 )
 
@@ -592,7 +602,7 @@ widgetViewRouter.get(
     const p = req.params as { lng?: string; theme?: string }
     const lng: WidgetLangName | undefined = p.lng === 'ar' || p.lng === 'en' ? p.lng : undefined
     const theme = isWidgetTheme(p.theme) ? p.theme : undefined
-    const { source, cached, config } = await resolveConfig(req.params.widgetId)
+    const { source, cached, config, engine } = await resolveConfig(req.params.widgetId)
     res.setHeader('X-Config-Source', source)
     res.setHeader('X-Config-Cached', String(cached))
     res.setHeader('Cache-Control', 'public, max-age=30')
@@ -600,7 +610,7 @@ widgetViewRouter.get(
     let c = config
     if (lng) c = applyWidgetLanguage(c, lng)
     if (theme) c = applyWidgetTheme(c, theme)
-    res.json(settleOpening(materializeChrome(materializeHero(absolutizeUploads(c, origin), origin, req.params.widgetId, lng)), source))
+    res.json(withTransport(settleOpening(materializeChrome(materializeHero(absolutizeUploads(c, origin), origin, req.params.widgetId, lng)), source), engine))
   }),
 )
 

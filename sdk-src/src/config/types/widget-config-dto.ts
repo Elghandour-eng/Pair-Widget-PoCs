@@ -198,6 +198,7 @@ export interface HeaderControlsDto {
 
 export interface HeaderDto {
   enabled: boolean
+  showIcon?: boolean
   iconId?: string
   icon?: string | null
   iconStyle?: CSSProperties & {
@@ -293,6 +294,7 @@ export interface ShowIntroScreen {
 }
 
 export interface IntroScreen {
+  showPattern?: boolean
   heroSection: HeroSection
   loadingState: LoadingState
   welcomeTitle: WelcomeTitle
@@ -377,6 +379,9 @@ export interface QuickLinksDesignDto {
   imageHeight?: number
   imageFit?: 'cover' | 'contain'
   imageRadius?: number
+  /** The image is a small icon at the top of the card, not a photo across it. */
+  imageAsIcon?: boolean
+  iconSize?: number
   /** The card's hover colours, compiled to a rule for `.pair-quick-card`. */
   hoverCss?: string
 }
@@ -622,7 +627,26 @@ export interface EmptyStateDto {
   color?: string
 }
 
+/**
+ * The assistant's "working" line while a reply is on its way: the film-reel
+ * line (default), or a gradient pill with a spark (Hiro's look).
+ */
+export interface ThinkingDesignDto {
+  style?: 'reel' | 'pill'
+  /** Fixed text for the pill; the stream's own narration wins when it has one. */
+  label?: string
+  /** The pill's gradient, start → end. */
+  from?: string
+  to?: string
+  textColor?: string
+  height?: number
+  radius?: number
+  /** Show the engine's narration ("Checking your scans…") instead of the fixed label. */
+  narrate?: boolean
+}
+
 export interface Messages {
+  thinking?: ThinkingDesignDto
   loadingOlder?: LoadingOlder
   emptyState?: EmptyStateDto
   feedback: Feedback

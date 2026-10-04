@@ -36,9 +36,11 @@ const ENGINE_KEY = process.env.AGENT_ENGINE_KEY || ''
 export interface EngineTarget {
   agentId: string
   apiKey: string
+  /** Which orchestrator: the env default, or the widget's own (a preview instance, say). */
+  baseUrl: string
 }
 
-const ENV_TARGET: EngineTarget = { agentId: ENGINE_AGENT, apiKey: ENGINE_KEY }
+const ENV_TARGET: EngineTarget = { agentId: ENGINE_AGENT, apiKey: ENGINE_KEY, baseUrl: ENGINE_URL }
 
 /** The branch rows behind every location answer: the cards, and the distances the agent is given. */
 const LOCATION_TEMPLATE = TEMPLATES_BY_NAME.get('location_card')!
@@ -64,7 +66,7 @@ export async function agentPlugins(widgetId: string): Promise<Record<string, Age
   let value: Record<string, AgentPlugin> | null = null
   try {
     const target = await engineTarget(widgetId)
-    const r = await fetch(`${ENGINE_URL}/v1/info`, { headers: engineHeaders(false, target), signal: AbortSignal.timeout(5000) })
+    const r = await fetch(`${target.baseUrl}/v1/info`, { headers: engineHeaders(false, target), signal: AbortSignal.timeout(5000) })
     if (r.ok) {
       const body = (await r.json()) as { plugins?: Record<string, AgentPlugin> }
       if (body.plugins && typeof body.plugins === 'object') value = body.plugins
@@ -81,8 +83,12 @@ async function engineTarget(widgetId: string): Promise<EngineTarget> {
     // Unreachable Redis falls back to the env agent rather than failing the turn.
     const raw = await getSoon(`widget:${widgetId}`)
     if (!raw) return ENV_TARGET
-    const rec = JSON.parse(raw) as { agentId?: string; engineKey?: string }
-    return { agentId: rec.agentId || ENGINE_AGENT, apiKey: rec.engineKey || ENGINE_KEY }
+    const rec = JSON.parse(raw) as { agentId?: string; engineKey?: string; engineUrl?: string }
+    return {
+      agentId: rec.agentId || ENGINE_AGENT,
+      apiKey: rec.engineKey || ENGINE_KEY,
+      baseUrl: (rec.engineUrl || ENGINE_URL).replace(/\/$/, ''),
+    }
   } catch {
     return ENV_TARGET
   }
@@ -107,7 +113,7 @@ engineChatRouter.post('/widget/:widgetId/cine/chat', async (req, res) => {
     inputs: typeof req.body?.inputs === 'object' && req.body.inputs ? req.body.inputs : {},
   }
   try {
-    const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
+    const upstream = await fetch(`${target.baseUrl}/v1/chat-messages`, {
       method: 'POST',
       headers: engineHeaders(true, target),
       body: JSON.stringify(body),
@@ -643,6 +649,14 @@ interface EngineConv {
   user: string
   /** the customer's language, updated from every worded message they type */
   lang: 'ar' | 'en'
+  /**
+   * What the host page says about the visitor (phone, user id, name…), mapped
+   * from its metadata by the widget design and sent with every message. It
+   * reaches the agent as its `inputs`, where a tool reads it as
+   * `{{inputs.phone}}` — so the user's identity comes from the app, never from
+   * the model.
+   */
+  inputs?: Record<string, string>
 }
 
 const convs = new Map<string, EngineConv>()
@@ -738,10 +752,10 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   }
   say(thinkOpener(query, conv.lang))
   try {
-    const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
+    const upstream = await fetch(`${target.baseUrl}/v1/chat-messages`, {
       method: 'POST',
       headers: engineHeaders(true, target),
-      body: JSON.stringify({ query, user: conv.user, conversation_id: conv.engineConv, response_mode: 'streaming', inputs: {} }),
+      body: JSON.stringify({ query, user: conv.user, conversation_id: conv.engineConv, response_mode: 'streaming', inputs: conv.inputs ?? {} }),
     })
     if (!upstream.body) throw new Error('no body')
     const reader = upstream.body.getReader()
@@ -805,16 +819,26 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
     comps = [...(hydrateComponents(toolComps, binding) as Array<Record<string, unknown>>), ...comps]
   }
   {
-    // chips must speak the reply's language — mismatched ones (a model slip) are replaced
+    // chips must speak the reply's language — mismatched ones (a model slip) are replaced.
+    // The stock chips are Cinescape's own, so only its agent gets them; any other
+    // agent's slip just loses its chips rather than gaining another business's.
     const arReply = /[\u0600-\u06FF]/.test(finalText || buf)
-    const fallback = arReply ? ['كل السينمات 📍', 'أسعار التذاكر', 'شنو التجارب عندكم؟'] : ['All cinemas 📍', 'Ticket prices', 'Your experiences?']
+    const cinema = target.agentId === ENGINE_AGENT && ENGINE_AGENT === 'cinescape'
+    const fallback = !cinema
+      ? null
+      : arReply
+        ? ['كل السينمات 📍', 'أسعار التذاكر', 'شنو التجارب عندكم؟']
+        : ['All cinemas 📍', 'Ticket prices', 'Your experiences?']
     const sug = comps.find((c) => c.type === 'suggestions') as { items?: unknown[] } | undefined
     if (!sug) {
-      comps.push({ type: 'suggestions', items: fallback })
+      if (fallback) comps.push({ type: 'suggestions', items: fallback })
     } else if (Array.isArray(sug.items) && sug.items.length > 0) {
       const arItems = sug.items.filter((i) => /[\u0600-\u06FF]/.test(String(i))).length
       const mismatched = arReply ? arItems < sug.items.length / 2 : arItems > sug.items.length / 2
-      if (mismatched) sug.items = fallback
+      if (mismatched) {
+        if (fallback) sug.items = fallback
+        else comps = comps.filter((c) => c !== sug)
+      }
     }
   }
   const template = componentsToTemplate(comps, finalText || buf)
@@ -840,7 +864,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
 async function loadConvFromEngine(convId: string, widgetId: string): Promise<EngineConv | null> {
   const [target, binding] = await Promise.all([engineTarget(widgetId), bindingFor(widgetId)])
   try {
-    const r = await fetch(`${ENGINE_URL}/v1/conversations/${encodeURIComponent(convId)}`, { headers: engineHeaders(false, target) })
+    const r = await fetch(`${target.baseUrl}/v1/conversations/${encodeURIComponent(convId)}`, { headers: engineHeaders(false, target) })
     if (!r.ok) return null
     const doc = (await r.json()) as { id: string; user?: string; messages?: Array<{ id: string; role: string; text: string; envelope?: string; created_at?: number }> }
     const history: WidgetMessage[] = []
@@ -961,6 +985,21 @@ engineWidgetRouter.get('/widget/:widgetId/conversations', async (req, res, next)
   res.json({ data, meta: { page: 1, limit: 20, total: data.length } })
 })
 
+/**
+ * The host page's visitor fields, as the widget sent them (`query_params`,
+ * mapped from the page's metadata by the design). Flat strings only, a few
+ * dozen keys at most, each value capped: they become the agent's inputs.
+ */
+function hostInputs(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 32)) {
+    if (!/^[A-Za-z_][\w]{0,40}$/.test(k)) continue
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[k] = String(v).slice(0, 200)
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next) => {
   if (!(await isEngineWidget(req.params.widgetId))) return next()
   const content = String((req.body as { content?: unknown })?.content ?? '').trim()
@@ -974,6 +1013,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
 
   const sub = contactSub(req)
   const binding = await bindingFor(req.params.widgetId)
+  const inputs = hostInputs((req.body as { query_params?: unknown })?.query_params)
   const enrichedLocation = await enrichLocationMessage(content, (req.body as { metadata?: unknown })?.metadata, binding)
   const isMachineMsg = content.startsWith('📍 shared my location') || enrichedLocation !== null
   if (requestedConv) {
@@ -982,6 +1022,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
       (await getOrRestoreConv(requestedConv, req.params.widgetId)) ??
       ({ widgetId: req.params.widgetId, engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}`, lang: 'ar' } as EngineConv)
     convs.set(requestedConv, conv)
+    if (inputs) conv.inputs = inputs
     if (!isMachineMsg && hasLetters(content)) conv.lang = hasArabic(content) ? 'ar' : isEnglishSentence(content) ? 'en' : conv.lang
     conv.history.push(userMsg)
     broadcast(conv, { event: 'message', conversation_id: requestedConv, message: userMsg })
@@ -999,6 +1040,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
     clients: new Set(),
     user: `widget-${msgUlid}`,
     lang: !isMachineMsg && isEnglishSentence(content) ? 'en' : 'ar',
+    inputs,
   }
   let responded = false
   const timer = setTimeout(() => {

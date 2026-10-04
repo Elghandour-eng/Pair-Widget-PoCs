@@ -164,6 +164,15 @@ export const Route = createFileRoute('/')({
     logger.debug('loader', 'Route loader started, ensuring widget config query data')
     // A language/theme the visitor picked earlier applies from the first paint.
     const data = await queryClient.ensureQueryData(WidgetConfigQueryOptions(getViewOverride(getWidgetId())))
+    // A widget the studio serves from an orchestrator streams over SSE; the
+    // config says so, and a page that set nothing itself follows it.
+    const settings = (window.PairAiWidgetSettings ?? {}) as { transport?: string }
+    if ((data as { transport?: string }).transport === 'sse' && !settings.transport) {
+      window.PairAiWidgetSettings = {
+        ...window.PairAiWidgetSettings,
+        transport: 'sse',
+      } as unknown as typeof window.PairAiWidgetSettings
+    }
     logger.debug('loader', 'Widget config query data ensured', data)
 
     // Load fonts before the widget is initialized to prevent flash of unstyled text

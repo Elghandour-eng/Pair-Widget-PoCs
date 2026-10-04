@@ -27,6 +27,7 @@ export function HeaderPage({ get, set, disabled }: PageProps) {
           <ColorField label={t('builder.header.titleColor')} path="widget_v2_config.header.titleStyle.color" get={get} set={set} disabled={disabled} />
           <div className="grid content-end gap-2">
             <ToggleField label={t('form.headerShow')} path="widget_v2_config.header.enabled" fallback get={get} set={set} disabled={disabled} />
+            <ToggleField label={t('builder.header.showIcon')} path="widget_v2_config.header.showIcon" fallback get={get} set={set} disabled={disabled} />
             <ToggleField label={t('form.headerBgOn')} path="widget_v2_config.header.background.enabled" get={get} set={set} disabled={disabled} />
           </div>
         </div>
@@ -108,6 +109,7 @@ export function HeroPage({ draft, setDraft, get, set, disabled }: { draft: Widge
           <BilingualField label={t('form.welcomeTitle')} path={BILINGUAL_PATHS[0]} draft={draft} setDraft={setDraft} disabled={disabled} />
           <BilingualField label={t('form.welcomeSubtitle')} path={BILINGUAL_PATHS[1]} draft={draft} setDraft={setDraft} disabled={disabled} />
           <ToggleField label={t('form.heroShow')} path={`${HERO}.enabled.value`} fallback get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.intro.shellPattern')} path="widget_v2_config.intro_screen.showPattern" fallback get={get} set={set} disabled={disabled} />
         </div>
       </section>
 

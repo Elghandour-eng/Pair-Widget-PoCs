@@ -379,6 +379,9 @@ export interface QuickLinksDesign {
   imageHeight: number
   imageFit: ImageFit
   imageRadius: number
+  /** Draw the card's image as a small icon at the top, not a photo across it. */
+  imageAsIcon: boolean
+  iconSize: number
   align: TextAlign
   titleColor: string
   titleSize: number
@@ -765,6 +768,8 @@ export const QUICK_LINKS_DEFAULTS: QuickLinksDesign = {
   imageHeight: 84,
   imageFit: 'cover',
   imageRadius: 10,
+  imageAsIcon: false,
+  iconSize: 24,
   align: 'start',
   titleColor: '#1A1A1A',
   titleSize: 12,
@@ -801,6 +806,8 @@ export function normalizeQuickLinks(raw: unknown): QuickLinksDesign {
     imageHeight: num(r.imageHeight, d.imageHeight, 0, 260),
     imageFit: pick(r.imageFit, IMAGE_FITS, d.imageFit),
     imageRadius: num(r.imageRadius, d.imageRadius, 0, 60),
+    imageAsIcon: bool(r.imageAsIcon, d.imageAsIcon),
+    iconSize: num(r.iconSize, d.iconSize, 12, 64),
     align: pick(r.align, TEXT_ALIGNS, d.align),
     titleColor: color(r.titleColor, d.titleColor),
     titleSize: num(r.titleSize, d.titleSize, 8, 28),

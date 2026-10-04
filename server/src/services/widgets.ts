@@ -27,6 +27,8 @@ export interface WidgetRecord {
    */
   agentId?: string
   engineKey?: string
+  /** The orchestrator this widget's agent runs on; blank = the server's default. */
+  engineUrl?: string
   notes?: string
   createdAt: string
   createdBy: string
@@ -105,7 +107,7 @@ export async function getWidget(widgetId: string): Promise<WidgetRecord> {
 export async function createWidget(
   input: {
     widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string; importFromApi?: boolean
-    engine?: string; agentId?: string; engineKey?: string
+    engine?: string; agentId?: string; engineKey?: string; engineUrl?: string
   },
   actor: string,
 ): Promise<WidgetRecord> {
@@ -120,6 +122,7 @@ export async function createWidget(
     engine: input.engine?.trim() || undefined,
     agentId: input.agentId?.trim() || undefined,
     engineKey: input.engineKey?.trim() || undefined,
+    engineUrl: input.engineUrl?.trim() || undefined,
     notes: input.notes?.trim() || undefined,
     createdAt: now,
     createdBy: actor,
@@ -154,7 +157,7 @@ export async function createWidget(
 
 export async function updateWidget(
   widgetId: string,
-  patch: Partial<Pick<WidgetRecord, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId' | 'engineKey'>>,
+  patch: Partial<Pick<WidgetRecord, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId' | 'engineKey' | 'engineUrl'>>,
   actor: string,
 ): Promise<WidgetRecord> {
   const w = await getWidget(widgetId)
@@ -169,6 +172,7 @@ export async function updateWidget(
   if (patch.engine !== undefined) w.engine = patch.engine.trim() || undefined
   if (patch.agentId !== undefined) w.agentId = patch.agentId.trim() || undefined
   if (patch.engineKey !== undefined) w.engineKey = patch.engineKey.trim() || undefined
+  if (patch.engineUrl !== undefined) w.engineUrl = patch.engineUrl.trim() || undefined
   w.updatedAt = new Date().toISOString()
   w.updatedBy = actor
   await redis.set(keys.widget(widgetId), JSON.stringify(w))
@@ -304,16 +308,16 @@ export async function importFromApi(widgetId: string, actor: string): Promise<{ 
 export async function resolveConfig(
   widgetId: string,
   override?: Source,
-): Promise<{ source: Source; cached: boolean; config: WidgetConfig }> {
+): Promise<{ source: Source; cached: boolean; config: WidgetConfig; engine?: string }> {
   const w = await getWidget(widgetId)
   const source = override ?? w.source
   if (source === 'redis') {
     const config = await getStoredConfig(widgetId)
     if (!config) throw notFound(`No Redis config stored for widget ${widgetId}`)
-    return { source, cached: false, config }
+    return { source, cached: false, config, engine: w.engine }
   }
   const { config, cached } = await fetchPairConfigCached(widgetId, w.apiBaseUrl)
-  return { source, cached, config }
+  return { source, cached, config, engine: w.engine }
 }
 
 export async function getAudit(widgetId: string): Promise<AuditEntry[]> {

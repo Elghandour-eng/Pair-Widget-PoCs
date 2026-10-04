@@ -140,6 +140,10 @@ export function QuickLinksPage({ get, set, disabled }: PageProps) {
           <NumField label={t('builder.cards.imageHeight')} path={q('imageHeight')} min={0} max={260} step={2} fallback={84} unit="px" get={get} set={set} disabled={disabled} />
           <ChoiceField label={t('builder.cards.imageFit')} path={q('imageFit')} options={[...IMAGE_FITS]} keyPrefix="builder.cards.imageFit" fallback="cover" get={get} set={set} disabled={disabled} />
           <NumField label={t('builder.cards.imageRadius')} path={q('imageRadius')} min={0} max={60} step={1} fallback={10} unit="px" get={get} set={set} disabled={disabled} />
+          <ToggleField label={t('builder.cards.imageAsIcon')} path={q('imageAsIcon')} get={get} set={set} disabled={disabled} />
+          {get(q('imageAsIcon')) === true && (
+            <NumField label={t('builder.cards.iconSize')} path={q('iconSize')} min={12} max={64} step={1} fallback={24} unit="px" get={get} set={set} disabled={disabled} />
+          )}
         </div>
       </Disclosure>
 

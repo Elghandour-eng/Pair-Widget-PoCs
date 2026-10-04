@@ -9,6 +9,8 @@ import type { CSSProperties } from 'react'
 
 export interface HeaderConfig {
   enabled: boolean
+  /** The avatar / icon before the title; off leaves the title alone. */
+  showIcon: boolean
   backgroundEnabled: boolean
   backgroundColor: string
   title: string
@@ -241,6 +243,8 @@ export interface LoadingStateConfig {
 
 export interface IntroScreenConfig {
   show: boolean
+  /** The dotted decoration behind the intro; off for a design that brings its own artwork. */
+  showPattern: boolean
   welcomeTitle: string
   welcomeTitleStyles?: CSSProperties
   welcomeSubtitle: string
@@ -281,6 +285,7 @@ export interface ChatInputConfig {
 
 // TODO: Start consuming this configuration in the message and feedback UI components
 export interface MessagesConfig {
+  thinking?: import('./widget-config-dto').ThinkingDesignDto
   suggestions?: import('./widget-config-dto').SuggestionChipsDto
   questions?: import('./widget-config-dto').QuestionCardDto
   emptyState?: import('./widget-config-dto').EmptyStateDto

@@ -1,3 +1,4 @@
+import type { HiroTemplate, StackTemplate } from './hiro-templates'
 /**
  * Sender information from API
  */
@@ -841,6 +842,8 @@ export type WidgetTemplate =
   | TicketListTemplate
   | LinkCardTemplate
   | ImageCardTemplate
+  | HiroTemplate
+  | StackTemplate
 
 /**
  * Messages list response (matches actual API response)
