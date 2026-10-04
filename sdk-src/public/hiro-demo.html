@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ask Hiro — demo</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #f4f6fa; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Stands in for the Hiro app's "Ask Hiro" screen. The app passes the signed-in
+      user; here they come from the address:
+        /sdk/hiro-demo.html?phone=…&uid=…&name=…   (optional: &id=<widget id>)
+      Served next to the widget, so it uses this same studio for everything.
+    -->
+    <script>
+      var q = new URLSearchParams(location.search)
+      var origin = location.origin
+      window.PairAiWidgetSettings = {
+        beBaseUrl: origin,
+        metadata: { phone: q.get('phone') || '', user_id: q.get('uid') || '', name: q.get('name') || '' },
+      }
+      ;(function (d, t) {
+        var BASE_URL = origin + '/sdk'
+        var g = d.createElement(t), s = d.getElementsByTagName(t)[0]
+        g.src = BASE_URL + '/sdk.js'
+        g.async = true
+        s.parentNode.insertBefore(g, s)
+        g.onload = function () {
+          window.PairAiWidgetSDK.run({ widgetId: q.get('id') || 'HIRO_ASK', baseUrl: BASE_URL })
+        }
+      })(document, 'script')
+    </script>
+  </body>
+</html>
