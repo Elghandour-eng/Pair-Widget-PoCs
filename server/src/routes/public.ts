@@ -21,7 +21,7 @@ import { isDrawableSendIcon, sendGlyphDataUri } from '../lib/sendGlyph.js'
 import { applyWidgetLanguage, type WidgetLang as WidgetLangName } from '../lib/widgetLang.js'
 import { applyWidgetTheme, isWidgetTheme } from '../lib/widgetTheme.js'
 import { sdkBaseUrl } from '../lib/sdkBase.js'
-import { normalizeVoiceCall, resolveVoiceCallColors } from '../lib/voiceCall.js'
+import { normalizeVoiceCall, resolveVoiceCallColors, voiceCallHasAgent } from '../lib/voiceCall.js'
 import { asyncHandler } from '../middleware/error.js'
 import { getWidget, resolveConfig } from '../services/widgets.js'
 import { uploadsDir } from './uploads.js'
@@ -384,8 +384,8 @@ function materializeChrome<T>(config: T): T {
     // The routing (agent number and name) stays on the server: the widget asks
     // for a call by widget id, and the server knows where to send it.
     const call = resolveVoiceCallColors(normalizeVoiceCall(next.widget_v2_config.voice_call, one(next.locale)), brand)
-    const { agentNumber: _n, agentName: _a, ...forWidget } = call
-    next.widget_v2_config.voice_call = { ...forWidget, available: call.enabled && !!call.agentNumber }
+    const { agentId: _i, agentNumber: _n, agentName: _a, ...forWidget } = call
+    next.widget_v2_config.voice_call = { ...forWidget, available: call.enabled && voiceCallHasAgent(call) }
   }
 
   if (hasCsat) {

@@ -217,7 +217,14 @@ async function startCall(opts: StartOptions) {
     finish(state.status === 'live' ? 'remote' : 'failed')
   })
   // Captions from LiveKit Agents 1.x: one text stream per segment, delta chunks.
+  // Agents 1.x also send the same words as legacy transcription events, so the
+  // first text stream switches those off (and clears what they already drew).
+  let streamed = false
   r.registerTextStreamHandler('lk.transcription', async (reader, participant) => {
+    if (!streamed) {
+      streamed = true
+      setState({ captions: state.captions.filter((c) => !c.id.startsWith('legacy:')) })
+    }
     const id = reader.info.attributes?.['lk.segment_id'] ?? reader.info.id
     const from: Caption['from'] = participant.identity === r.localParticipant.identity ? 'visitor' : 'agent'
     let text = ''
@@ -227,10 +234,11 @@ async function startCall(opts: StartOptions) {
     }
     upsertCaption({ id, from, text, final: true })
   })
-  // …and from older agents, which send whole segments.
+  // …and from older agents, which only send whole segments this way.
   r.on(lk.RoomEvent.TranscriptionReceived, (segments, participant) => {
+    if (streamed) return
     const from: Caption['from'] = participant?.identity === r.localParticipant.identity ? 'visitor' : 'agent'
-    segments.forEach((s) => upsertCaption({ id: s.id, from, text: s.text, final: s.final }))
+    segments.forEach((s) => upsertCaption({ id: `legacy:${s.id}`, from, text: s.text, final: s.final }))
   })
 
   try {

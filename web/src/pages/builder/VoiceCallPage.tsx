@@ -40,9 +40,11 @@ export function VoiceCallPage({ draft, setDraft, get, set, disabled }: { draft: 
         <p className="callout mb-4">{t('builder.call.hint')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <ToggleField label={t('builder.call.enabled')} path={p('enabled')} get={get} set={set} disabled={disabled} />
+          <Field label={t('builder.call.agentId')} path={p('agentId')} placeholder="stc" get={get} set={set} disabled={disabled} />
           <Field label={t('builder.call.agentNumber')} path={p('agentNumber')} placeholder="+9001" get={get} set={set} disabled={disabled} />
         </div>
-        {enabled && !String(get(p('agentNumber')) ?? '').trim() && <p className="fine mt-2 text-[#B42318]">{t('builder.call.agentMissing')}</p>}
+        <p className="fine mt-2">{t('builder.call.agentHint')}</p>
+        {enabled && !String(get(p('agentNumber')) ?? '').trim() && !String(get(p('agentId')) ?? '').trim() && <p className="fine mt-2 text-[#B42318]">{t('builder.call.agentMissing')}</p>}
       </section>
 
       <Disclosure summary={t('builder.call.entry')}>

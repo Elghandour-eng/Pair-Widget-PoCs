@@ -114,10 +114,15 @@ describe('auth + rbac', () => {
     await put({ enabled: true })
     expect((await (await call()).json()).error.message).toMatch(/No voice agent/)
 
+    // A Solef agent alone is somewhere to call.
+    await put({ enabled: true, agentId: 'stc' })
+    expect((await (await fetch(`${base}/api/public/widget/TEST_WIDGET_1/config`)).json()).widget_v2_config.voice_call.available).toBe(true)
+
     await put({ enabled: true, agentNumber: '+90 01', design: { accent: '#brand' }, texts: { title: '' } })
     const vc = (await (await fetch(`${base}/api/public/widget/TEST_WIDGET_1/config`)).json()).widget_v2_config.voice_call
     expect(vc).toMatchObject({ enabled: true, available: true, texts: { title: 'Voice assistant' }, design: { accent: '#E50914' } })
     expect(vc.agentNumber).toBeUndefined()
+    expect(vc.agentId).toBeUndefined()
     // No LiveKit keys in this environment: the call is refused, not attempted.
     const r = await call()
     expect(r.status).toBe(503)

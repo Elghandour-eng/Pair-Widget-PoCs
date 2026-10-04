@@ -48,13 +48,21 @@ function sign(claims: { identity?: string; name?: string; metadata?: string; att
 }
 
 /** A visitor's token: join one room, speak with the microphone only, listen, send data. */
-export function visitorToken(opts: { room: string; identity: string; name: string; metadata: Record<string, unknown>; ttlSec: number }): string {
+export function visitorToken(opts: {
+  room: string
+  identity: string
+  name: string
+  metadata: Record<string, unknown>
+  /** Read by the agent when the visitor joins; Solef picks its agent from `prolife.agent_id`. */
+  attributes?: Record<string, string>
+  ttlSec: number
+}): string {
   return sign(
     {
       identity: opts.identity,
       name: opts.name,
       metadata: JSON.stringify(opts.metadata),
-      attributes: { source: 'widget' },
+      attributes: { source: 'widget', ...opts.attributes },
       video: {
         room: opts.room,
         roomJoin: true,

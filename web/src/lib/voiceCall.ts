@@ -70,7 +70,9 @@ export interface VoiceCallDesign {
 
 export interface VoiceCall {
   enabled: boolean
-  /** The voice agent's number: the agent looks its configuration up by it. */
+  /** A Solef agent's id (its slug): sent as the caller's `prolife.agent_id`, which is how the Solef worker picks the agent. */
+  agentId: string
+  /** The voice agent's number: the Pair voice agent looks its configuration up by it. */
   agentNumber: string
   /** Set to dispatch a named agent explicitly; blank uses automatic dispatch. */
   agentName: string
@@ -179,6 +181,7 @@ export const VOICE_CALL_DESIGN_DEFAULTS: VoiceCallDesign = {
 
 export const VOICE_CALL_DEFAULTS: Omit<VoiceCall, 'texts'> = {
   enabled: false,
+  agentId: '',
   agentNumber: '',
   agentName: '',
   entry: { header: true, intro: false },
@@ -211,6 +214,7 @@ const url = (v: unknown): string =>
   typeof v === 'string' && /^(https?:\/\/|\/)[^\s"'<>]*$/i.test(v.trim()) ? v.trim().slice(0, 400) : ''
 /** The routing number: digits with an optional leading +, nothing a room name cannot carry. */
 const number = (v: unknown): string => (typeof v === 'string' ? v.replace(/[^\d+]/g, '').slice(0, 20) : '')
+/** An agent id or a dispatch name: letters, digits, `_`, `.`, `-`. */
 const agentName = (v: unknown): string => (typeof v === 'string' ? v.replace(/[^\w.-]/g, '').slice(0, 64) : '')
 
 /**
@@ -233,6 +237,7 @@ export function normalizeVoiceCall(raw: unknown, lang?: string): VoiceCall {
   }
   return {
     enabled: bool(r.enabled, d.enabled),
+    agentId: agentName(r.agentId),
     agentNumber: number(r.agentNumber),
     agentName: agentName(r.agentName),
     entry: { header: bool(e.header, d.entry.header), intro: bool(e.intro, d.entry.intro) },
@@ -271,6 +276,11 @@ export function normalizeVoiceCall(raw: unknown, lang?: string): VoiceCall {
       fontFamily: font(g.fontFamily),
     },
   }
+}
+
+/** A call has somewhere to go: a Solef agent, or a number the Pair voice agent routes by. */
+export function voiceCallHasAgent(call: Pick<VoiceCall, 'agentId' | 'agentNumber'>): boolean {
+  return !!(call.agentId || call.agentNumber)
 }
 
 /** `#brand` swapped for the widget's colour, everywhere it can appear. */
