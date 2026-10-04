@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { CardImage } from './card-image'
 import { useTemplateDesign } from './use-template-design'
+import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
+import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
 import type { MovieCardsTemplate } from '@/features/conversation/types/message'
 
 /**
  * Now-showing carousel: poster cards with title, age rating and genre.
+ * Tapping a card asks for that movie's showtimes as the visitor's reply.
  * Language follows the reply, colours follow the theme.
  */
 export function MovieCards({ template }: { template: MovieCardsTemplate; sourceMessageUlid?: string }) {
+  const { conversationId } = useWidgetNavigation()
+  const { mutateAsync: sendMessage } = useSendMessage()
+  const [sending, setSending] = useState<number | null>(null)
   const d = useTemplateDesign(template.content)
   const { accent: brand, isArabic } = d
   const { title, title_en, items = [] } = template.content ?? {}
@@ -17,6 +24,19 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
   // Wider cards mean fewer across the same row; the poster keeps its chosen ratio.
   const cardWidth = Math.round(280 / Math.max(1, d.columns))
 
+  // One request at a time; the card is free again once the message is on its way.
+  const pick = (i: number, name: string) => {
+    if (sending !== null || !name) return
+    setSending(i)
+    void sendMessage({
+      ...(conversationId ? { conversation_id: conversationId } : {}),
+      content: isArabic ? `مواعيد فيلم ${name}` : `Showtimes for ${name}`,
+      message_type: 'text',
+    })
+      .catch(() => undefined)
+      .finally(() => setSending(null))
+  }
+
   return (
     <div className="mt-2 flex w-full flex-col gap-2" dir={isArabic ? 'rtl' : 'ltr'}>
       {heading && (
@@ -26,10 +46,14 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
       )}
       <div className="flex w-full snap-x snap-mandatory gap-2.5 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {items.map((it, i) => (
-          <div
+          <button
             key={i}
-            className="flex shrink-0 snap-start flex-col overflow-hidden"
-            style={{ ...cardStyle, width: cardWidth }}
+            type="button"
+            onClick={() => pick(i, it.title || it.title_ar || '')}
+            disabled={sending !== null && sending !== i}
+            aria-label={isArabic ? `مواعيد فيلم ${it.title_ar ?? it.title}` : `Showtimes for ${it.title}`}
+            className="flex shrink-0 cursor-pointer snap-start flex-col overflow-hidden text-start transition-transform active:scale-[0.98] disabled:opacity-50"
+            style={{ ...cardStyle, width: cardWidth, ...(sending === i ? { outline: `2px solid ${brand}` } : {}) }}
           >
             <div className="relative">
               <CardImage
@@ -71,7 +95,7 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
                 </span>
               )}
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>
