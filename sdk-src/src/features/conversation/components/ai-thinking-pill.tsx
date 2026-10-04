@@ -38,8 +38,12 @@ function FilmReelSpinner({ color }: { color: string }) {
 function GradientThinkingPill({ label }: { label?: string }) {
   const { widgetConfig, view } = useWidgetConfigContext()
   const t = widgetConfig.messagesConfig?.thinking ?? {}
-  const isArabic = /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
-  const fixed = t.label?.trim() || (isArabic ? 'أفكر' : 'Thinking')
+  // The pill speaks the language the user is writing in. The server's status
+  // line for this turn is already in that language, so it decides; before it
+  // arrives (or without one) the widget's own language does.
+  const isArabic = label?.trim() ? /[\u0600-\u06FF]/.test(label) : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const own = isArabic ? t.label_i18n?.ar : t.label_i18n?.en
+  const fixed = own?.trim() || (isArabic ? 'أفكر' : 'Thinking')
   const text = t.narrate && label?.trim() ? label.trim() : fixed
   const from = t.from || '#8FD3FF'
   const to = t.to || '#9AA8F5'

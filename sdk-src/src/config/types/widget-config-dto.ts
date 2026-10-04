@@ -635,6 +635,8 @@ export interface ThinkingDesignDto {
   style?: 'reel' | 'pill'
   /** Fixed text for the pill; the stream's own narration wins when it has one. */
   label?: string
+  /** The fixed text per language; the pill speaks the language the user is writing in. */
+  label_i18n?: { en?: string; ar?: string }
   /** The pill's gradient, start → end. */
   from?: string
   to?: string
