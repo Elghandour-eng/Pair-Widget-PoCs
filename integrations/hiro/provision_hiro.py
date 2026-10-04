@@ -80,8 +80,9 @@ config = {
             'subtitleStyle': {'color': MUTED, 'fontSize': '0.8rem'},
             'iconStyle': {'shape': 'circle'},
             'actions': {'cart': False, 'favorites': False, 'reset': False},
-            # عربي / EN and light / dark on the header; no close (the app owns the screen).
-            'controls': {'lang': {'show': True, 'icon': 'badge'}, 'theme': {'show': True, 'icon': 'moon'}, 'close': {'show': False}},
+            # عربي / EN, light / dark and close on the header. Close tells the app
+            # (PairWidget.on('close')), which leaves the Ask Hiro screen.
+            'controls': {'lang': {'show': True, 'icon': 'badge'}, 'theme': {'show': True, 'icon': 'moon'}, 'close': {'show': True}},
         },
         'intro_screen': {
             'showIntroScreen': {'value': True, 'styles': {}},

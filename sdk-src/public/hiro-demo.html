@@ -9,6 +9,7 @@
     </style>
   </head>
   <body>
+    <button id="reopen" style="display:none;position:fixed;inset:auto 0 32px;margin:auto;width:max-content;align-items:center;gap:8px;padding:14px 22px;border:0;border-radius:999px;background:#218EE7;color:#fff;font:600 15px system-ui;box-shadow:0 8px 24px rgba(33,142,231,.35);cursor:pointer">Ask Hiro</button>
     <!--
       Stands in for the Hiro app's "Ask Hiro" screen. The app passes the signed-in
       user; here they come from the address:
@@ -30,6 +31,11 @@
         s.parentNode.insertBefore(g, s)
         g.onload = function () {
           window.PairAiWidgetSDK.run({ widgetId: q.get('id') || 'HIRO_ASK', baseUrl: BASE_URL })
+          // The app would leave the screen on close; the demo offers a way back.
+          var reopen = d.getElementById('reopen')
+          PairWidget.on('closed', function () { reopen.style.display = 'flex' })
+          PairWidget.on('opened', function () { reopen.style.display = 'none' })
+          reopen.onclick = function () { PairWidget.open() }
         }
       })(document, 'script')
     </script>

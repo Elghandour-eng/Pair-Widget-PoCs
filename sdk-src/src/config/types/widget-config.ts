@@ -32,7 +32,8 @@ export interface HeaderConfig {
   controls: {
     lang: { show: boolean; icon: string; iconUrl?: string }
     theme: { show: boolean; icon: string; iconUrl?: string }
-    close: { show: boolean }
+    /** `asked`: the design turned it on itself, which also shows it on a widget with no launcher. */
+    close: { show: boolean; asked: boolean }
   }
 }
 

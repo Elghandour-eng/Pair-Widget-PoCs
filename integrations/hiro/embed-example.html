@@ -31,6 +31,8 @@
           window.PairAiWidgetSDK.run({ widgetId: 'HIRO_ASK', baseUrl: BASE_URL })
         }
       })(document, 'script')
+      // The X in Hiro's header closes the chat; the app leaves the screen:
+      // PairWidget.on('close', function () { /* navigate back */ })
       // If the user changes while the screen is open:
       // PairWidget.updateMetadata({ phone: '…', user_id: '…', name: '…' })
     </script>

@@ -150,7 +150,7 @@ export function mapToWidgetConfig(apiResponse: WidgetConfigDto, windowSettings?:
             icon: rawHeader.controls?.theme?.icon ?? 'moon',
             iconUrl: rawHeader.controls?.theme?.iconUrl,
           },
-          close: { show: rawHeader.controls?.close?.show ?? true },
+          close: { show: rawHeader.controls?.close?.show ?? true, asked: rawHeader.controls?.close?.show === true },
         },
       }
     : undefined

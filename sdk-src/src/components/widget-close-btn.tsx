@@ -22,7 +22,10 @@ function WidgetCloseBtn() {
   // close button goes too — the panel simply stays. Unless the host page opens
   // and closes the panel itself: then this is the visitor's own way out, and it
   // shows at every width because there is no launcher to close it with.
-  const hostControlled = widgetConfig.type === 'none' && !!widgetConfig.hostControlsPanel
+  // A design that asks for the button on a widget with no launcher (an app's
+  // full-screen chat) gets it too: the host hears `close` and leaves the screen.
+  const hostControlled =
+    widgetConfig.type === 'none' && (!!widgetConfig.hostControlsPanel || !!widgetConfig.headerConfig?.controls.close.asked)
   if (widgetConfig.type === 'none' && !hostControlled) return null
   // The studio can turn the close button off, like the other header controls.
   if (widgetConfig.headerConfig?.controls.close.show === false) return null
