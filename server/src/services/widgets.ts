@@ -15,6 +15,18 @@ export interface WidgetRecord {
   source: Source
   /** Optional per-widget override of the Pair backend base URL. */
   apiBaseUrl?: string
+  /**
+   * Which backend answers this widget's chat. `agent-engine` hands it to the
+   * orchestrator over SSE; anything else (the default) goes to Pair.
+   */
+  engine?: string
+  /**
+   * The agent the orchestrator should run for this widget, and the application
+   * key that selects it. Without them the server's env defaults apply — which
+   * is why one studio used to be able to serve exactly one agent.
+   */
+  agentId?: string
+  engineKey?: string
   notes?: string
   createdAt: string
   createdBy: string
@@ -91,7 +103,10 @@ export async function getWidget(widgetId: string): Promise<WidgetRecord> {
 }
 
 export async function createWidget(
-  input: { widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string; importFromApi?: boolean },
+  input: {
+    widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string; importFromApi?: boolean
+    engine?: string; agentId?: string; engineKey?: string
+  },
   actor: string,
 ): Promise<WidgetRecord> {
   const widgetId = input.widgetId.trim()
@@ -102,6 +117,9 @@ export async function createWidget(
     channelName: input.channelName.trim(),
     source: input.source,
     apiBaseUrl: input.apiBaseUrl?.trim() || undefined,
+    engine: input.engine?.trim() || undefined,
+    agentId: input.agentId?.trim() || undefined,
+    engineKey: input.engineKey?.trim() || undefined,
     notes: input.notes?.trim() || undefined,
     createdAt: now,
     createdBy: actor,
@@ -136,7 +154,7 @@ export async function createWidget(
 
 export async function updateWidget(
   widgetId: string,
-  patch: Partial<Pick<WidgetRecord, 'channelName' | 'source' | 'apiBaseUrl' | 'notes'>>,
+  patch: Partial<Pick<WidgetRecord, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId' | 'engineKey'>>,
   actor: string,
 ): Promise<WidgetRecord> {
   const w = await getWidget(widgetId)
@@ -148,6 +166,9 @@ export async function updateWidget(
   if (patch.source !== undefined) w.source = patch.source
   if (patch.apiBaseUrl !== undefined) w.apiBaseUrl = patch.apiBaseUrl.trim() || undefined
   if (patch.notes !== undefined) w.notes = patch.notes.trim() || undefined
+  if (patch.engine !== undefined) w.engine = patch.engine.trim() || undefined
+  if (patch.agentId !== undefined) w.agentId = patch.agentId.trim() || undefined
+  if (patch.engineKey !== undefined) w.engineKey = patch.engineKey.trim() || undefined
   w.updatedAt = new Date().toISOString()
   w.updatedBy = actor
   await redis.set(keys.widget(widgetId), JSON.stringify(w))

@@ -7,8 +7,79 @@ export interface User {
 }
 export interface Widget {
   widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string
+  /** Which backend answers this widget's chat, and which agent it runs. */
+  engine?: string; agentId?: string
   createdAt: string; createdBy: string; updatedAt: string; updatedBy: string
   configUpdatedAt: string | null; configUpdatedBy: string | null
+}
+
+/* ------------------------------ template engine ----------------------------- */
+
+export interface TemplateField {
+  key: string
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object'
+  required?: boolean
+  description: string
+}
+/** A card shape the agent can emit and the widget can render. */
+export interface TemplateDef {
+  name: string
+  title: string
+  description: string
+  widgetType: string
+  collects: boolean
+  /** True when the rows come from the agent's own tool and no source applies. */
+  passthrough: boolean
+  /** Set on a plugin component: the orchestrator plugin, tool group and tool that produce it. */
+  plugin: { id: string; group: string; tool: string } | null
+  emits: TemplateField[]
+  sample: Record<string, unknown>
+  snippet: Record<string, unknown>
+  seedRows: number
+  /** Keys of the design catalog this template honours. */
+  design: string[]
+  designDefaults: TemplateDesign
+}
+/** A plugin as the agent has it installed; `groups` are the tool groups in use ("tickets", "messaging"…). */
+export interface AgentPlugin {
+  enabled: boolean
+  environment: string
+  groups: string[]
+  tools: string[]
+}
+/** A design knob a template honours. The dashboard renders a control per `type`. */
+export interface DesignField {
+  key: string
+  label: string
+  type: 'color' | 'number' | 'choice' | 'boolean'
+  options?: string[]
+  min?: number
+  max?: number
+  step?: number
+  description: string
+}
+export type TemplateDesign = Record<string, string | number | boolean>
+
+export type SourceKind = 'inline' | 'http' | 'airtable'
+export interface DataSourceConfig {
+  url?: string; headers?: Record<string, string>; path?: string
+  base?: string; table?: string; view?: string; token?: string
+  items?: Array<Record<string, unknown>>
+}
+export interface DataSource {
+  id: string; name: string; kind: SourceKind; ttlMs: number; config: DataSourceConfig
+  hasToken: boolean
+  status: { rows: number; fetchedAt: string | null; lastError: string | null }
+  createdAt: string; createdBy: string; updatedAt: string; updatedBy: string
+}
+/** Which templates a widget renders, and the source behind each. `enabled: null` means all of them. */
+export interface WidgetTemplates {
+  enabled: string[] | null
+  sources: Record<string, string>
+  /** Per-template design overrides: what makes a shared template look customised on this widget. */
+  designs: Record<string, TemplateDesign>
+  updatedAt: string | null
+  updatedBy: string | null
 }
 export interface AuditEntry { at: string; by: string; action: string; detail?: string }
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -108,13 +179,36 @@ export const api = {
       `/widgets/${encodeURIComponent(widgetId)}/versions/${encodeURIComponent(versionId)}/restore`,
       { method: 'POST' },
     ),
-  updateWidget: (widgetId: string, body: Partial<Pick<Widget, 'channelName' | 'source' | 'apiBaseUrl' | 'notes'>>) =>
+  updateWidget: (widgetId: string, body: Partial<Pick<Widget, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId'>> & { engineKey?: string }) =>
     request<{ widget: Widget }>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteWidget: (widgetId: string) => request<void>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'DELETE' }),
   resolveConfig: (widgetId: string, source?: Source) =>
     request<{ source: Source; cached: boolean; config: WidgetConfig }>(`/widgets/${encodeURIComponent(widgetId)}/config${source ? `?source=${source}` : ''}`),
   saveConfig: (widgetId: string, config: WidgetConfig) => request<{ widget: Widget }>(`/widgets/${encodeURIComponent(widgetId)}/config`, { method: 'PUT', body: JSON.stringify(config) }),
   importFromApi: (widgetId: string) => request<{ widget: Widget; storedConfig: WidgetConfig }>(`/widgets/${encodeURIComponent(widgetId)}/import`, { method: 'POST' }),
+
+  listTemplates: () =>
+    request<{ templates: TemplateDef[]; designFields: Record<string, DesignField> }>('/templates'),
+  /** POST so an unsaved design can be previewed as the editor types. */
+  previewTemplate: (name: string, body: { source?: string; design?: TemplateDesign; lang?: 'ar' | 'en' } = {}) =>
+    request<{ name: string; widgetType: string; content: Record<string, unknown> }>(
+      `/templates/${encodeURIComponent(name)}/preview`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  listDataSources: () => request<{ sources: DataSource[] }>('/datasources'),
+  createDataSource: (body: { id: string; name: string; kind: SourceKind; ttlMs: number; config: DataSourceConfig }) =>
+    request<{ source: DataSource }>('/datasources', { method: 'POST', body: JSON.stringify(body) }),
+  updateDataSource: (id: string, body: { name?: string; ttlMs?: number; config?: DataSourceConfig }) =>
+    request<{ source: DataSource }>(`/datasources/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  refreshDataSource: (id: string) => request<{ source: DataSource }>(`/datasources/${encodeURIComponent(id)}/refresh`, { method: 'POST' }),
+  deleteDataSource: (id: string) => request<void>(`/datasources/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  getWidgetTemplates: (widgetId: string) =>
+    request<{ templates: WidgetTemplates; plugins: Record<string, AgentPlugin> | null }>(`/widgets/${encodeURIComponent(widgetId)}/templates`),
+  saveWidgetTemplates: (
+    widgetId: string,
+    body: { enabled?: string[] | null; sources?: Record<string, string>; designs?: Record<string, TemplateDesign> },
+  ) =>
+    request<{ templates: WidgetTemplates }>(`/widgets/${encodeURIComponent(widgetId)}/templates`, { method: 'PUT', body: JSON.stringify(body) }),
 
   listLogs: (f: LogFilters) =>
     request<{ logs: SystemLog[]; total: number; page: number; perPage: number; available: boolean }>(
@@ -157,6 +251,14 @@ export interface EmbedSettings {
   /** The panel's size, which the SDK needs before the config has loaded. */
   panel?: PanelSize
 }
+
+/**
+ * The standalone test page: this widget, rendered by the real SDK, with the
+ * launcher the design saved. `?frame=1` is the same page without the surrounding
+ * test-page chrome, which is what the previews embed.
+ */
+export const widgetTestUrl = (widgetId: string) =>
+  `${window.location.origin}/api/public/widget/${encodeURIComponent(widgetId)}/embed`
 
 /** The standalone page that renders this widget with the real SDK. */
 export const embedPreviewUrl = (widgetId: string, s: EmbedSettings) =>

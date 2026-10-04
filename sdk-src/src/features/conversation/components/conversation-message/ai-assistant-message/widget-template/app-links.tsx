@@ -1,5 +1,5 @@
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { isDarkBackground } from '@/lib/utils'
+import { useTemplateDesign } from './use-template-design'
 import type { AppLinksTemplate } from '@/features/conversation/types/message'
 
 /**
@@ -7,30 +7,28 @@ import type { AppLinksTemplate } from '@/features/conversation/types/message'
  * store buttons (caption + store name), theme- and language-aware.
  */
 export function AppLinks({ template }: { template: AppLinksTemplate; sourceMessageUlid?: string }) {
-  const { widgetConfig, view } = useWidgetConfigContext()
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  const replyLang = template.content?.lang
-  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const { widgetConfig } = useWidgetConfigContext()
+  const d = useTemplateDesign(template.content)
+  const { accent: brand, isDark, isArabic } = d
   const { ios, android } = template.content ?? {}
   if (!ios && !android) return null
 
-  const brand = widgetConfig.primaryColor || '#B3202C'
   const appIcon = widgetConfig.launcherDesign?.iconUrl || widgetConfig.avatarUrl
   const badge =
-    'flex w-full items-center gap-3 rounded-xl px-4 py-2.5 transition-all hover:opacity-90 hover:-translate-y-px active:translate-y-0'
+    'flex w-full items-center gap-3 px-4 py-2.5 transition-all hover:opacity-90 hover:-translate-y-px active:translate-y-0'
+  // Outline keeps the card light when the widget already carries a lot of colour.
+  const outline = d.buttonStyle === 'outline'
   const badgeStyle: React.CSSProperties = {
-    background: isDark ? '#000' : '#111318',
-    border: '1px solid rgba(255,255,255,0.14)',
+    borderRadius: Math.max(0, d.radius - 4),
+    background: outline ? 'transparent' : isDark ? '#000' : '#111318',
+    border: `1px solid ${outline ? brand : 'rgba(255,255,255,0.14)'}`,
   }
 
   return (
     <div
-      className="mt-2 flex w-full max-w-[320px] flex-col gap-3.5 rounded-2xl p-4 shadow-sm"
+      className="mt-2 flex w-full max-w-[320px] flex-col gap-3.5 shadow-sm"
       dir={isArabic ? 'rtl' : 'ltr'}
-      style={{
-        background: isDark ? '#181c28' : '#ffffff',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
-      }}
+      style={{ ...d.cardStyle, padding: d.padding }}
     >
       {/* App identity */}
       <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { Activity, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Users, X } from 'lucide-react'
+import { Activity, Boxes, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Users, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
@@ -42,6 +42,7 @@ export function Shell() {
   const navItems = (mini: boolean) => (
     <nav className="flex flex-col gap-1">
       <Item to="/widgets" icon={<LayoutGrid className="size-4" />} label={t('nav.widgets')} mini={mini} />
+      <Item to="/templates" icon={<Boxes className="size-4" />} label={t('nav.templates')} mini={mini} />
       {can('admin') && <Item to="/users" icon={<Users className="size-4" />} label={t('nav.users')} mini={mini} />}
       {can('admin') && <Item to="/logs" icon={<Activity className="size-4" />} label={t('nav.logs')} mini={mini} />}
     </nav>

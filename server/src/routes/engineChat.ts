@@ -3,8 +3,11 @@ import jwt from 'jsonwebtoken'
 import { ulid } from 'ulid'
 import { env } from '../config/env.js'
 import { logger } from '../lib/logger.js'
-import { redis } from '../lib/redis.js'
-import { MENU_ITEMS } from './cinescapeMenu.js'
+import { getSoon, redis } from '../lib/redis.js'
+import { componentsToTemplate, hydrateComponents, rowsFor, ALL_TEMPLATES, type TemplateBinding } from '../lib/templates/hydrate.js'
+import { componentFromTool, questionFromButtons } from '../lib/templates/pairPlugin.js'
+import { TEMPLATES_BY_NAME } from '../lib/templates/registry.js'
+import { bindingFor } from '../services/templates.js'
 
 /**
  * Agent-engine chat: an isolated demo surface that connects a widget experience
@@ -24,158 +27,78 @@ const ENGINE_AGENT = process.env.AGENT_ENGINE_AGENT || 'cinescape'
 // Pair Danah Orchestrator: an application key (app-…) authenticates the widget server and selects the agent.
 // Without it the legacy X-Agent-Id header is sent (the old agent-engine accepted anonymous calls).
 const ENGINE_KEY = process.env.AGENT_ENGINE_KEY || ''
-const engineHeaders = (json = true): Record<string, string> => ({
-  ...(json ? { 'Content-Type': 'application/json' } : {}),
-  ...(ENGINE_KEY ? { Authorization: `Bearer ${ENGINE_KEY}` } : { 'X-Agent-Id': ENGINE_AGENT }),
-})
+/**
+ * Which agent a widget talks to. The env pair is the default; a widget record
+ * may name its own `agentId` and `engineKey`, which is what lets one server
+ * serve more than one customer's agent instead of the single compiled-in
+ * `cinescape`.
+ */
+export interface EngineTarget {
+  agentId: string
+  apiKey: string
+}
+
+const ENV_TARGET: EngineTarget = { agentId: ENGINE_AGENT, apiKey: ENGINE_KEY }
+
+/** The branch rows behind every location answer: the cards, and the distances the agent is given. */
+const LOCATION_TEMPLATE = TEMPLATES_BY_NAME.get('location_card')!
+
+export interface AgentPlugin {
+  enabled: boolean
+  environment: string
+  groups: string[]
+  tools: string[]
+}
+
+const pluginCache = new Map<string, { at: number; value: Record<string, AgentPlugin> | null }>()
 
 /**
- * Component hydration: the model emits tiny references (a cinema id, a price preset) and the
- * proxy expands them into full card data here. Keeps replies fast and cheap — the model never
- * spends tokens copying static data — and card contents can never drift from the source.
+ * The plugins installed on the agent a widget talks to, from the orchestrator's
+ * /v1/info. Null means the engine did not say — an older engine has no such
+ * field, or it was unreachable — which the dashboard shows as unknown rather
+ * than as "not installed": the cards are driven by tool calls either way.
  */
-const CINEMA_DATA: Record<string, Record<string, unknown>> = {
-  '1': { id: '1', name: 'Cinescape 360', name_ar: 'سينسكيب 360', address: '360 Mall, Zahra (South Surra)', address_ar: 'مول 360، الزهراء', hours: '11 AM - 4 AM', lat: 29.267396766357216, lng: 47.99196210604129, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000001.jpg?v=169', maps_url: 'https://maps.google.com/?q=29.267396766357216,47.99196210604129', experiences: ['STANDARD', 'VIP', '4DX', 'DOLBY'] },
-  '8': { id: '8', name: 'Cinescape Avenues', name_ar: 'سينسكيب الأفنيوز', address: 'The Avenues Mall (Phase 1), Al-Rai', address_ar: 'مول الأفنيوز، الري', hours: '11 AM - 2 AM', lat: 29.30258, lng: 47.92927, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000008.jpg?v=741', maps_url: 'https://maps.google.com/?q=29.30258,47.92927', experiences: ['STANDARD', 'VIP', '4DX', 'DOLBY', 'SCREENX'] },
-  '5': { id: '5', name: 'Cinescape Al Kout', name_ar: 'سينسكيب الكوت', address: 'Al Kout Mall, Fahaheel', address_ar: 'الكوت مول، الفحيحيل', hours: '11 AM - 4 AM', lat: 29.07798, lng: 48.13963, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000005.jpg', maps_url: 'https://maps.google.com/?q=29.07798,48.13963', experiences: ['STANDARD', 'IMAX', '4DX', 'ELEVEN'] },
-  '13': { id: '13', name: 'Cinescape Assima', name_ar: 'سينسكيب العاصمة', address: 'Assima Mall, Mirqab (Kuwait City)', address_ar: 'مول العاصمة، المرقاب', hours: '11 AM - 3 AM', lat: 29.373813616320145, lng: 47.98789268449745, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000013.jpg?v=646', maps_url: 'https://maps.google.com/?q=29.373813616320145,47.98789268449745', experiences: ['STANDARD', 'VIP', '4DX', '4DXSCREEN', '3D', 'DOLBY', 'SKYLINE'] },
-  '14': { id: '14', name: 'Cinescape Khiran', name_ar: 'سينسكيب الخيران', address: 'Al Khiran Outlet Mall, Sabah Al Ahmed Sea City', address_ar: 'مول الخيران، مدينة صباح الأحمد البحرية', hours: '11 AM - 2 AM', lat: 28.67086, lng: 48.34639, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000014.jpg?v=867', maps_url: 'https://maps.google.com/?q=28.67086,48.34639', experiences: ['STANDARD', 'VIP'] },
-  '15': { id: '15', name: 'Cinescape Warehouse', name_ar: 'سينسكيب ذا ويرهاوس', address: 'The Warehouse Mall, South Sabahiya', address_ar: 'مول ذا ويرهاوس، جنوب الصباحية', hours: '11 AM - 3 AM', lat: 29.0859, lng: 48.1032, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000015.jpg?v=103', maps_url: 'https://maps.google.com/?q=29.0859,48.1032', experiences: ['STANDARD'] },
-  '3': { id: '3', name: 'Cinescape Al Bairaq', name_ar: 'سينسكيب البيرق', address: 'Al Bairaq Mall, Eqaila', address_ar: 'البيرق مول، العقيلة', hours: '12 PM - 2 AM', lat: 29.17358, lng: 48.09881, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000003.jpg?v=238', maps_url: 'https://maps.google.com/?q=29.17358,48.09881', experiences: ['STANDARD'] },
-  '2': { id: '2', name: 'Cinescape Ajial', name_ar: 'سينسكيب أجيال', address: 'Ajial Mall, Fahaheel', address_ar: 'أجيال مول، الفحيحيل', hours: '3:30 PM - 2 AM', lat: 29.08288, lng: 48.13633, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000002.jpg?v=046', maps_url: 'https://maps.google.com/?q=29.08288,48.13633', experiences: ['STANDARD'] },
-  '12': { id: '12', name: '1954 Film House', name_ar: 'بيت الأفلام 1954', address: 'Souq Al Kout (Seaside), Fahaheel', address_ar: 'سوق الكوت القديم (الواجهة البحرية)، الفحيحيل', hours: '12 PM - 3 AM', lat: 29.08078, lng: 48.14085, image: 'https://cdn.cinescape.com.kw/cinema/web_big/0000000012.jpg?v=800', maps_url: 'https://maps.google.com/?q=29.08078,48.14085', experiences: ['STANDARD'] },
+export async function agentPlugins(widgetId: string): Promise<Record<string, AgentPlugin> | null> {
+  const hit = pluginCache.get(widgetId)
+  if (hit && Date.now() - hit.at < 60_000) return hit.value
+  let value: Record<string, AgentPlugin> | null = null
+  try {
+    const target = await engineTarget(widgetId)
+    const r = await fetch(`${ENGINE_URL}/v1/info`, { headers: engineHeaders(false, target), signal: AbortSignal.timeout(5000) })
+    if (r.ok) {
+      const body = (await r.json()) as { plugins?: Record<string, AgentPlugin> }
+      if (body.plugins && typeof body.plugins === 'object') value = body.plugins
+    }
+  } catch {
+    /* unknown */
+  }
+  pluginCache.set(widgetId, { at: Date.now(), value })
+  return value
 }
-const PRICE_ITEMS = [
-  { label: 'عادي 2D/3D', label_en: 'Standard 2D/3D', price: '3.500' },
-  { label: 'ستاندرد بريميوم', label_en: 'Standard Premium', price: '4.000' },
-  { label: 'VIP', label_en: 'VIP', price: '8.000' },
-  { label: '4DX', label_en: '4DX', price: '8.000' },
-  { label: '4DX Screen', label_en: '4DX Screen', price: '8.000' },
-  { label: 'IMAX عادي', label_en: 'IMAX Regular', price: '4.000' },
-  { label: 'IMAX بريميوم', label_en: 'IMAX Premium', price: '4.500' },
-  { label: 'ScreenX', label_en: 'ScreenX', price: '4.500' },
-  { label: 'دولبي', label_en: 'Dolby Cinema', price: '4.500' },
-  { label: 'ELEVEN', label_en: 'ELEVEN', price: '3.500' },
-  { label: 'Skyline', label_en: 'Skyline', price: '5.000' },
-  { label: 'بيت الأفلام 1954 (ديلوكس)', label_en: '1954 Film House (Deluxe)', price: '6.000' },
-]
 
-/** Every experience with its cinemas and price, in both languages — hydrated from `{"template":"experiences_list","data":{}}`. */
-const EXPERIENCE_ITEMS = [
-  { name: 'IMAX', cinemas_ar: 'الكوت فقط (الوحيدة بالكويت)', cinemas_en: 'Al Kout only (the only one in Kuwait)', price: '4.000' },
-  { name: 'Dolby Cinema', cinemas_ar: '360، الأفنيوز، العاصمة', cinemas_en: '360, Avenues, Assima', price: '4.500' },
-  { name: '4DX', cinemas_ar: '360، الأفنيوز، الكوت', cinemas_en: '360, Avenues, Al Kout', price: '8.000' },
-  { name: '4DX Screen', cinemas_ar: 'العاصمة فقط', cinemas_en: 'Assima only', price: '8.000' },
-  { name: 'ScreenX', cinemas_ar: 'الأفنيوز والعاصمة', cinemas_en: 'Avenues and Assima', price: '4.500' },
-  { name: 'ELEVEN', cinemas_ar: 'الكوت فقط', cinemas_en: 'Al Kout only', price: '3.500' },
-  { name: 'VIP', cinemas_ar: '360، الأفنيوز، العاصمة، الخيران', cinemas_en: '360, Avenues, Assima, Khiran', price: '8.000' },
-  { name: 'Skyline', cinemas_ar: 'العاصمة', cinemas_en: 'Assima', price: '5.000', note_ar: 'موسمي بالشتاء', note_en: 'seasonal, winter' },
-  { name: '1954 Film House', cinemas_ar: 'سوق الكوت', cinemas_en: 'Souq Al Kout', price: '6.000', note_ar: 'سينما بوتيك بمقاعد ديلوكس', note_en: 'boutique cinema, Deluxe seats' },
-]
-
-function hydrateComponents(list: unknown): unknown {
-  if (!Array.isArray(list)) return list
-  return list.map((c) => {
-    if (!c || typeof c !== 'object') return c
-    const comp = c as Record<string, unknown>
-    if (comp.type !== 'template') return comp
-    const data = (comp.data && typeof comp.data === 'object' ? comp.data : {}) as Record<string, unknown>
-    if (comp.template === 'location_card') {
-      const full = CINEMA_DATA[String(data.id ?? '')]
-      if (full) return { ...comp, data: { ...full, ...data } } // model fields (distance_km) win over nothing; full fills the rest
-    }
-    if (comp.template === 'price_list') {
-      const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : PRICE_ITEMS
-      return { ...comp, data: { title: data.title ?? 'أسعار التذاكر 🎬', title_en: 'Ticket prices 🎬', currency: 'د.ك', currency_en: 'KD', items } }
-    }
-    if (comp.template === 'experiences_list') {
-      const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : EXPERIENCE_ITEMS
-      return { ...comp, data: { title: 'تجاربنا السينمائية ✨', title_en: 'Our cinema experiences ✨', items } }
-    }
-    if (comp.template === 'menu_list') {
-      let items = Array.isArray(data.items) && data.items.length > 0 ? (data.items as Array<Record<string, unknown>>) : []
-      let title = data.title as string | undefined
-      let title_en = data.title_en as string | undefined
-      const cat = String(data.category ?? '').trim()
-      // optional cinema filter: map the customer's cinema to Airtable availability columns
-      const cinemaRaw = String(data.cinema ?? '').trim().toLowerCase()
-      const CINEMA_COLS: Array<[RegExp, string[]]> = [
-        [/360/, ['360', '360 VIP']],
-        [/avenue|أفنيوز|افنيوز/, ['Avenues', 'Avenues VIP']],
-        [/kout|كوت/, ['Al Kout']],
-        [/assima|عاصمة|العاصمه|skyline|سكاي/, ['Assima', 'Assima VIP', 'Skyline']],
-        [/khiran|khairan|خيران/, ['Khairan', 'Khairan VIP']],
-        [/warehouse|ويرهاوس/, ['Warehouse']],
-        [/bairaq|بيرق/, ['Bairaq']],
-        [/ajial|أجيال|اجيال/, ['Ajial']],
-        [/1954|بيت الأفلام|film house/, ['1954']],
-      ]
-      const cols = cinemaRaw ? CINEMA_COLS.find(([re]) => re.test(cinemaRaw))?.[1] : undefined
-      const atCinema = (m: { cinemas: string[] }) => (cols ? m.cinemas.some((c) => cols.includes(c)) : m.cinemas.length > 0)
-      // a specific food type ("popcorn", "قهوة") filters by item name, never a whole category
-      const match = String(data.match ?? '').trim()
-      if (items.length === 0 && match) {
-        const terms = match.toLowerCase().split(/[|,،\s]+/).filter((t) => t.length >= 2)
-        const hits = MENU_ITEMS.filter((m) => {
-          const hay = `${m.name} ${m.name_ar}`.toLowerCase()
-          return terms.some((t) => hay.includes(t)) && atCinema(m)
-        })
-        items = hits.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
-        title = title ?? match.split(/[|,،]/)[0]
-        title_en = title_en ?? match.split(/[|,،]/)[0]
-      }
-      if (items.length === 0 && cat) {
-        const matched = MENU_ITEMS.filter((m) => m.category.toLowerCase() === cat.toLowerCase() && atCinema(m))
-        // the price-list renderer reads label/label_en
-        items = matched.map((m) => ({ label: m.name_ar || m.name, label_en: m.name, price: m.price, image: m.image }))
-        title = title ?? matched[0]?.category_ar
-        title_en = title_en ?? matched[0]?.category
-      } else if (items.length > 0) {
-        // normalize model-passed items and fill prices from the dataset by name
-        items = items.map((it) => {
-          const nm = String(it.name ?? it.label ?? '')
-          const m = MENU_ITEMS.find((x) => x.name.toLowerCase() === nm.toLowerCase() || x.name_ar === (it.name_ar ?? it.label))
-          return {
-            label: (it.name_ar ?? it.label ?? m?.name_ar ?? m?.name ?? nm) as string,
-            label_en: (it.name ?? it.label_en ?? m?.name ?? nm) as string,
-            price: (it.price ?? m?.price ?? '') as string,
-            image: (m?.image ?? '') as string,
-          }
-        })
-      }
-      return { ...comp, data: { title: title ?? 'المنيو 🍿', title_en: title_en ?? 'Menu 🍿', currency: 'د.ك', currency_en: 'KD', items } }
-    }
-    if (comp.template === 'menu_categories') {
-      const hidden = new Set(['VIP', 'Limited', 'Merchandise'])
-      const order: string[] = []
-      const byCat = new Map<string, { key: string; label: string; label_en: string; image: string; count: number }>()
-      for (const m of MENU_ITEMS) {
-        if (hidden.has(m.category)) continue
-        let c = byCat.get(m.category)
-        if (!c) {
-          c = { key: m.category, label: m.category_ar || m.category, label_en: m.category, image: '', count: 0 }
-          byCat.set(m.category, c)
-          order.push(m.category)
-        }
-        c.count++
-        if (!c.image && m.image) c.image = m.image
-      }
-      return { ...comp, data: { title: 'المنيو 🍿', title_en: 'Our menu 🍿', items: order.map((k) => byCat.get(k)) } }
-    }
-    if (comp.template === 'app_links') {
-      return {
-        ...comp,
-        data: {
-          ios: 'https://apps.apple.com/in/app/cinescape-kncc/id443396586',
-          android: 'https://play.google.com/store/apps/details?id=com.cinescape&hl=en_IN',
-        },
-      }
-    }
-    return comp
-  })
+async function engineTarget(widgetId: string): Promise<EngineTarget> {
+  try {
+    // Unreachable Redis falls back to the env agent rather than failing the turn.
+    const raw = await getSoon(`widget:${widgetId}`)
+    if (!raw) return ENV_TARGET
+    const rec = JSON.parse(raw) as { agentId?: string; engineKey?: string }
+    return { agentId: rec.agentId || ENGINE_AGENT, apiKey: rec.engineKey || ENGINE_KEY }
+  } catch {
+    return ENV_TARGET
+  }
 }
+
+const engineHeaders = (json = true, target: EngineTarget = ENV_TARGET): Record<string, string> => ({
+  ...(json ? { 'Content-Type': 'application/json' } : {}),
+  // An application key authenticates the server and selects the agent; without one
+  // the legacy header names the agent directly.
+  ...(target.apiKey ? { Authorization: `Bearer ${target.apiKey}` } : { 'X-Agent-Id': target.agentId }),
+})
+
 
 engineChatRouter.post('/widget/:widgetId/cine/chat', async (req, res) => {
+  // Read once, before the stream opens: nothing inside the pass-through loop awaits.
+  const [target, binding] = await Promise.all([engineTarget(req.params.widgetId), bindingFor(req.params.widgetId)])
   const body = {
     query: String(req.body?.query ?? ''),
     user: String(req.body?.user ?? 'widget-guest'),
@@ -186,7 +109,7 @@ engineChatRouter.post('/widget/:widgetId/cine/chat', async (req, res) => {
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
-      headers: engineHeaders(),
+      headers: engineHeaders(true, target),
       body: JSON.stringify(body),
     })
     res.status(upstream.status)
@@ -217,7 +140,7 @@ engineChatRouter.post('/widget/:widgetId/cine/chat', async (req, res) => {
           try {
             const e = JSON.parse(line.slice(5)) as { event?: string; data?: { components?: unknown } }
             if (e.event === 'components' && e.data) {
-              e.data.components = hydrateComponents(e.data.components)
+              e.data.components = hydrateComponents(e.data.components, binding)
               out = 'data: ' + JSON.stringify(e)
             }
           } catch {
@@ -679,7 +602,7 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
  * coordinates, reverse-geocoded address, exact distances, and a far-outside-
  * Kuwait note. The customer's bubble keeps the short text.
  */
-async function enrichLocationMessage(content: string, meta?: unknown): Promise<string | null> {
+async function enrichLocationMessage(content: string, meta?: unknown, binding: TemplateBinding = ALL_TEMPLATES): Promise<string | null> {
   let lat = NaN, lng = NaN
   const shared = (meta as { shared_location?: { lat?: unknown; lng?: unknown } } | undefined)?.shared_location
   if (shared) {
@@ -692,7 +615,9 @@ async function enrichLocationMessage(content: string, meta?: unknown): Promise<s
     lng = Number(m[2])
   }
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  const dists = Object.values(CINEMA_DATA)
+  // Same rows the location_card template renders, so the distances the agent is
+  // told and the cards the customer sees can never disagree.
+  const dists = rowsFor(LOCATION_TEMPLATE, binding)
     .map((c) => ({ name: String(c.name), km: haversineKm(lat, lng, Number(c.lat), Number(c.lng)) }))
     .sort((a, b) => a.km - b.km)
   const addr = await reverseGeocode(lat, lng)
@@ -708,37 +633,10 @@ const hasLetters = (t: string) => /[a-zA-Z\u0600-\u06FF]/.test(t)
 // Switching to English needs a real typed sentence — a tapped chip like "IMAX" or "VIP 360" must not flip an Arabic conversation.
 const isEnglishSentence = (t: string) => !hasArabic(t) && /[a-z]{2,}\s+[a-z]{2,}/i.test(t) && t.trim().length > 8
 
-/**
- * Builds the SDK's native widget_template from hydrated components (cards beat the price list).
- * `replyText` decides the template's language: cards follow the reply, not the widget's view setting.
- */
-function componentsToTemplate(comps: Array<Record<string, unknown>>, replyText: string): Record<string, unknown> | undefined {
-  const lang = /[\u0600-\u06FF]/.test(replyText) ? 'ar' : 'en'
-  const cards = comps
-    .filter((c) => c.type === 'template' && c.template === 'location_card')
-    .map((c) => c.data as Record<string, unknown>)
-    .filter((d) => d && d.name)
-  if (cards.length > 0) return { type: 'location_cards', content: { lang, cards } }
-  const price = comps.find((c) => c.type === 'template' && c.template === 'price_list')
-  if (price) return { type: 'price_list', content: { lang, ...(price.data as Record<string, unknown>) } }
-  const exp = comps.find((c) => c.type === 'template' && c.template === 'experiences_list')
-  if (exp) return { type: 'experiences_list', content: { lang, ...(exp.data as Record<string, unknown>) } }
-  const mcats = comps.find((c) => c.type === 'template' && c.template === 'menu_categories')
-  if (mcats) return { type: 'menu_categories', content: { lang, ...(mcats.data as Record<string, unknown>) } }
-  const movies = comps.find((c) => c.type === 'template' && c.template === 'movie_cards')
-  if (movies) return { type: 'movie_cards', content: { lang, ...(movies.data as Record<string, unknown>) } }
-  const app = comps.find((c) => c.type === 'template' && c.template === 'app_links')
-  if (app) return { type: 'app_links', content: { lang, ...(app.data as Record<string, unknown>) } }
-  const menu = comps.find((c) => c.type === 'template' && c.template === 'menu_list')
-  if (menu) {
-    const md = menu.data as { items?: Array<{ image?: string }> }
-    const hasImages = Array.isArray(md.items) && md.items.some((i) => i.image)
-    return { type: hasImages ? 'menu_cards' : 'price_list', content: { lang, ...(menu.data as Record<string, unknown>) } }
-  }
-  return undefined
-}
 
 interface EngineConv {
+  /** Which widget this conversation belongs to: it selects the agent and the template bindings. */
+  widgetId: string
   engineConv: string
   history: WidgetMessage[]
   clients: Set<Response>
@@ -751,7 +649,7 @@ const convs = new Map<string, EngineConv>()
 
 async function isEngineWidget(widgetId: string): Promise<boolean> {
   try {
-    const raw = await redis.get(`widget:${widgetId}`)
+    const raw = await getSoon(`widget:${widgetId}`)
     if (!raw) return false
     return (JSON.parse(raw) as { engine?: string }).engine === 'agent-engine'
   } catch {
@@ -820,11 +718,15 @@ function componentsToWidgetFields(comps: Array<Record<string, unknown>>): Pick<W
  * so a brand-new conversation can answer send-message with the engine's own — persistent — id.
  */
 async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: string) => void) {
+  // Once per turn: which agent answers, and which templates this widget renders.
+  const [target, binding] = await Promise.all([engineTarget(conv.widgetId), bindingFor(conv.widgetId)])
   const streamId = `st-${ulid()}`
   const botUlid = ulid()
   let buf = ''
   let finalText = ''
   let comps: Array<Record<string, unknown>> = []
+  /** Components that came from plugin tool calls rather than from the agent's reply. */
+  const toolComps: Array<Record<string, unknown>> = []
   let replaced = false
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
@@ -838,7 +740,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   try {
     const upstream = await fetch(`${ENGINE_URL}/v1/chat-messages`, {
       method: 'POST',
-      headers: engineHeaders(),
+      headers: engineHeaders(true, target),
       body: JSON.stringify({ query, user: conv.user, conversation_id: conv.engineConv, response_mode: 'streaming', inputs: {} }),
     })
     if (!upstream.body) throw new Error('no body')
@@ -869,6 +771,11 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           say(pickFrom(THINK_GENERIC.route[conv.lang], lastThink))
         } else if (e.event === 'agent_thought') {
           const tool = String((e as { tool?: unknown }).tool ?? '')
+          // A Pair plugin tool call is itself something to show: the ticket it
+          // opened, the link or image it sent, the buttons it offered.
+          const th = e as { tool_input?: unknown; observation?: unknown }
+          const fromTool = componentFromTool(tool, th.tool_input, th.observation) ?? questionFromButtons(tool, th.tool_input)
+          if (fromTool) toolComps.push(fromTool)
           if (tool === 'cinescape_locations') say(pickFrom(THINK_GENERIC.locations[conv.lang], lastThink))
           else if (tool && !tool.startsWith('route_to_')) say(thinkKnowledge(String((e as { tool_input?: unknown }).tool_input ?? ''), conv.lang, lastThink))
         } else if (e.event === 'message' && typeof e.answer === 'string') {
@@ -881,7 +788,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           replaced = true
         } else if (e.event === 'components') {
           const data = e.data as { components?: unknown } | undefined
-          comps = (hydrateComponents(data?.components) as Array<Record<string, unknown>>) ?? []
+          comps = (hydrateComponents(data?.components, binding) as Array<Record<string, unknown>>) ?? []
         } else if (e.event === 'envelope') {
           const raw = (e.data as { raw?: { message?: string } } | undefined)?.raw
           if (raw?.message && !replaced) finalText = raw.message
@@ -891,6 +798,11 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
+  }
+  if (toolComps.length > 0) {
+    // Hydrated like any other, so a widget that switched a plugin card off does
+    // not get it, and each card carries that widget's design.
+    comps = [...(hydrateComponents(toolComps, binding) as Array<Record<string, unknown>>), ...comps]
   }
   {
     // chips must speak the reply's language — mismatched ones (a model slip) are replaced
@@ -925,9 +837,10 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
 }
 
 /** Rebuilds a conversation's widget history from the engine's persistent store (survives studio restarts). */
-async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
+async function loadConvFromEngine(convId: string, widgetId: string): Promise<EngineConv | null> {
+  const [target, binding] = await Promise.all([engineTarget(widgetId), bindingFor(widgetId)])
   try {
-    const r = await fetch(`${ENGINE_URL}/v1/conversations/${encodeURIComponent(convId)}`, { headers: engineHeaders(false) })
+    const r = await fetch(`${ENGINE_URL}/v1/conversations/${encodeURIComponent(convId)}`, { headers: engineHeaders(false, target) })
     if (!r.ok) return null
     const doc = (await r.json()) as { id: string; user?: string; messages?: Array<{ id: string; role: string; text: string; envelope?: string; created_at?: number }> }
     const history: WidgetMessage[] = []
@@ -942,7 +855,7 @@ async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
           try {
             const envDoc = JSON.parse(m.envelope) as { message?: string; components?: unknown }
             if (envDoc.message) text = envDoc.message
-            comps = (hydrateComponents(envDoc.components) as Array<Record<string, unknown>>) ?? []
+            comps = (hydrateComponents(envDoc.components, binding) as Array<Record<string, unknown>>) ?? []
           } catch {
             /* plain text fallback */
           }
@@ -966,7 +879,7 @@ async function loadConvFromEngine(convId: string): Promise<EngineConv | null> {
     for (const m of doc.messages ?? []) {
       if (m.role === 'user' && !m.text.startsWith('📍 shared my location') && hasLetters(m.text)) lang = hasArabic(m.text) ? 'ar' : 'en'
     }
-    return { engineConv: doc.id, history, clients: new Set(), user: doc.user || `widget-${convId}`, lang }
+    return { widgetId, engineConv: doc.id, history, clients: new Set(), user: doc.user || `widget-${convId}`, lang }
   } catch {
     return null
   }
@@ -997,10 +910,10 @@ async function rememberConv(sub: string, convId: string): Promise<void> {
   }
 }
 
-async function getOrRestoreConv(convId: string): Promise<EngineConv | null> {
+async function getOrRestoreConv(convId: string, widgetId: string): Promise<EngineConv | null> {
   const existing = convs.get(convId)
   if (existing) return existing
-  const restored = await loadConvFromEngine(convId)
+  const restored = await loadConvFromEngine(convId, widgetId)
   if (restored) convs.set(convId, restored)
   return restored
 }
@@ -1032,7 +945,7 @@ engineWidgetRouter.get('/widget/:widgetId/conversations', async (req, res, next)
   }
   const data = []
   for (const id of ids.slice(0, 5)) {
-    const conv = await getOrRestoreConv(id)
+    const conv = await getOrRestoreConv(id, req.params.widgetId)
     if (!conv || conv.history.length === 0) continue
     const last = conv.history[conv.history.length - 1]
     data.push({
@@ -1060,13 +973,14 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
   const userMsg: WidgetMessage = { ulid: msgUlid, type: 'message', content, message_type: 'text', sender_type: 'contact', sent_at: new Date().toISOString(), status: 'sent' }
 
   const sub = contactSub(req)
-  const enrichedLocation = await enrichLocationMessage(content, (req.body as { metadata?: unknown })?.metadata)
+  const binding = await bindingFor(req.params.widgetId)
+  const enrichedLocation = await enrichLocationMessage(content, (req.body as { metadata?: unknown })?.metadata, binding)
   const isMachineMsg = content.startsWith('📍 shared my location') || enrichedLocation !== null
   if (requestedConv) {
     // existing conversation: the widget's id IS the engine's persistent conversation id
     const conv =
-      (await getOrRestoreConv(requestedConv)) ??
-      ({ engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}`, lang: 'ar' } as EngineConv)
+      (await getOrRestoreConv(requestedConv, req.params.widgetId)) ??
+      ({ widgetId: req.params.widgetId, engineConv: requestedConv, history: [], clients: new Set<Response>(), user: `widget-${requestedConv}`, lang: 'ar' } as EngineConv)
     convs.set(requestedConv, conv)
     if (!isMachineMsg && hasLetters(content)) conv.lang = hasArabic(content) ? 'ar' : isEnglishSentence(content) ? 'en' : conv.lang
     conv.history.push(userMsg)
@@ -1079,6 +993,7 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
 
   // new conversation: wait for the engine to assign its id (first SSE event), then answer with it
   const conv: EngineConv = {
+    widgetId: req.params.widgetId,
     engineConv: '',
     history: [userMsg],
     clients: new Set(),
@@ -1105,13 +1020,13 @@ engineWidgetRouter.post('/widget/:widgetId/send-message', async (req, res, next)
 
 engineWidgetRouter.get('/widget/:widgetId/conversations/:convId/messages', async (req, res, next) => {
   if (!(await isEngineWidget(req.params.widgetId))) return next()
-  const conv = await getOrRestoreConv(req.params.convId)
+  const conv = await getOrRestoreConv(req.params.convId, req.params.widgetId)
   res.json({ data: conv?.history ?? [], has_more: false })
 })
 
 engineWidgetRouter.get('/widget/:widgetId/conversations/:convId/stream', async (req, res, next) => {
   if (!(await isEngineWidget(req.params.widgetId))) return next()
-  const conv = await getOrRestoreConv(req.params.convId)
+  const conv = await getOrRestoreConv(req.params.convId, req.params.widgetId)
   if (!conv) {
     res.status(404).json({ error: { code: 'unknown_conversation' } })
     return

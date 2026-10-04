@@ -1,10 +1,11 @@
 import {
-  ArrowLeft, BellRing, Check, ClipboardList, Download, Image as ImageIcon, Languages, LayoutGrid, LoaderCircle, MessagesSquare, Monitor, Moon, Palette, PanelTop, Phone, Rocket, RotateCcw, Save, Share2, ShieldCheck, Smartphone, Sparkles, Star, Sun, Tablet, TextCursorInput, Zap,
+  ArrowLeft, BellRing, Check, ClipboardList, Download, ExternalLink, Image as ImageIcon, Languages, LayoutGrid, LoaderCircle, MessagesSquare, Monitor, Moon, Palette, PanelTop, Phone, Rocket, RotateCcw, Save, Share2, ShieldCheck, Smartphone, Sparkles, Star, Sun, Tablet, TextCursorInput, Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FitScale, Loading, Spinner } from '@/components/ui'
-import { api, type Widget, type WidgetConfig } from '@/lib/api'
+import { api, widgetTestUrl, type Widget, type WidgetConfig } from '@/lib/api'
+import { copyText } from '@/lib/clipboard'
 import { useAuth } from '@/lib/auth'
 import { PairWordmark } from '@/components/brand'
 import { stageSize, type PreviewDevice } from '@/components/WidgetPreview'
@@ -83,10 +84,12 @@ export function Builder() {
   useEffect(() => { load().catch((e) => toast.err((e as Error).message)) }, [load, toast])
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(stored), [draft, stored])
+  const testUrl = useMemo(() => widgetTestUrl(widgetId), [widgetId])
 
   /* ------------------------- postMessage to the frame ------------------------- */
   const frame = useRef<HTMLIFrameElement>(null)
   const [frameReady, setFrameReady] = useState(false)
+
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -141,6 +144,20 @@ export function Builder() {
     } catch (e) { toast.err((e as Error).message) } finally { setBusy(null) }
   }
   const reset = () => setDraft(stored ? (structuredClone(stored) as WidgetConfig) : null)
+  /**
+   * Share copies, and only copies — it used to fall back to opening the link in a
+   * new tab when the clipboard was unavailable, which is how a share button on the
+   * plain-HTTP deployments quietly became a second test button. copyText covers
+   * those origins, and a failure is now reported instead of disguised.
+   */
+  const share = async () => {
+    try {
+      await copyText(testUrl)
+      toast.ok(t('builder.share.copied'))
+    } catch {
+      toast.err(t('common.copyFailed'))
+    }
+  }
   const importApi = async () => {
     setBusy('import')
     try {
@@ -176,22 +193,17 @@ export function Builder() {
           </div>
           <p className="mono truncate text-[10.5px] leading-tight text-faint">{widget.widgetId}</p>
         </div>
-        <button
-          className="btn-ghost btn-sm shrink-0"
-          onClick={async () => {
-            const url = `${window.location.origin}/api/public/widget/${encodeURIComponent(widgetId)}/embed`
-            try {
-              await navigator.clipboard.writeText(url)
-              toast.ok(t('builder.share.copied'))
-            } catch {
-              window.open(url, '_blank', 'noreferrer')
-            }
-          }}
-          title={t('builder.share')}
-        >
-          <Share2 className="size-4" />
-          <span className="hidden md:inline">{t('builder.share')}</span>
-        </button>
+        <div className="flex shrink-0 gap-1.5">
+          {/* Open the test page; share only ever copies its link. */}
+          <a className="btn-ghost btn-sm" href={testUrl} target="_blank" rel="noreferrer" title={t('builder.test.hint')}>
+            <ExternalLink className="size-4" />
+            <span className="hidden md:inline">{t('builder.test')}</span>
+          </a>
+          <button className="btn-ghost btn-sm" onClick={share} title={t('builder.share.hint')}>
+            <Share2 className="size-4" />
+            <span className="hidden md:inline">{t('builder.share')}</span>
+          </button>
+        </div>
         {editor && (
           <div className="flex shrink-0 gap-1.5">
             <button className="btn-ghost btn-sm" onClick={reset} disabled={!dirty || !!busy} title={t('builder.reset')} aria-label={t('builder.reset')}>
@@ -339,18 +351,18 @@ export function Builder() {
               <PairWordmark className="h-4 shrink-0 text-accent" />
               <span className="h-4 w-px shrink-0 bg-divider" aria-hidden />
               <div className="flex rounded-lg border border-line bg-code p-0.5" role="group" aria-label={t('builder.push.lang')}>
-                <PushChip active={pushedLang === 'en'} onClick={() => pushEvent({ type: 'pws:event', name: 'set-language', value: 'en' })} label="EN" title={t('builder.push.lang')} />
-                <PushChip active={pushedLang === 'ar'} onClick={() => pushEvent({ type: 'pws:event', name: 'set-language', value: 'ar' })} label="عربي" title={t('builder.push.lang')} />
+                <PushChip active={pushedLang === 'en'} disabled={live} onClick={() => pushEvent({ type: 'pws:event', name: 'set-language', value: 'en' })} label="EN" title={t('builder.push.lang')} />
+                <PushChip active={pushedLang === 'ar'} disabled={live} onClick={() => pushEvent({ type: 'pws:event', name: 'set-language', value: 'ar' })} label="عربي" title={t('builder.push.lang')} />
               </div>
               <div className="flex rounded-lg border border-line bg-code p-0.5" role="group" aria-label={t('builder.push.theme')}>
-                <PushChip active={pushedTheme === 'light'} onClick={() => pushEvent({ type: 'pws:event', name: 'set-theme', value: 'light' })} label={<Sun className="size-3.5" />} title={t('builder.theme.light')} />
-                <PushChip active={pushedTheme === 'dark'} onClick={() => pushEvent({ type: 'pws:event', name: 'set-theme', value: 'dark' })} label={<Moon className="size-3.5" />} title={t('builder.theme.dark')} />
+                <PushChip active={pushedTheme === 'light'} disabled={live} onClick={() => pushEvent({ type: 'pws:event', name: 'set-theme', value: 'light' })} label={<Sun className="size-3.5" />} title={t('builder.theme.light')} />
+                <PushChip active={pushedTheme === 'dark'} disabled={live} onClick={() => pushEvent({ type: 'pws:event', name: 'set-theme', value: 'dark' })} label={<Moon className="size-3.5" />} title={t('builder.theme.dark')} />
               </div>
               {editor && (
                 <button
                   className="btn-ghost btn-sm"
                   onClick={applyPushed}
-                  disabled={!pushedLang && !pushedTheme}
+                  disabled={live || (!pushedLang && !pushedTheme)}
                   title={t('builder.push.apply')}
                 >
                   <Check className="size-3.5" />
@@ -382,13 +394,14 @@ function DeviceToggle({ active, onClick, icon, label }: { active: boolean; onCli
   )
 }
 
-function PushChip({ active, onClick, label, title }: { active: boolean; onClick: () => void; label: React.ReactNode; title: string }) {
+function PushChip({ active, onClick, label, title, disabled }: { active: boolean; onClick: () => void; label: React.ReactNode; title: string; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={active}
       title={title}
-      className={`flex items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-bold transition-all duration-200 ${
+      className={`flex items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-bold transition-all duration-200 disabled:opacity-40 ${
         active ? 'bg-white text-accent-deep shadow-[0_1px_2px_rgba(15,18,22,0.06)]' : 'text-muted hover:text-ink'
       }`}
     >

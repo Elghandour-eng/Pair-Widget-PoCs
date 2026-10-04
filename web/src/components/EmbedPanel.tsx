@@ -4,6 +4,7 @@ import { Select } from './Select'
 import { SectionHead } from './ui'
 import { embedPreviewUrl, embedSnippet, type EmbedSettings, type PanelSize, type Widget } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
+import { copyText } from '@/lib/clipboard'
 import { useToast } from '@/lib/toast'
 
 const POSITIONS = ['right', 'left'] as const
@@ -27,12 +28,12 @@ export function EmbedPanel({ widget, sdkBaseUrl, panel }: { widget: Widget; sdkB
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(snippet)
+      await copyText(snippet)
       setCopied(true)
       toast.ok(t('embed.copied'))
       setTimeout(() => setCopied(false), 1600)
-    } catch (e) {
-      toast.err((e as Error).message)
+    } catch {
+      toast.err(t('common.copyFailed'))
     }
   }
 

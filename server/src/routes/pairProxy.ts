@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { env } from '../config/env.js'
 import { logger } from '../lib/logger.js'
+import { recordPairPusherAuth } from '../lib/pusherEnv.js'
 
 /**
  * The widget points its `beBaseUrl` at this server so the design config is served
@@ -11,6 +12,8 @@ import { logger } from '../lib/logger.js'
 export const pairProxyRouter = Router()
 
 const FORWARD_HEADERS = ['content-type', 'accept', 'authorization', 'x-request-id', 'accept-language']
+// The widget's channel-auth request, whose answer names the Pusher key Pair signs with.
+const PUSHER_AUTH_PATH = /^\/widget\/[^/]+\/auth\/pusher$/
 
 pairProxyRouter.use(async (req, res) => {
   const base = env.PAIR_API_BASE_URL.replace(/\/$/, '')
@@ -36,10 +39,15 @@ pairProxyRouter.use(async (req, res) => {
     }
 
     const upstream = await fetch(target, init)
+    const body = Buffer.from(await upstream.arrayBuffer())
+    // Pair's signature carries the key Pair uses; compared with the key this
+    // deployment serves the widget, because the two disagreeing is otherwise
+    // invisible from here (see lib/pusherEnv.ts).
+    if (upstream.ok && PUSHER_AUTH_PATH.test(req.path)) recordPairPusherAuth(body)
     res.status(upstream.status)
     const ct = upstream.headers.get('content-type')
     if (ct) res.setHeader('content-type', ct)
-    res.send(Buffer.from(await upstream.arrayBuffer()))
+    res.send(body)
   } catch (err) {
     logger.warn({ err: (err as Error).message, target, method: req.method }, 'pair proxy failed')
     res.status(502).json({ error: { code: 'upstream_unreachable', message: 'Pair API is unreachable' } })

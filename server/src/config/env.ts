@@ -39,6 +39,14 @@ const schema = z.object({
   LIVEKIT_URL: z.union([z.literal(''), z.string().regex(/^wss?:\/\//, 'LIVEKIT_URL must start with ws:// or wss://')]).default(''),
   LIVEKIT_API_KEY: z.string().default(''),
   LIVEKIT_API_SECRET: z.string().default(''),
+  // The Cinescape concessions menu the studio hydrates menu cards from (see
+  // routes/cinescapeMenuSource.ts). The base and table default to the one the
+  // engine's own airtable_menu tool reads, so both sides see the same rows.
+  // Without a token the compiled snapshot answers.
+  AIRTABLE_TOKEN: z.string().default(''),
+  AIRTABLE_MENU_BASE: z.string().default('appRkp6YvIgE5m69N'),
+  AIRTABLE_MENU_TABLE: z.string().default('tblrzeqWS3OaV3OtQ'),
+  MENU_REFRESH_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
   // Optional: when set, system logs are also written to MongoDB.
   MONGODB_URI: z.string().optional(),
   MONGODB_DB: z.string().default('pair_widget_studio'),

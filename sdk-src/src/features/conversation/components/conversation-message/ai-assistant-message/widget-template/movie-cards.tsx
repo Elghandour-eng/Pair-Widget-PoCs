@@ -1,6 +1,5 @@
 import { CardImage } from './card-image'
-import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { isDarkBackground } from '@/lib/utils'
+import { useTemplateDesign } from './use-template-design'
 import type { MovieCardsTemplate } from '@/features/conversation/types/message'
 
 /**
@@ -8,24 +7,20 @@ import type { MovieCardsTemplate } from '@/features/conversation/types/message'
  * Language follows the reply, colours follow the theme.
  */
 export function MovieCards({ template }: { template: MovieCardsTemplate; sourceMessageUlid?: string }) {
-  const { widgetConfig, view } = useWidgetConfigContext()
-  const brand = widgetConfig.primaryColor || '#B3202C'
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  const replyLang = template.content?.lang
-  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const d = useTemplateDesign(template.content)
+  const { accent: brand, isArabic } = d
   const { title, title_en, items = [] } = template.content ?? {}
   if (items.length === 0) return null
 
   const heading = isArabic ? title : (title_en ?? title)
-  const cardStyle: React.CSSProperties = {
-    background: isDark ? '#181c28' : '#ffffff',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
-  }
+  const cardStyle: React.CSSProperties = d.cardStyle
+  // Wider cards mean fewer across the same row; the poster keeps its chosen ratio.
+  const cardWidth = Math.round(280 / Math.max(1, d.columns))
 
   return (
     <div className="mt-2 flex w-full flex-col gap-2" dir={isArabic ? 'rtl' : 'ltr'}>
       {heading && (
-        <p className="text-[13.5px] font-bold" style={{ color: brand }}>
+        <p className="font-bold" style={{ color: brand, fontSize: d.titleSize }}>
           {heading}
         </p>
       )}
@@ -33,18 +28,19 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
         {items.map((it, i) => (
           <div
             key={i}
-            className="flex w-[124px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl"
-            style={cardStyle}
+            className="flex shrink-0 snap-start flex-col overflow-hidden"
+            style={{ ...cardStyle, width: cardWidth }}
           >
             <div className="relative">
               <CardImage
                 src={it.image}
                 alt={it.title}
-                className="h-[168px] w-full object-cover"
+                className="w-full object-cover"
+                style={{ aspectRatio: d.aspect }}
                 fallback={
                   <div
-                    className="flex h-[168px] w-full flex-col items-center justify-center gap-2 px-2 text-center"
-                    style={{ background: `linear-gradient(160deg, ${brand}26, ${brand}0a)` }}
+                    className="flex w-full flex-col items-center justify-center gap-2 px-2 text-center"
+                    style={{ aspectRatio: d.aspect, background: `linear-gradient(160deg, ${brand}26, ${brand}0a)` }}
                   >
                     <span className="text-[30px]">🎬</span>
                     <span className="line-clamp-3 text-[11px] font-semibold" style={{ color: brand }}>
@@ -62,15 +58,15 @@ export function MovieCards({ template }: { template: MovieCardsTemplate; sourceM
                 </span>
               )}
             </div>
-            <div className="flex flex-1 flex-col gap-0.5 p-2">
+            <div className="flex flex-1 flex-col gap-0.5" style={{ padding: d.padding }}>
               <span
                 className="line-clamp-2 text-[11.5px] leading-snug font-semibold"
-                style={{ color: isDark ? '#f0f2f8' : '#1b1c21' }}
+                style={{ color: d.text }}
               >
                 {isArabic ? (it.title_ar ?? it.title) : it.title}
               </span>
               {(it.genre || it.duration) && (
-                <span className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)' }}>
+                <span className="text-[10px]" style={{ color: d.muted }}>
                   {[it.genre, it.duration].filter(Boolean).join(' · ')}
                 </span>
               )}

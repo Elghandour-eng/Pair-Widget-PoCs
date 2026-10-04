@@ -1,5 +1,4 @@
-import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { isDarkBackground } from '@/lib/utils'
+import { useTemplateDesign } from './use-template-design'
 import type { ExperiencesListTemplate } from '@/features/conversation/types/message'
 
 /**
@@ -7,12 +6,8 @@ import type { ExperiencesListTemplate } from '@/features/conversation/types/mess
  * cinemas and ticket price. Language-aware copy, theme-aware surfaces.
  */
 export function ExperiencesList({ template }: { template: ExperiencesListTemplate; sourceMessageUlid?: string }) {
-  const { widgetConfig, view } = useWidgetConfigContext()
-  const color = widgetConfig.primaryColor || '#B3202C'
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  // the reply's own language (set server-side from the message text) wins over the view setting
-  const replyLang = (template.content as { lang?: string } | undefined)?.lang
-  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const d = useTemplateDesign(template.content)
+  const { accent: color, isDark, isArabic } = d
   const { title, title_en, items = [] } = template.content ?? {}
   if (items.length === 0) return null
 
@@ -20,25 +15,27 @@ export function ExperiencesList({ template }: { template: ExperiencesListTemplat
 
   return (
     <div
-      className="mt-2 w-full max-w-[340px] rounded-2xl p-4 shadow-sm"
+      className="mt-2 w-full max-w-[340px] shadow-sm"
       dir={isArabic ? 'rtl' : 'ltr'}
-      style={{
-        background: isDark ? '#181c28' : '#ffffff',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
-      }}
+      style={{ ...d.cardStyle, padding: d.padding }}
     >
-      <p className="mb-2.5 text-[14px] font-bold" style={{ color }}>
+      <p className="mb-2.5 font-bold" style={{ color, fontSize: d.titleSize }}>
         {heading}
       </p>
       <div className="flex flex-col gap-2.5">
         {items.map((it, i) => (
           <div
             key={i}
-            className="rounded-xl p-2.5"
-            style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}
+            className="p-2.5"
+            style={{
+              // Rows echo the card's own radius, a step tighter so they nest rather than compete.
+              borderRadius: Math.max(0, d.radius - 4),
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              ...(d.divider === 'none' ? {} : { border: `1px ${d.divider} ${d.border}` }),
+            }}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] font-bold" style={{ color: isDark ? '#f3f4f8' : '#17181c' }}>
+              <span className="text-[13px] font-bold" style={{ color: d.text }}>
                 {it.name}
               </span>
               {it.price && (

@@ -715,14 +715,22 @@ export interface LocationCardData {
   maps_url?: string
 }
 
+/**
+ * Per-template design tokens, resolved server-side: the template's defaults
+ * with this widget's overrides on top. Unset keys fall through to the widget's
+ * theme in `useTemplateDesign`.
+ */
+export type TemplateDesign = Record<string, string | number | boolean | undefined>
+
 export interface LocationCardsTemplate {
   type: 'location_cards'
-  content: { lang?: 'ar' | 'en'; cards: LocationCardData[] }
+  content: { lang?: 'ar' | 'en'; cards: LocationCardData[]; design?: TemplateDesign }
 }
 
 export interface PriceListTemplate {
   type: 'price_list'
   content: {
+    design?: TemplateDesign
     lang?: 'ar' | 'en'
     title?: string
     title_en?: string
@@ -735,6 +743,7 @@ export interface PriceListTemplate {
 export interface ExperiencesListTemplate {
   type: 'experiences_list'
   content: {
+    design?: TemplateDesign
     lang?: 'ar' | 'en'
     title?: string
     title_en?: string
@@ -751,12 +760,31 @@ export interface ExperiencesListTemplate {
 
 export interface AppLinksTemplate {
   type: 'app_links'
-  content: { lang?: 'ar' | 'en'; ios?: string; android?: string }
+  content: { lang?: 'ar' | 'en'; ios?: string; android?: string; design?: TemplateDesign }
+}
+
+/** Pair plugin components — each rendered from a plugin tool call, never typed by the model. */
+export interface TicketCardTemplate {
+  type: 'ticket_card'
+  content: { lang?: 'ar' | 'en'; design?: TemplateDesign; ticket_id?: string; title: string; description?: string; priority?: string; status?: string }
+}
+export interface TicketListTemplate {
+  type: 'ticket_list'
+  content: { lang?: 'ar' | 'en'; design?: TemplateDesign; items: Array<{ ticket_id?: string; title?: string; status?: string; priority?: string }> }
+}
+export interface LinkCardTemplate {
+  type: 'link_card'
+  content: { lang?: 'ar' | 'en'; design?: TemplateDesign; header?: string; text?: string; cta_text?: string; url: string }
+}
+export interface ImageCardTemplate {
+  type: 'image_card'
+  content: { lang?: 'ar' | 'en'; design?: TemplateDesign; url: string; caption?: string }
 }
 
 export interface MenuCardsTemplate {
   type: 'menu_cards'
   content: {
+    design?: TemplateDesign
     lang?: 'ar' | 'en'
     title?: string
     title_en?: string
@@ -767,6 +795,7 @@ export interface MenuCardsTemplate {
 export interface MovieCardsTemplate {
   type: 'movie_cards'
   content: {
+    design?: TemplateDesign
     lang?: 'ar' | 'en'
     title?: string
     title_en?: string
@@ -784,6 +813,7 @@ export interface MovieCardsTemplate {
 export interface MenuCategoriesTemplate {
   type: 'menu_categories'
   content: {
+    design?: TemplateDesign
     lang?: 'ar' | 'en'
     title?: string
     title_en?: string
@@ -807,6 +837,10 @@ export type WidgetTemplate =
   | MenuCardsTemplate
   | MovieCardsTemplate
   | MenuCategoriesTemplate
+  | TicketCardTemplate
+  | TicketListTemplate
+  | LinkCardTemplate
+  | ImageCardTemplate
 
 /**
  * Messages list response (matches actual API response)

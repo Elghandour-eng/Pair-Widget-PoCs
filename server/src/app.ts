@@ -8,11 +8,13 @@ import { pinoHttp } from 'pino-http'
 import { env } from './config/env.js'
 import { logger } from './lib/logger.js'
 import { mongoStatus } from './lib/mongo.js'
+import { pusherStatus } from './lib/pusherEnv.js'
 import { redis } from './lib/redis.js'
 import { checkSdkOrigin, localSdkDist, localSdkStatus, missingSdkEnv, sdkRuntimeEnv } from './lib/sdkBase.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { authRouter } from './routes/auth.js'
 import { engineChatRouter, engineWidgetRouter } from './routes/engineChat.js'
+import { menuStatus } from './routes/cinescapeMenuSource.js'
 import { pairProxyRouter } from './routes/pairProxy.js'
 import { publicRouter, widgetLangRouter, widgetViewRouter } from './routes/public.js'
 import { voiceCallRouter } from './routes/voiceCall.js'
@@ -21,6 +23,7 @@ import { usersRouter } from './routes/users.js'
 import { logsRouter } from './routes/logs.js'
 import { uploadsRouter, uploadsStatic, uploadsStatus } from './routes/uploads.js'
 import { widgetsRouter } from './routes/widgets.js'
+import { dataSourcesRouter, templatesRouter } from './routes/templates.js'
 
 export function createApp() {
   const app = express()
@@ -65,8 +68,13 @@ export function createApp() {
       redis: redis.status,
       mongo: mongoStatus(),
       sdk: localSdkStatus(),
+      // Likewise the Pusher the widget is told to use: when it is not the one
+      // Pair signs for, every message stays "Sending…" and nothing else fails.
+      pusher: pusherStatus(),
       uploads: uploadsStatus(),
       livekit: livekitStatus(),
+      // Which menu copy is answering (airtable | snapshot) and how old it is.
+      menu: menuStatus(),
       uptime: process.uptime(),
     })
   })
@@ -98,6 +106,9 @@ export function createApp() {
   app.use('/api/auth', dashboardCors, authRouter)
   app.use('/api/users', dashboardCors, usersRouter)
   app.use('/api/widgets', dashboardCors, widgetsRouter)
+  // The template engine: the catalog of card shapes, and the named feeds behind them.
+  app.use('/api/templates', dashboardCors, templatesRouter)
+  app.use('/api/datasources', dashboardCors, dataSourcesRouter)
   app.use('/api/logs', dashboardCors, logsRouter)
   app.use('/api/uploads', dashboardCors, uploadsRouter)
 
@@ -121,6 +132,9 @@ export function createApp() {
     if (missing.length) {
       logger.error({ missing }, 'the widget is served without settings it cannot start without; set them in this deployment\'s environment')
     }
+    // Said at boot so a deployment pointing the widget at the wrong Pusher
+    // shows it in its own logs, not in a visitor's browser console.
+    logger.info(pusherStatus(), 'the widget is served with these Pusher settings')
 
     // The widget is a separate app that runs in an iframe on any site, and it
     // has its own inline bootstrap. The dashboard's policy — script-src 'self'

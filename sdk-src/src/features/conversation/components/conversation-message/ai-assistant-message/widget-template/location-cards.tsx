@@ -1,6 +1,5 @@
 import { CardImage } from './card-image'
-import { useWidgetConfigContext } from '@/contexts/widget-config-context'
-import { isDarkBackground } from '@/lib/utils'
+import { useTemplateDesign } from './use-template-design'
 import type { LocationCardsTemplate } from '@/features/conversation/types/message'
 
 /**
@@ -8,22 +7,15 @@ import type { LocationCardsTemplate } from '@/features/conversation/types/messag
  * carousel. Copy follows the widget language and colours follow the theme.
  */
 export function LocationCards({ template }: { template: LocationCardsTemplate; sourceMessageUlid?: string }) {
-  const { widgetConfig, view } = useWidgetConfigContext()
-  const color = widgetConfig.primaryColor || '#B3202C'
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  // the reply's own language (set server-side from the message text) wins over the view setting
-  const replyLang = (template.content as { lang?: string } | undefined)?.lang
-  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const d = useTemplateDesign(template.content)
+  const { accent: color, isArabic } = d
   const cards = template.content?.cards ?? []
   if (cards.length === 0) return null
   const single = cards.length === 1
 
-  const cardStyle: React.CSSProperties = {
-    background: isDark ? '#181c28' : '#ffffff',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
-  }
-  const nameColor = isDark ? '#f3f4f8' : '#17181c'
-  const dimColor = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.5)'
+  const cardStyle: React.CSSProperties = d.cardStyle
+  const nameColor = d.text
+  const dimColor = d.muted
 
   return (
     <div
@@ -41,24 +33,27 @@ export function LocationCards({ template }: { template: LocationCardsTemplate; s
         return (
           <div
             key={c.id ?? i}
-            className={`flex flex-col overflow-hidden rounded-2xl ${single ? 'w-full max-w-[320px]' : 'w-[240px] shrink-0 snap-start self-stretch'}`}
+            className={`flex flex-col overflow-hidden ${single ? 'w-full max-w-[320px]' : 'w-[240px] shrink-0 snap-start self-stretch'}`}
             style={cardStyle}
           >
-            <CardImage
-              src={c.image}
-              alt={title ?? ''}
-              className={`w-full object-cover ${single ? 'h-[140px]' : 'h-[110px]'}`}
-              fallback={
-                <div
-                  className={`flex w-full items-center justify-center text-[30px] ${single ? 'h-[140px]' : 'h-[110px]'}`}
-                  style={{ background: `linear-gradient(160deg, ${color}26, ${color}0a)` }}
-                >
-                  📍
-                </div>
-              }
-            />
-            <div className="flex flex-1 flex-col gap-1.5 p-3.5">
-              <p className="text-[14px] leading-tight font-bold" style={{ color: nameColor }}>
+            {d.showImage && (
+              <CardImage
+                src={c.image}
+                alt={title ?? ''}
+                className="w-full object-cover"
+                style={{ aspectRatio: d.aspect }}
+                fallback={
+                  <div
+                    className="flex w-full items-center justify-center text-[30px]"
+                    style={{ aspectRatio: d.aspect, background: `linear-gradient(160deg, ${color}26, ${color}0a)` }}
+                  >
+                    📍
+                  </div>
+                }
+              />
+            )}
+            <div className="flex flex-1 flex-col gap-1.5" style={{ padding: d.padding }}>
+              <p className="leading-tight font-bold" style={{ color: nameColor, fontSize: d.titleSize }}>
                 {title}
                 {subtitle && (
                   <span className="font-normal" style={{ color: dimColor }}>

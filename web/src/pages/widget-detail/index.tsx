@@ -8,6 +8,7 @@ import { CopyIcon, FitScale, Loading, Modal, Spinner } from '@/components/ui'
 import { api, publicConfigUrl, type AuditEntry, type Source, type Widget, type WidgetConfig } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useAuditLabel, useFormatDate, useI18n, type MsgKey } from '@/lib/i18n'
+import { copyText } from '@/lib/clipboard'
 import { useToast } from '@/lib/toast'
 import { DesignForm } from './DesignForm'
 import { Compare, NotesPanel } from './NotesComparePanels'
@@ -98,11 +99,11 @@ export function WidgetDetail() {
   const remove = () => run('delete', async () => { await api.deleteWidget(widgetId); toast.ok(t('detail.deleted')); nav('/widgets') })
   const copyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(publicConfigUrl(widgetId))
+      await copyText(publicConfigUrl(widgetId))
       setCopied(true)
       toast.ok(t('detail.copied'))
       setTimeout(() => setCopied(false), 1600)
-    } catch (e) { toast.err((e as Error).message) }
+    } catch { toast.err(t('common.copyFailed')) }
   }
 
   if (!widget) return <Loading />

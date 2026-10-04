@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 import { PREVIEW_FRAME_PATH } from '@/lib/builder'
 import { I18nProvider, useI18n } from '@/lib/i18n'
 import { ToastProvider } from '@/lib/toast'
-import { Builder, Login, Logs, PreviewFrame, Users, WidgetDetail, Widgets } from '@/pages/routes'
+import { Builder, Login, Logs, PreviewFrame, Templates, Users, WidgetDetail, Widgets } from '@/pages/routes'
 
 function Guard({ role }: { role?: 'admin' | 'editor' }) {
   const { user, loading, can } = useAuth()
@@ -68,6 +68,7 @@ export default function App() {
                   <Route path="/widgets" element={<Page><Widgets /></Page>} />
                   <Route path="/widgets/:widgetId" element={<Page><WidgetDetail /></Page>} />
                   <Route path="/widgets/:widgetId/builder" element={<Page><Builder /></Page>} />
+                  <Route path="/templates" element={<Page><Templates /></Page>} />
                   <Route element={<Guard role="admin" />}>
                     <Route path="/users" element={<Page><Users /></Page>} />
                     <Route path="/logs" element={<Page><Logs /></Page>} />

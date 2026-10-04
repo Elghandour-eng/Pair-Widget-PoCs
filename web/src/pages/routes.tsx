@@ -8,6 +8,7 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 const loaders = {
   '/login': () => import('@/pages/Login'),
   '/widgets': () => import('@/pages/Widgets'),
+  '/templates': () => import('@/pages/Templates'),
   '/widgets/:widgetId': () => import('@/pages/widget-detail/index'),
   '/widgets/:widgetId/builder': () => import('@/pages/builder/index'),
   '/users': () => import('@/pages/Users'),
@@ -32,6 +33,7 @@ function page<M, K extends keyof M>(load: () => Promise<M>, name: K): LazyExotic
 
 export const Login = page(loaders['/login'], 'Login')
 export const Widgets = page(loaders['/widgets'], 'Widgets')
+export const Templates = page(loaders['/templates'], 'Templates')
 export const WidgetDetail = page(loaders['/widgets/:widgetId'], 'WidgetDetail')
 export const Builder = page(loaders['/widgets/:widgetId/builder'], 'Builder')
 export const Users = page(loaders['/users'], 'Users')

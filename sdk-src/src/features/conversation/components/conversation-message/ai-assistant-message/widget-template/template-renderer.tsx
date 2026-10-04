@@ -15,6 +15,7 @@ import { AppLinks } from './app-links'
 import { MenuCards } from './menu-cards'
 import { MovieCards } from './movie-cards'
 import { MenuCategories } from './menu-categories'
+import { ImageCard, LinkCard, TicketCard, TicketList } from './pair-plugin-cards'
 
 interface TemplateRendererProps {
   widgetTemplate: WidgetTemplate
@@ -58,6 +59,14 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <MovieCards template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'menu_categories':
       return <MenuCategories template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'ticket_card':
+      return <TicketCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'ticket_list':
+      return <TicketList template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'link_card':
+      return <LinkCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    case 'image_card':
+      return <ImageCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     default:
       return null
   }

@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { CardImage } from './card-image'
-import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { useTemplateDesign } from './use-template-design'
 import { useWidgetNavigation } from '@/contexts/widget-navigation-context'
 import { env } from '@/core/env'
 import { useSendMessage } from '@/features/conversation/hooks/use-send-message'
-import { isDarkBackground } from '@/lib/utils'
 import type { MenuCategoriesTemplate } from '@/features/conversation/types/message'
 
 /**
@@ -12,14 +11,11 @@ import type { MenuCategoriesTemplate } from '@/features/conversation/types/messa
  * category name as the visitor's reply when tapped. Two per row.
  */
 export function MenuCategories({ template }: { template: MenuCategoriesTemplate; sourceMessageUlid?: string }) {
-  const { widgetConfig, view } = useWidgetConfigContext()
   const { conversationId } = useWidgetNavigation()
   const { mutateAsync: sendMessage } = useSendMessage()
   const [picked, setPicked] = useState<string | null>(null)
-  const brand = widgetConfig.primaryColor || '#B3202C'
-  const isDark = view.theme ? view.theme === 'dark' : isDarkBackground(widgetConfig.widgetBgColor)
-  const replyLang = template.content?.lang
-  const isArabic = replyLang ? replyLang === 'ar' : /^ar/i.test(view.lang ?? widgetConfig.locale ?? 'en')
+  const d = useTemplateDesign(template.content)
+  const { accent: brand, isDark, isArabic } = d
   const { title, title_en, items = [] } = template.content ?? {}
   if (items.length === 0) return null
 
@@ -39,11 +35,11 @@ export function MenuCategories({ template }: { template: MenuCategoriesTemplate;
   return (
     <div className="mt-2 flex w-full max-w-[340px] flex-col gap-2" dir={isArabic ? 'rtl' : 'ltr'}>
       {heading && (
-        <p className="text-[13.5px] font-bold" style={{ color: brand }}>
+        <p className="font-bold" style={{ color: brand, fontSize: d.titleSize }}>
           {heading}
         </p>
       )}
-      <div className="grid w-full grid-cols-2 gap-2">
+      <div className="grid w-full gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, d.columns)}, minmax(0, 1fr))` }}>
         {items.map((it) => {
           const label = isArabic ? it.label : (it.label_en ?? it.label)
           const isPicked = picked === label
@@ -53,8 +49,10 @@ export function MenuCategories({ template }: { template: MenuCategoriesTemplate;
               type="button"
               onClick={() => pick(label)}
               disabled={!!picked && !isPicked}
-              className="group relative h-[92px] overflow-hidden rounded-2xl text-start transition-transform active:scale-[0.98] disabled:opacity-50"
+              className="group relative overflow-hidden text-start transition-transform active:scale-[0.98] disabled:opacity-50"
               style={{
+                aspectRatio: d.aspect,
+                borderRadius: d.radius,
                 border: `1.5px solid ${isPicked ? brand : isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
               }}
             >

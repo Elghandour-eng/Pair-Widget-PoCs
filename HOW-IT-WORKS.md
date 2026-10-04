@@ -376,8 +376,9 @@ From `server/src/config/env.ts`:
 | variable | default | what it controls |
 | --- | --- | --- |
 | `WIDGET_SDK_DIST` | *(empty)* | path to a local widget build; set ⇒ served at `/sdk` |
-| `WIDGET_SDK_BASE_URL` | `https://widgets-test.trypair.ai` | the hosted widget build, used when the above is empty |
+| `WIDGET_SDK_BASE_URL` | *(empty)* | a foreign widget build to load instead, used only when the above holds no build |
 | `PAIR_API_BASE_URL` | `https://system.trypair.ai` | the upstream Pair backend |
+| `VITE_BASE_URL`, `VITE_PUSHER_APP_KEY`, `VITE_PUSHER_HOST`, `VITE_PUSHER_PORT`, `VITE_PUSHER_FORCE_TLS`, `VITE_PUSHER_CLUSTER` | *(empty)* | the widget's own settings, written into its page at runtime (`window.__PAIR_WIDGET_ENV__`); the Pusher ones must be the Pusher that `PAIR_API_BASE_URL` signs for, or subscriptions are refused and messages stay "Sending…" — `/api/health` → `pusher.mismatch` says when they are not |
 | `REDIS_URL` | `redis://127.0.0.1:6379/5` | where designs, versions and notes live |
 | `REDIS_PREFIX` | `pwp:` | key prefix |
 | `MONGODB_URI` | *(unset)* | optional; logs and notes fall back to Redis without it |

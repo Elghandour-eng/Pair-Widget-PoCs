@@ -9,6 +9,8 @@ import { asyncHandler } from '../middleware/error.js'
 import { assertWidgetAccess, loadWidgetAccess } from '../middleware/widgetAccess.js'
 import { fetchPairConfig } from '../services/pairApi.js'
 import { grantWidgetAccess } from '../services/users.js'
+import { getWidgetTemplates, saveWidgetTemplates } from '../services/templates.js'
+import { agentPlugins } from './engineChat.js'
 import {
   createWidget, deleteWidget, getAudit, getStoredConfig, getVersion, getWidget, importFromApi,
   listVersions, listWidgets, resolveConfig, restoreVersion, saveStoredConfig, sourceSchema,
@@ -63,6 +65,9 @@ widgetsRouter.post(
         source: sourceSchema.default('api'),
         apiBaseUrl,
         notes: z.string().max(500).optional(),
+        engine: z.enum(['pair', 'agent-engine']).optional(),
+        agentId: z.string().max(80).optional(),
+        engineKey: z.string().max(200).optional(),
         importFromApi: z.boolean().default(true),
       })
       .parse(req.body)
@@ -121,7 +126,15 @@ widgetsRouter.patch(
   requireRole('editor'),
   asyncHandler(async (req, res) => {
     const body = z
-      .object({ channelName: z.string().min(1).max(80).optional(), source: sourceSchema.optional(), apiBaseUrl, notes: z.string().max(500).optional() })
+      .object({
+        channelName: z.string().min(1).max(80).optional(),
+        source: sourceSchema.optional(),
+        apiBaseUrl,
+        notes: z.string().max(500).optional(),
+        engine: z.enum(['pair', 'agent-engine']).optional(),
+        agentId: z.string().max(80).optional(),
+        engineKey: z.string().max(200).optional(),
+      })
       .parse(req.body)
     res.json({ widget: await updateWidget(req.params.widgetId, body, req.user!.email) })
   }),
@@ -151,6 +164,42 @@ widgetsRouter.put(
   asyncHandler(async (req, res) => {
     const config = configBody.parse(req.body)
     res.json({ widget: await saveStoredConfig(req.params.widgetId, config, req.user!.email) })
+  }),
+)
+
+/* ----------------------------- template bindings ---------------------------- */
+
+/**
+ * Which templates this widget renders, and the data source behind each. A
+ * widget with no record renders every registered template from its seed, so
+ * this is opt-in: saving nothing changes nothing.
+ */
+widgetsRouter.get(
+  '/:widgetId/templates',
+  asyncHandler(async (req, res) => {
+    await getWidget(req.params.widgetId)
+    // The agent's plugins travel with the binding so the page can say which
+    // plugin components this widget's agent is able to produce.
+    const [templates, plugins] = await Promise.all([getWidgetTemplates(req.params.widgetId), agentPlugins(req.params.widgetId)])
+    res.json({ templates, plugins })
+  }),
+)
+
+widgetsRouter.put(
+  '/:widgetId/templates',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    await getWidget(req.params.widgetId)
+    const body = z
+      .object({
+        // null means every registered template, which is also the default.
+        enabled: z.array(z.string().max(64)).nullable().optional(),
+        sources: z.record(z.string().max(64)).optional(),
+        // Cleaned per template against that template's own knobs before it is stored.
+        designs: z.record(z.record(z.union([z.string(), z.number(), z.boolean()]))).optional(),
+      })
+      .parse(req.body)
+    res.json({ templates: await saveWidgetTemplates(req.params.widgetId, body, req.user!.email) })
   }),
 )
 

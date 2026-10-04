@@ -76,7 +76,7 @@ All dashboard routes require `Authorization: Bearer <jwt>`.
 | POST | `/api/widgets/:widgetId/import` | editor | Snapshot the live Pair design into Redis |
 | GET/POST/PATCH/DELETE | `/api/users[/:id]` | admin | User management |
 | GET | `/api/public/widget/:widgetId/config` | public | What the widget consumes |
-| GET | `/api/health` | public | Liveness + Redis status |
+| GET | `/api/health` | public | Liveness: Redis, Mongo, the served SDK, and the Pusher the widget is told to use (`pusher.mismatch` turns true when Pair signs subscriptions with another key) |
 
 ## Redis layout
 
