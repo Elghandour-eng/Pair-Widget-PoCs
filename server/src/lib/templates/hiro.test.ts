@@ -67,3 +67,22 @@ describe('Hiro cards', () => {
     expect((card.data as { totals: Row }).totals).toEqual({ calories: 780, protein_g: 62, carbs_g: 27, fat_g: 44 })
   })
 })
+
+describe('the card the model left out', async () => {
+  const { hiroCardFromTool } = await import('./hiro.js')
+  const exercises = JSON.stringify({ data: { exercises: { items: [{ exercise_name: 'Squats', target_muscle_groups: ['quads'], default_sets: 4, default_reps: '10-12', default_rest_seconds: 90, images: [{ image_path: 'uploads/ex/squat.jpg' }], videos: [] }] } } })
+
+  it('draws exercise cards from the exercises tool, in the reply language, with Hiro media links', () => {
+    const card = hiroCardFromTool('hiro_exercises', exercises, 'ar') as { template: string; data: { title: string; items: Row[] } }
+    expect(card.template).toBe('hiro_exercise_cards')
+    expect(card.data.title).toBe('تمارين مقترحة')
+    const [hydrated] = hydrate([card]) as Array<{ data: { items: Row[] } }>
+    expect(hydrated.data.items[0]).toMatchObject({ name: 'Squats', sets: 4, reps: '10-12', rest_seconds: 90 })
+    expect(hydrated.data.items[0].image).toBe('https://hiro-backend.dev.k8s.trypair.ai/api/v2/uploads/ex/squat.jpg')
+  })
+
+  it('draws nothing from a cut-off result or an unknown tool', () => {
+    expect(hiroCardFromTool('hiro_exercises', exercises.slice(0, 40), 'en')).toBeUndefined()
+    expect(hiroCardFromTool('hiro_body_metrics', exercises, 'en')).toBeUndefined()
+  })
+})

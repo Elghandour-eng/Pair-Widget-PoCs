@@ -4,6 +4,7 @@ import { ulid } from 'ulid'
 import { env } from '../config/env.js'
 import { logger } from '../lib/logger.js'
 import { getSoon, redis } from '../lib/redis.js'
+import { hiroCardFromTool } from '../lib/templates/hiro.js'
 import { componentsToTemplate, hydrateComponents, rowsFor, ALL_TEMPLATES, type TemplateBinding } from '../lib/templates/hydrate.js'
 import { componentFromTool, questionFromButtons } from '../lib/templates/pairPlugin.js'
 import { TEMPLATES_BY_NAME } from '../lib/templates/registry.js'
@@ -741,6 +742,8 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   let comps: Array<Record<string, unknown>> = []
   /** Components that came from plugin tool calls rather than from the agent's reply. */
   const toolComps: Array<Record<string, unknown>> = []
+  /** The last catalogue tool the agent ran, in case its card has to be drawn for it. */
+  let catalogue: { tool: string; observation: unknown } | null = null
   let replaced = false
   const convId = () => conv.engineConv
   // narrated status: the widget's thinking line follows what the engine is actually doing
@@ -790,6 +793,7 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
           const th = e as { tool_input?: unknown; observation?: unknown }
           const fromTool = componentFromTool(tool, th.tool_input, th.observation) ?? questionFromButtons(tool, th.tool_input)
           if (fromTool) toolComps.push(fromTool)
+          if (tool.startsWith('hiro_')) catalogue = { tool, observation: th.observation }
           if (tool === 'cinescape_locations') say(pickFrom(THINK_GENERIC.locations[conv.lang], lastThink))
           else if (tool && !tool.startsWith('route_to_')) say(thinkKnowledge(String((e as { tool_input?: unknown }).tool_input ?? ''), conv.lang, lastThink))
         } else if (e.event === 'message' && typeof e.answer === 'string') {
@@ -812,6 +816,16 @@ async function runEngineTurn(conv: EngineConv, query: string, onConvId?: (id: st
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'engine turn failed')
     finalText = finalText || 'نعتذر، صار خلل بسيط. جرب مرة ثانية 🙏'
+  }
+  if (catalogue && !comps.some((c) => c.type === 'template')) {
+    // The agent ran a catalogue tool but answered in words only: draw the card
+    // from the rows it was given, so the answer still shows what it describes.
+    const lang = /[\u0600-\u06FF]/.test(finalText || buf) ? 'ar' : 'en'
+    const card = hiroCardFromTool(catalogue.tool, catalogue.observation, lang)
+    if (card) {
+      comps = [...(hydrateComponents([card], binding) as Array<Record<string, unknown>>), ...comps]
+      logger.info({ widgetId: conv.widgetId, tool: catalogue.tool }, 'drew the card the agent left out')
+    }
   }
   if (toolComps.length > 0) {
     // Hydrated like any other, so a widget that switched a plugin card off does

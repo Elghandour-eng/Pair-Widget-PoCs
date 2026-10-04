@@ -325,3 +325,120 @@ export const HIRO_TEMPLATES: TemplateDef[] = [
       }),
   }),
 ]
+
+/* ------------------------- the card the model forgot ------------------------ */
+
+const GOALS: Record<string, { en: string; ar: string }> = {
+  weight_loss: { en: 'Weight loss', ar: 'خسارة الوزن' },
+  muscle_gain: { en: 'Muscle gain', ar: 'بناء العضل' },
+  maintenance: { en: 'Maintenance', ar: 'المحافظة على الوزن' },
+  toning: { en: 'Toning', ar: 'شد الجسم' },
+  flexibility: { en: 'Flexibility', ar: 'المرونة' },
+  body_recomp: { en: 'Body recomposition', ar: 'إعادة تشكيل الجسم' },
+}
+const LEVELS: Record<string, { en: string; ar: string }> = {
+  beginner: { en: 'Beginner', ar: 'مبتدئ' },
+  intermediate: { en: 'Intermediate', ar: 'متوسط' },
+  advanced: { en: 'Advanced', ar: 'متقدم' },
+}
+const BLOCKS: Record<string, { en: string; ar: string }> = {
+  warmup: { en: 'Warm-up', ar: 'إحماء' },
+  main: { en: 'Main', ar: 'التمرين الأساسي' },
+  cooldown: { en: 'Cool-down', ar: 'تهدئة' },
+  finisher: { en: 'Finisher', ar: 'الختام' },
+}
+const word = (table: Record<string, { en: string; ar: string }>, v: unknown, lang: 'ar' | 'en') =>
+  typeof v === 'string' ? (table[v]?.[lang] ?? v.replace(/_/g, ' ')) : undefined
+const firstMedia = (list: unknown, key: string): string | undefined => {
+  const first = Array.isArray(list) ? list[0] : undefined
+  return typeof first === 'string' ? first : first && typeof first === 'object' ? (first as Row)[key] as string | undefined : undefined
+}
+const parse = (text: unknown): Row | undefined => {
+  if (typeof text !== 'string') return undefined
+  try {
+    const v = JSON.parse(text)
+    return v && typeof v === 'object' ? (v as Row) : undefined
+  } catch {
+    return undefined // cut off at the tool's size limit: nothing safe to draw
+  }
+}
+const dig = (o: unknown, ...path: string[]): unknown => path.reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Row)[k] : undefined), o)
+
+const exerciseOf = (e: Row) => ({
+  name: e.exercise_name ?? e.name,
+  muscles: e.target_muscle_groups,
+  sets: e.sets ?? e.default_sets,
+  reps: e.reps ?? e.default_reps,
+  duration_seconds: e.duration_seconds ?? e.default_duration_seconds,
+  rest_seconds: e.rest_seconds ?? e.default_rest_seconds,
+  description: e.description,
+  image: firstMedia(e.images, 'image_path'),
+  video: firstMedia(e.videos, 'video_path'),
+})
+const mealOf = (m: Row) => ({
+  name: m.meal_name ?? m.name,
+  category: m.category_name_en,
+  calories: m.calories,
+  protein_g: m.protein_g,
+  carbs_g: m.carbs_g,
+  fat_g: m.fat_g,
+  image: firstMedia(m.images, 'image_path'),
+  video: firstMedia(m.videos, 'video_path'),
+})
+const workoutOf = (p: Row, lang: 'ar' | 'en') => {
+  const blocks = new Map<string, Row[]>()
+  for (const e of rows(p.exercises, 20)) {
+    const b = String(e.block ?? 'main')
+    blocks.set(b, [...(blocks.get(b) ?? []), exerciseOf(e)])
+  }
+  return {
+    name: p.name,
+    goal: word(GOALS, p.goal, lang),
+    difficulty: word(LEVELS, p.difficulty, lang),
+    duration_minutes: p.duration_minutes,
+    estimated_calories: p.estimated_calories,
+    muscles: p.target_muscle_groups,
+    image: firstMedia(p.images, 'image_path'),
+    video: firstMedia(p.videos, 'video_path'),
+    blocks: [...blocks].map(([b, exercises]) => ({ name: word(BLOCKS, b, lang) ?? b, exercises })),
+  }
+}
+
+/**
+ * Builds the card for a catalogue tool's result. The agent is told to send one
+ * after these tools, and almost always does; when it answers in words alone,
+ * the studio draws the card itself from the very rows the agent was given, so
+ * the user still sees it. Undefined when there is nothing to draw.
+ */
+export function hiroCardFromTool(tool: string, observation: unknown, lang: 'ar' | 'en'): Row | undefined {
+  const body = parse(observation)
+  if (!body) return undefined
+  const ar = lang === 'ar'
+  const card = (template: string, data: Row) => ({ type: 'template', template, data })
+  switch (tool) {
+    case 'hiro_exercises': {
+      const items = rows(dig(body, 'data', 'exercises', 'items'), 6).map(exerciseOf)
+      return items.length ? card('hiro_exercise_cards', { title: ar ? 'تمارين مقترحة' : 'Exercises for you', items }) : undefined
+    }
+    case 'hiro_meals': {
+      const items = rows(dig(body, 'data', 'meals'), 6).map(mealOf)
+      return items.length ? card('hiro_meal_cards', { title: ar ? 'وجبات مقترحة' : 'Meal ideas', items }) : undefined
+    }
+    case 'hiro_meal_plans': {
+      const p = rows(dig(body, 'data', 'plans', 'items'), 1)[0]
+      return p ? card('hiro_meal_plan', { name: p.name, goal: word(GOALS, p.goal, lang), target_calories: p.target_calories, meals: rows(p.meals, 8).map(mealOf) }) : undefined
+    }
+    case 'hiro_workout_plans': {
+      const p = rows(dig(body, 'data', 'workouts', 'categories'), 10).flatMap((c) => rows(c.plans, 10))[0]
+      return p ? card('hiro_workout_plan', workoutOf(p, lang)) : undefined
+    }
+    case 'hiro_favorites': {
+      const w = rows(dig(body, 'data', 'workouts', 'categories'), 10).flatMap((c) => rows(c.workoutPlans, 10))[0]
+      if (w) return card('hiro_workout_plan', workoutOf(w, lang))
+      const m = rows(dig(body, 'data', 'meals', 'categories'), 10).flatMap((c) => rows(c.mealPlans, 10))[0]
+      return m ? card('hiro_meal_plan', { name: m.name, goal: word(GOALS, m.goal, lang), target_calories: m.target_calories, meals: rows(m.meals, 8).map(mealOf) }) : undefined
+    }
+    default:
+      return undefined
+  }
+}
