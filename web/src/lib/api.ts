@@ -24,6 +24,8 @@ export interface TemplateField {
 /** A card shape the agent can emit and the widget can render. */
 export interface TemplateDef {
   name: string
+  /** The catalog shelf: health (Hiro), ticketing, cinema, media. */
+  category: 'health' | 'ticketing' | 'cinema' | 'media'
   title: string
   description: string
   widgetType: string

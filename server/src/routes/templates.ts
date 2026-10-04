@@ -32,6 +32,7 @@ templatesRouter.get(
       designFields: DESIGN_FIELDS,
       templates: TEMPLATES.map((t) => ({
         name: t.name,
+        category: t.category ?? 'cinema',
         title: t.title,
         description: t.description,
         widgetType: t.widgetType,

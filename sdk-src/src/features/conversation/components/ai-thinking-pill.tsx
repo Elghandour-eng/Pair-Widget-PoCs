@@ -50,7 +50,7 @@ function GradientThinkingPill({ label }: { label?: string }) {
         style={{
           height: t.height ?? 56,
           borderRadius: t.radius ?? 999,
-          background: `linear-gradient(100deg, ${from} 0%, #CDE9FF 30%, #4FC3F7 62%, ${to} 100%)`,
+          background: `linear-gradient(100deg, ${from} 0%, #CDE9FF 30%, ${widgetConfig.primaryColor || '#4FC3F7'} 62%, ${to} 100%)`,
           color: t.textColor || '#FFFFFF',
           boxShadow: `0 8px 24px ${from}55, inset 0 0 0 3px rgba(255,255,255,0.35)`,
         }}

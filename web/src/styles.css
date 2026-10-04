@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Hiro's cards are drawn from the widget's source on the Templates page. */
+@source '../../sdk-src/src/features/conversation/components/conversation-message/ai-assistant-message/widget-template/hiro-cards-view.tsx';
 
 /* ------------------------------------------------------------------ *
  * Pair design tokens — Figma reference (Pair Document Design v1.0)

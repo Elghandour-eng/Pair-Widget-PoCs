@@ -1,4 +1,5 @@
-import type { TemplateDesign } from '@/features/conversation/components/conversation-message/ai-assistant-message/widget-template/use-template-design'
+/** The resolved card design the studio sends with every card (see use-template-design). */
+export type TemplateDesign = Record<string, string | number | boolean | undefined>
 
 /**
  * Hiro's cards (see server/src/lib/templates/hiro.ts for what the agent may
@@ -84,6 +85,7 @@ export interface HiroMeal {
   carbs_g?: number
   fat_g?: number
   image?: string
+  video?: string
 }
 
 export interface HiroMealCardsTemplate {
@@ -111,6 +113,7 @@ export interface HiroExercise {
   rest_seconds?: number
   description?: string
   image?: string
+  video?: string
 }
 
 export interface HiroWorkoutPlanTemplate {
@@ -122,6 +125,8 @@ export interface HiroWorkoutPlanTemplate {
     duration_minutes?: number
     estimated_calories?: number
     muscles?: string[]
+    image?: string
+    video?: string
     blocks?: Array<{ name: string; exercises: HiroExercise[] }>
   }
 }

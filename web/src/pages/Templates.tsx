@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Empty, Loading, Modal, PageHead, SectionHead, Spinner } from '@/components/ui'
 import {
@@ -82,11 +82,7 @@ export function Templates() {
             ]}
           />
           {tab === 'templates' ? (
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {templates.map((tpl) => (
-                <GalleryTile key={tpl.name} tpl={tpl} onOpen={() => setOpenName(tpl.name)} />
-              ))}
-            </section>
+            <Gallery templates={templates} onOpen={setOpenName} />
           ) : (
             <SourcesPanel sources={sources} canEdit={can('editor')} canDelete={can('admin')} onChanged={reload} />
           )}
@@ -122,6 +118,109 @@ function Tabs<T extends string>({ value, onChange, tabs }: {
 }
 
 /* --------------------------------- gallery --------------------------------- */
+
+const CATEGORIES = ['all', 'health', 'ticketing', 'cinema', 'media'] as const
+type Category = (typeof CATEGORIES)[number]
+const PAGE_SIZE = 9
+
+/**
+ * The catalog: one shelf per kind of business (Hiro's health cards, tickets,
+ * cinema, media), a search across names and descriptions, and pages of nine so
+ * the gallery stays quick as templates are added. Every tile draws its card,
+ * so a page loads only the previews it shows.
+ */
+function Gallery({ templates, onOpen }: { templates: TemplateDef[]; onOpen: (name: string) => void }) {
+  const { t } = useI18n()
+  const [cat, setCat] = useState<Category>('all')
+  const [q, setQ] = useState('')
+  const [page, setPage] = useState(0)
+
+  const counts = useMemo(() => {
+    const c: Record<Category, number> = { all: templates.length, health: 0, ticketing: 0, cinema: 0, media: 0 }
+    for (const x of templates) c[x.category] = (c[x.category] ?? 0) + 1
+    return c
+  }, [templates])
+
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    return templates.filter(
+      (x) =>
+        (cat === 'all' || x.category === cat) &&
+        (!needle || [x.title, x.name, x.description, x.widgetType].some((v) => v?.toLowerCase().includes(needle))),
+    )
+  }, [templates, cat, q])
+
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
+  const current = Math.min(page, pages - 1)
+  const slice = shown.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('tpl.categories')}>
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="tab"
+              aria-selected={cat === c}
+              onClick={() => { setCat(c); setPage(0) }}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors ${
+                cat === c ? 'border-accent bg-accent-50 text-accent-deep' : 'border-line text-muted hover:text-ink'
+              }`}
+            >
+              {t(`tpl.cat.${c}` as Parameters<typeof t>[0])}
+              <span className="chip text-[10px]">{counts[c]}</span>
+            </button>
+          ))}
+        </div>
+        <label className="relative w-full sm:w-72">
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <input
+            className="input ps-9"
+            type="search"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setPage(0) }}
+            placeholder={t('tpl.search')}
+            aria-label={t('tpl.search')}
+          />
+        </label>
+      </div>
+
+      {slice.length === 0 ? (
+        <Empty title={t('tpl.noMatch')} />
+      ) : (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {slice.map((tpl) => (
+            <GalleryTile key={tpl.name} tpl={tpl} onOpen={() => onOpen(tpl.name)} />
+          ))}
+        </section>
+      )}
+
+      {pages > 1 && (
+        <nav className="flex items-center justify-center gap-2" aria-label={t('tpl.pages')}>
+          <button type="button" className="btn-ghost btn-sm" onClick={() => setPage(current - 1)} disabled={current === 0} aria-label={t('tpl.prev')}>
+            <ChevronLeft className="size-4 rtl:rotate-180" />
+          </button>
+          {Array.from({ length: pages }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setPage(i)}
+              aria-current={i === current}
+              className={`size-8 rounded-lg text-[12.5px] font-bold ${i === current ? 'bg-accent text-white' : 'text-muted hover:bg-surface'}`}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button type="button" className="btn-ghost btn-sm" onClick={() => setPage(current + 1)} disabled={current === pages - 1} aria-label={t('tpl.next')}>
+            <ChevronRight className="size-4 rtl:rotate-180" />
+          </button>
+        </nav>
+      )}
+    </div>
+  )
+}
 
 /** One template, drawn as the card it actually is. The shape is the label. */
 function GalleryTile({ tpl, onOpen }: { tpl: TemplateDef; onOpen: () => void }) {

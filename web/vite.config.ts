@@ -5,7 +5,12 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    // The Templates page draws Hiro's cards from the widget's own source
+    // (sdk-src/…/hiro-cards-view.tsx); one React and one icon set for both.
+    dedupe: ['react', 'react-dom', 'lucide-react'],
+  },
   server: { proxy: { '/api': { target: process.env.API_URL ?? 'http://localhost:4100', changeOrigin: true } } },
   preview: { proxy: { '/api': { target: process.env.API_URL ?? 'http://localhost:4100', changeOrigin: true } } },
   build: {

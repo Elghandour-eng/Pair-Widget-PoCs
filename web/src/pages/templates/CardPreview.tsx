@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import * as Hiro from '../../../../sdk-src/src/features/conversation/components/conversation-message/ai-assistant-message/widget-template/hiro-cards-view'
 
 /**
  * Faithful dashboard previews of the widget's template cards.
@@ -387,6 +388,38 @@ function ImageCard({ content, isDark }: { content: CardContent; isDark: boolean 
   )
 }
 
+/* ---------------------------------- Hiro ----------------------------------- */
+
+/**
+ * Hiro's cards are not twins: they are the widget's own view, imported from
+ * sdk-src, so the preview cannot drift from what the widget draws. Only the
+ * design is resolved here, from the same `design` object the widget reads.
+ */
+const HIRO_VIEWS: Record<string, (p: { content: never; d: Hiro.HiroDesign }) => ReactNode> = {
+  hiro_body_snapshot: Hiro.HiroBodySnapshotView as never,
+  hiro_progress_trend: Hiro.HiroProgressTrendView as never,
+  hiro_body_composition: Hiro.HiroBodyCompositionView as never,
+  hiro_goal_progress: Hiro.HiroGoalProgressView as never,
+  hiro_macro_targets: Hiro.HiroMacroTargetsView as never,
+  hiro_muscle_balance: Hiro.HiroMuscleBalanceView as never,
+  hiro_meal_cards: Hiro.HiroMealCardsView as never,
+  hiro_meal_plan: Hiro.HiroMealPlanView as never,
+  hiro_workout_plan: Hiro.HiroWorkoutPlanView as never,
+  hiro_exercise_cards: Hiro.HiroExerciseCardsView as never,
+  hiro_insight: Hiro.HiroInsightView as never,
+}
+
+function HiroCard({ type, content, isDark }: { type: string; content: CardContent; isDark: boolean }) {
+  const View = HIRO_VIEWS[type]
+  const r = resolve(content, isDark)
+  const d: Hiro.HiroDesign = {
+    accent: r.accent, text: r.text, muted: r.muted, padding: r.padding, titleSize: r.titleSize,
+    isDark: r.isDark, isArabic: r.isArabic,
+    cardStyle: { background: r.surface, border: `1px solid ${r.border}`, borderRadius: r.radius },
+  }
+  return <div className="w-full max-w-[360px]"><View content={content as never} d={d} /></div>
+}
+
 /* --------------------------------- the switch ------------------------------- */
 
 /** Draws one hydrated card. Mirrors the SDK's `template-renderer` switch. */
@@ -404,6 +437,7 @@ export function CardPreview({ type, content, isDark }: { type: string; content: 
     case 'link_card': return <LinkCard content={content} isDark={isDark} />
     case 'image_card': return <ImageCard content={content} isDark={isDark} />
     default:
+      if (type in HIRO_VIEWS) return <HiroCard type={type} content={content} isDark={isDark} />
       return (
         <p className="text-xs text-muted">
           No preview for <span className="mono">{type}</span> yet.

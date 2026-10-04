@@ -181,6 +181,8 @@ const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.voice_call.texts.unmute',
   'widget_v2_config.voice_call.texts.closeButton',
   'widget_v2_config.voice_call.texts.callAgain',
+  'widget_v2_config.header.content.title',
+  'widget_v2_config.messages.thinking.label',
 ]
 
 export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): WidgetConfig {
@@ -234,10 +236,16 @@ export function applyWidgetLanguage(config: WidgetConfig, lang: WidgetLang): Wid
   if (Array.isArray(cards)) {
     next = deepSet(next, 'widget_v2_config.quick_links.quickLinkCards',
       // The message a card sends when tapped is copy too, so it follows the switch.
-      cards.map((c: Any) => ({
-        ...c, title: swap(c.title), subtitle: swap(c.subtitle),
-        ...(typeof c.message === 'string' ? { message: swap(c.message) } : {}),
-      })))
+      // Copy the channel typed per language (`i18n.<lang>`) wins over the dictionary.
+      cards.map((c: Any) => {
+        const own = (k: string) => (typeof c.i18n?.[lang]?.[k] === 'string' && c.i18n[lang][k].trim() ? c.i18n[lang][k] : undefined)
+        return {
+          ...c,
+          title: own('title') ?? swap(c.title),
+          subtitle: own('subtitle') ?? swap(c.subtitle),
+          ...(typeof c.message === 'string' || own('message') ? { message: own('message') ?? swap(c.message) } : {}),
+        }
+      }))
   }
   // A designed hero slide carries its own copy, so it follows the switch too.
   // The badge is a brand name and is deliberately left alone.

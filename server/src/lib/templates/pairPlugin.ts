@@ -34,6 +34,7 @@ const card = { design: ['accent', 'surface', 'border', 'radius', 'padding', 'tit
 export const PAIR_PLUGIN_TEMPLATES: TemplateDef[] = [
   {
     name: 'pair_ticket',
+    category: 'ticketing',
     ...card,
     title: 'Ticket card',
     description: 'The ticket the agent just opened for the human team: its number, title, priority and status. Rendered from the pair_create_ticket call itself.',
@@ -58,6 +59,7 @@ export const PAIR_PLUGIN_TEMPLATES: TemplateDef[] = [
   },
   {
     name: 'pair_tickets',
+    category: 'ticketing',
     ...card,
     design: [...card.design, 'divider'],
     title: 'Ticket list',
@@ -76,6 +78,7 @@ export const PAIR_PLUGIN_TEMPLATES: TemplateDef[] = [
   },
   {
     name: 'pair_link',
+    category: 'media',
     ...card,
     design: [...card.design, 'buttonStyle'],
     designDefaults: { ...card.designDefaults, buttonStyle: 'filled' },
@@ -96,6 +99,7 @@ export const PAIR_PLUGIN_TEMPLATES: TemplateDef[] = [
   },
   {
     name: 'pair_image',
+    category: 'media',
     design: ['surface', 'border', 'radius', 'padding', 'imageRatio'],
     designDefaults: { radius: 16, padding: 0, imageRatio: '4:3' },
     title: 'Image',

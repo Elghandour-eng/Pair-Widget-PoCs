@@ -365,6 +365,8 @@ export const PLAIN_BILINGUAL_PATHS = [
   'widget_v2_config.voice_call.texts.unmute',
   'widget_v2_config.voice_call.texts.closeButton',
   'widget_v2_config.voice_call.texts.callAgain',
+  'widget_v2_config.header.content.title',
+  'widget_v2_config.messages.thinking.label',
 ] as const
 
 /** What a plain bilingual field shows for one language (see BILINGUAL_PATHS). */

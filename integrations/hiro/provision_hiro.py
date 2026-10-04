@@ -45,7 +45,7 @@ print('uploaded:', orb, flame, chart, bolt)
 FONT = '"Barlow Semi Condensed", "Barlow", system-ui, sans-serif'
 NAVY = '#0B2545'
 MUTED = '#5B6B82'
-BLUE = '#1E6FE8'
+BLUE = '#218EE7'  # Hiro's blue
 
 config = {
     'widget_id': WID,
@@ -75,12 +75,13 @@ config = {
             'showIcon': False,
             'icon': None,
             'background': {'enabled': False, 'color': ''},
-            'content': {'title': 'ASK HIRO', 'subtitle': ''},
+            'content': {'title': 'ASK HIRO', 'title_i18n': {'en': 'ASK HIRO', 'ar': 'اسأل هيرو'}, 'subtitle': ''},
             'titleStyle': {'color': NAVY, 'fontSize': '1.45rem', 'fontWeight': 700, 'fontFamily': FONT, 'letterSpacing': '0.02em'},
             'subtitleStyle': {'color': MUTED, 'fontSize': '0.8rem'},
             'iconStyle': {'shape': 'circle'},
             'actions': {'cart': False, 'favorites': False, 'reset': False},
-            'controls': {'lang': {'show': False}, 'theme': {'show': False}, 'close': {'show': False}},
+            # عربي / EN and light / dark on the header; no close (the app owns the screen).
+            'controls': {'lang': {'show': True, 'icon': 'badge'}, 'theme': {'show': True, 'icon': 'moon'}, 'close': {'show': False}},
         },
         'intro_screen': {
             'showIntroScreen': {'value': True, 'styles': {}},
@@ -114,9 +115,9 @@ config = {
             'showSubtitle': False,
             'displaySettings': {'position': 'under_welcome', 'carouselLoop': False, 'sectionTitle': ''},
             'quickLinkCards': [
-                {'id': 'hiro-burn-fat', 'order': 1, 'active': True, 'url': flame, 'title': 'Best way to burn fat?', 'subtitle': '', 'message': 'What is the best way for me to burn fat?'},
-                {'id': 'hiro-weight', 'order': 2, 'active': True, 'url': chart, 'title': 'Is my weight improving?', 'subtitle': '', 'message': 'Is my weight improving?'},
-                {'id': 'hiro-muscle', 'order': 3, 'active': True, 'url': bolt, 'title': 'How to gain muscle?', 'subtitle': '', 'message': 'How do I gain muscle?'},
+                {'id': 'hiro-burn-fat', 'order': 1, 'active': True, 'url': flame, 'title': 'Best way to burn fat?', 'subtitle': '', 'message': 'What is the best way for me to burn fat?', 'i18n': {'ar': {'title': 'أفضل طريقة أحرق دهون؟', 'message': 'شنو أفضل طريقة أحرق فيها دهون؟'}}},
+                {'id': 'hiro-weight', 'order': 2, 'active': True, 'url': chart, 'title': 'Is my weight improving?', 'subtitle': '', 'message': 'Is my weight improving?', 'i18n': {'ar': {'title': 'هل وزني يتحسن؟', 'message': 'هل وزني قاعد يتحسن؟'}}},
+                {'id': 'hiro-muscle', 'order': 3, 'active': True, 'url': bolt, 'title': 'How to gain muscle?', 'subtitle': '', 'message': 'How do I gain muscle?', 'i18n': {'ar': {'title': 'كيف أبني عضل؟', 'message': 'كيف أبني عضل؟'}}},
             ],
             'design': {
                 'layout': 'carousel', 'gap': 10, 'cardWidth': 112, 'autoScroll': False,
@@ -130,7 +131,7 @@ config = {
         'chat_input': {
             'inputLayout': {'type': 'floating_pill'},
             'inputActions': {'stickers': False, 'fileUpload': False, 'voiceMessages': False, 'attachmentMenu': False},
-            'placeholderText': {'text': 'Ask about your progress or goals', 'styles': {'color': '#5E6B80', 'fontSize': '0.95rem', 'fontFamily': FONT}},
+            'placeholderText': {'text': 'Ask about your progress or goals', 'text_i18n': {'en': 'Ask about your progress or goals', 'ar': 'اسأل عن تقدمك أو أهدافك'}, 'styles': {'color': '#5E6B80', 'fontSize': '0.95rem', 'fontFamily': FONT}},
             'design': {
                 'layout': 'floating_pill',
                 'field': {'background': '#FFFFFF', 'borderWidth': 0, 'radius': 999, 'height': 56, 'paddingX': 20,
@@ -144,7 +145,7 @@ config = {
             'sendButtonIcon': {'icon': 'paper-plane', 'variant': 'send', 'styles': {'backgroundColor': BLUE, 'iconColor': '#FFFFFF', 'borderRadius': '999px'}},
         },
         'messages': {
-            'thinking': {'style': 'pill', 'label': 'Thinking', 'from': '#8FD3FF', 'to': '#9AA8F5', 'height': 56},
+            'thinking': {'style': 'pill', 'label': 'Thinking', 'label_i18n': {'en': 'Thinking', 'ar': 'أفكر'}, 'from': '#8FD3FF', 'to': '#9AA8F5', 'height': 56},
             'feedback': {'showFeedbackButtons': False, 'toastMessage': 'Thanks for your feedback.'},
             'aiMessages': {'messageStyle': 'plain', 'showAiIcon': False,
                            'TextStyles': {'color': NAVY, 'fontSize': '0.98rem', 'fontFamily': FONT, 'fontWeight': '400'}},

@@ -27,9 +27,14 @@ export interface TemplateField {
   description: string
 }
 
+/** The shelf a template sits on in the dashboard's catalog. */
+export type TemplateCategory = 'health' | 'ticketing' | 'cinema' | 'media'
+
 export interface TemplateDef {
   /** What the agent writes in `"template"`. */
   name: string
+  /** Which shelf of the catalog it belongs on; unset = `cinema`, where the first templates came from. */
+  category?: TemplateCategory
   title: string
   description: string
   /** The SDK renderer that draws it. */

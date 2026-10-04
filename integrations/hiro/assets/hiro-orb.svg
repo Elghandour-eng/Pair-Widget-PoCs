@@ -2,13 +2,13 @@
   <defs>
     <radialGradient id="halo" cx="50%" cy="50%" r="50%">
       <stop offset="45%" stop-color="#4FA8FF" stop-opacity="0"/>
-      <stop offset="62%" stop-color="#4FA8FF" stop-opacity="0.55"/>
+      <stop offset="62%" stop-color="#218EE7" stop-opacity="0.5"/>
       <stop offset="78%" stop-color="#7C8CFF" stop-opacity="0.18"/>
       <stop offset="100%" stop-color="#7C8CFF" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#9FDBFF"/>
-      <stop offset="35%" stop-color="#2F8BFF"/>
+      <stop offset="35%" stop-color="#218EE7"/>
       <stop offset="70%" stop-color="#5B6CFF"/>
       <stop offset="100%" stop-color="#B6A8FF"/>
     </linearGradient>
