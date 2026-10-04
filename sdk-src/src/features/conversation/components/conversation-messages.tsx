@@ -120,7 +120,7 @@ function ConversationMessages({
   })
 
   // Use scroll management hook
-  const { scrollContainerRef, isAtBottom, handleScroll } = useConversationScroll({
+  const { scrollContainerRef, contentRef, isAtBottom, handleScroll } = useConversationScroll({
     messages,
     hasMore,
     onLoadMore,
@@ -201,41 +201,6 @@ function ConversationMessages({
     }
   }, [conversationId, conversationUnreadMessages, markAsRead, scrollContainerRef])
 
-  // Scroll to bottom when typing starts (smooth, one-off)
-  useEffect(() => {
-    if (isTyping && !hasActiveStream) {
-      scrollToBottom(scrollContainerRef.current, 'smooth')
-    }
-  }, [isTyping, hasActiveStream, scrollContainerRef])
-
-  // During streaming: only scroll if user is already near the bottom,
-  // use instant scroll to avoid animation fighting, and coalesce rapid
-  // delta updates into a single scroll per animation frame.
-  const streamingRafRef = useRef<number | null>(null)
-  const streamTextLength = activeStream?.text.length ?? 0
-
-  useEffect(() => {
-    if (!hasActiveStream) return
-
-    // If user has scrolled up, don't force them back down
-    if (!isAtBottom) return
-
-    // Coalesce into one scroll per frame
-    if (streamingRafRef.current !== null) return
-
-    streamingRafRef.current = requestAnimationFrame(() => {
-      scrollToBottom(scrollContainerRef.current, 'instant')
-      streamingRafRef.current = null
-    })
-
-    return () => {
-      if (streamingRafRef.current !== null) {
-        cancelAnimationFrame(streamingRafRef.current)
-        streamingRafRef.current = null
-      }
-    }
-  }, [hasActiveStream, streamTextLength, isAtBottom, scrollContainerRef])
-
   // Callback to register message elements
   const registerMessageRef = useCallback((messageId: string, element: HTMLDivElement | null) => {
     if (element) {
@@ -285,7 +250,7 @@ function ConversationMessages({
         onScroll={handleScroll}
         className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-4 py-6"
       >
-        <div className="flex flex-col gap-3 py-4">
+        <div ref={contentRef} className="flex flex-col gap-3 py-4">
           {messages.length === 0 && !isTyping ? (
             <EmptyMessage />
           ) : (

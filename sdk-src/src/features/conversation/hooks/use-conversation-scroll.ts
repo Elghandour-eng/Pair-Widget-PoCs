@@ -1,9 +1,12 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { checkIfAtBottom, checkIfAtTop, scrollToBottom } from '@/features/conversation/utils/scroll-utils'
 import { throttle } from '@/lib/throttle'
 
 const SCROLL_THROTTLE_MS = 100 // Throttle scroll handler to run every 100ms
+// How long after a wheel/touch/key the scrolling still counts as the visitor's own
+// (covers momentum scrolling on touch screens).
+const USER_SCROLL_WINDOW_MS = 1000
 
 interface UseConversationScrollOptions {
   messages: Array<{ ulid: string }>
@@ -21,20 +24,34 @@ export function useConversationScroll({
   onReachBottom,
 }: UseConversationScrollOptions) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  // True while the view follows the newest message. Only the visitor scrolling
+  // up turns it off; our own scrolls (and a smooth scroll still in flight) never do.
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const followRef = useRef(true)
+  const userScrollAtRef = useRef(0)
+  const isLoadingMoreRef = useRef(isLoadingMore)
+  isLoadingMoreRef.current = isLoadingMore
   const previousMessagesLengthRef = useRef(messages.length)
-  const isUserScrollingRef = useRef(false)
   const hasInitializedRef = useRef(false)
   const scrollPositionBeforeLoadRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null)
   const wasLoadingRef = useRef(false)
 
+  const setFollow = useCallback((follow: boolean) => {
+    followRef.current = follow
+    setIsAtBottom(follow)
+  }, [])
+
   // Handle scroll events (throttled to reduce overhead)
   const handleScrollInternal = useCallback(() => {
-    if (!scrollContainerRef.current) return
+    const container = scrollContainerRef.current
+    if (!container) return
 
-    const atBottom = checkIfAtBottom(scrollContainerRef.current)
-    const atTop = checkIfAtTop(scrollContainerRef.current)
-    setIsAtBottom(atBottom)
+    const atBottom = checkIfAtBottom(container)
+    const atTop = checkIfAtTop(container)
+    const byUser = Date.now() - userScrollAtRef.current < USER_SCROLL_WINDOW_MS
+    if (atBottom) setFollow(true)
+    else if (byUser) setFollow(false)
 
     // Load more messages when scrolling to top
     if (atTop && hasMore && onLoadMore && !isLoadingMore) {
@@ -45,7 +62,7 @@ export function useConversationScroll({
     if (atBottom && messages.length > 0) {
       onReachBottom?.()
     }
-  }, [hasMore, onLoadMore, isLoadingMore, messages.length, onReachBottom])
+  }, [hasMore, onLoadMore, isLoadingMore, messages.length, onReachBottom, setFollow])
 
   // Throttled scroll handler to reduce overhead from frequent scroll events
   const handleScroll = useMemo(() => throttle(handleScrollInternal, SCROLL_THROTTLE_MS), [handleScrollInternal])
@@ -107,54 +124,71 @@ export function useConversationScroll({
 
           container.scrollTop = newScrollTop
           scrollPositionBeforeLoadRef.current = null
+          setFollow(checkIfAtBottom(container))
         }
       })
     }
-  }, [isLoadingMore, messages.length])
+  }, [isLoadingMore, messages.length, setFollow])
 
-  // Auto-scroll when new messages arrive, but only if user is at bottom
-  // TODO: this should be handled on Pusher message received event
+  // A new message while following: bring it into view
   useLayoutEffect(() => {
     const previousLength = previousMessagesLengthRef.current
     const currentLength = messages.length
 
-    // Only auto-scroll if:
-    // 1. New messages were added (length increased)
-    // 2. User is at bottom
-    // 3. Not currently user-scrolling
-    // 4. Not loading more messages (to avoid scroll jump when loading older messages)
-    if (currentLength > previousLength && isAtBottom && !isUserScrollingRef.current && !isLoadingMore) {
-      scrollToBottom(scrollContainerRef.current, 'smooth')
+    if (currentLength > previousLength && followRef.current && !isLoadingMore) {
+      scrollToBottom(scrollContainerRef.current, 'instant')
     }
 
     previousMessagesLengthRef.current = currentLength
-  }, [messages.length, isAtBottom, isLoadingMore])
+  }, [messages.length, isLoadingMore])
 
-  // Track user scrolling to prevent auto-scroll during manual scroll
-  useLayoutEffect(() => {
+  // Anything that grows the conversation while following — a streamed reply,
+  // the typing dots, an image or card that loads late — keeps the bottom in view
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content || typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver(() => {
+      if (followRef.current && !isLoadingMoreRef.current) {
+        scrollToBottom(scrollContainerRef.current, 'instant')
+      }
+    })
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [])
+
+  // Note when the visitor scrolls on their own, so only that can stop the follow
+  useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
 
-    let scrollTimeout: NodeJS.Timeout
-
-    const handleScrollStart = () => {
-      isUserScrollingRef.current = true
-      clearTimeout(scrollTimeout)
-      scrollTimeout = setTimeout(() => {
-        isUserScrollingRef.current = false
-      }, 100)
+    const markUserScroll = () => {
+      userScrollAtRef.current = Date.now()
+    }
+    // A press on the container itself is its scrollbar; taps on a message's buttons don't count
+    const markScrollbar = (e: PointerEvent) => {
+      if (e.target === container) markUserScroll()
+    }
+    const markKeyScroll = (e: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) markUserScroll()
     }
 
-    container.addEventListener('scroll', handleScrollStart, { passive: true })
+    container.addEventListener('wheel', markUserScroll, { passive: true })
+    container.addEventListener('touchmove', markUserScroll, { passive: true })
+    container.addEventListener('pointerdown', markScrollbar, { passive: true })
+    container.addEventListener('keydown', markKeyScroll)
 
     return () => {
-      container.removeEventListener('scroll', handleScrollStart)
-      clearTimeout(scrollTimeout)
+      container.removeEventListener('wheel', markUserScroll)
+      container.removeEventListener('touchmove', markUserScroll)
+      container.removeEventListener('pointerdown', markScrollbar)
+      container.removeEventListener('keydown', markKeyScroll)
     }
   }, [])
 
   return {
     scrollContainerRef,
+    contentRef,
     isAtBottom,
     handleScroll,
   }

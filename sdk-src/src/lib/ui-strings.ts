@@ -83,3 +83,12 @@ export function uiText(locale: string | undefined, key: UiStringKey, vars?: Reco
   for (const [k, v] of Object.entries(vars ?? {})) out = out.replace(`{${k}}`, String(v))
   return out
 }
+
+/** The "new messages" pill: "1 new message" / "رسالة جديدة", with Arabic's own plural forms. */
+export function newMessagesText(locale: string | undefined, count: number): string {
+  if (!/^ar/i.test(locale ?? 'en')) return `${count} new ${count === 1 ? 'message' : 'messages'}`
+  if (count === 1) return 'رسالة جديدة'
+  if (count === 2) return 'رسالتان جديدتان'
+  if (count <= 10) return `${count} رسائل جديدة`
+  return `${count} رسالة جديدة`
+}

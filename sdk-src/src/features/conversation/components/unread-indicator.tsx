@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useWidgetConfigContext } from '@/contexts/widget-config-context'
+import { newMessagesText } from '@/lib/ui-strings'
 
 interface UnreadIndicatorProps {
   unreadCount: number
@@ -33,8 +34,8 @@ function UnreadIndicator({ unreadCount, onScrollToBottom, onScrollToFirstUnread 
         }}
         className="shadow-lg hover:opacity-90"
       >
-        <ChevronDown className="mr-1 size-4" />
-        {unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}
+        <ChevronDown className="me-1 size-4" />
+        {newMessagesText(widgetConfig.locale, unreadCount)}
       </Button>
     </div>
   )
