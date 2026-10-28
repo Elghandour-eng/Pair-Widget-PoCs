@@ -19,6 +19,7 @@ proxies widget chat) but nothing about templates.
 6. [Layer 3 — per-widget bindings](#6-layer-3--per-widget-bindings)
 7. [Per-widget agents](#7-per-widget-agents)
 8. [The SDK side](#8-the-sdk-side)
+8b. [The template studio](#8b-the-template-studio--a-template-without-a-deploy)
 9. [HTTP API reference](#9-http-api-reference)
 10. [The dashboard page](#10-the-dashboard-page)
 11. [Adding a template](#11-adding-a-template)
@@ -363,6 +364,70 @@ never reached. Adding a template means touching both, and nothing else.
 
 ---
 
+## 8b. The template studio — a template without a deploy
+
+Everything above describes a template as code: an entry in `registry.ts` and a
+renderer in the SDK. The studio is the other way in, for the templates nobody
+wants to wait for a deploy to get.
+
+An operator opens **Templates → New template** and gives the design in one of
+three ways: a picture of the card (dropped, pasted or picked), the markup a
+designer sent, or a sentence describing it. One call to Claude
+(`TEMPLATE_STUDIO_MODEL`, default `claude-haiku-5-5`) turns that into the same
+contract every other template has:
+
+- **fields** — what the agent may emit, each with a type and a one-line
+  description the agent reads;
+- **html** — the card body, with `{{field}}` holes to put the values in,
+  `{{#each list}}…{{/each}}` to repeat a block, and `{{#if field}}…{{/if}}` to
+  drop a part of the card nobody filled in;
+- **name, title, description, category** — how it sits in the catalog and what
+  the agent calls it.
+
+Nothing is saved by generating. The operator edits the name, the fields and the
+markup by hand, asks for changes in a sentence ("make the price bigger"), and
+presses save — and only then does it become a template.
+
+### What a studio template is, once saved
+
+A record in Redis (`template:<name>`), loaded into the registry at boot and
+registered beside the compiled templates. From that point it behaves like any
+other template: it is in the catalog, a widget can enable it, bind a data
+source to it and design it, and the agent emits it by name. `rows` inside the
+body is the bound source's copy, so a studio card can iterate a live feed.
+
+Its `widgetType` is always `custom_card`, and the server sends **finished
+markup** — the values are already in it. That is what keeps the SDK out of it:
+one renderer draws every studio template, and the widget never learns what any
+particular card is.
+
+### The two locks on the markup
+
+A card body is written by a model and filled with values an agent produced, so
+neither is trusted:
+
+1. **Values are escaped** where they are substituted, so data can never become
+   markup.
+2. **The body is stripped** of `<script>`, frames, inline `on…=` handlers and
+   `javascript:` targets when it is saved, and it is drawn in an iframe with no
+   `allow-scripts` — in the widget and in the dashboard alike.
+
+### Where it lives
+
+| Piece | File |
+|---|---|
+| Store, renderer, sanitiser | `server/src/lib/templates/customTemplates.ts` |
+| The model call | `server/src/lib/templates/studio.ts` |
+| Registry hooks (`registerCustom`, `templateByName`, `allTemplates`) | `server/src/lib/templates/registry.ts` |
+| Routes | `server/src/routes/templates.ts` (`/studio/*`, `/custom/*`) |
+| The page | `web/src/pages/templates/Studio.tsx` |
+| The one renderer | `sdk-src/.../widget-template/custom-card.tsx` |
+
+Set `ANTHROPIC_API_KEY` to turn the studio on; without it the page says so and
+the rest of the engine is unaffected.
+
+---
+
 ## 9. HTTP API reference
 
 All dashboard routes require auth. Mutations require `editor`; deletes require
@@ -387,6 +452,30 @@ Renders the template from its own sample through the **real hydrator** and
 returns what a widget would receive. With `?source=` it previews against that
 source instead of the seed, which is how you check a new feed before binding it
 to anything.
+
+### The studio
+
+```
+GET  /api/templates/studio/status                       { ready }
+POST /api/templates/studio/generate   { image?, html?, prompt?, previous? }
+POST /api/templates/studio/preview    { html, sample }
+```
+
+`generate` is the model call and returns an **unsaved** template spec;
+`preview` runs the engine's own renderer over an unsaved body, which is what
+the studio's live preview draws. An image is base64 with its media type, under
+1.4MB — the dashboard downscales before it uploads.
+
+```
+GET    /api/templates/custom
+GET    /api/templates/custom/:name
+POST   /api/templates/custom          { name, title, description, category, fields, html, sample }
+PATCH  /api/templates/custom/:name    (everything but the name)
+DELETE /api/templates/custom/:name
+```
+
+A studio template may not take the name of a compiled one, and its body may
+only use fields it declares — both fail on the form rather than in a chat.
 
 ### Data sources
 

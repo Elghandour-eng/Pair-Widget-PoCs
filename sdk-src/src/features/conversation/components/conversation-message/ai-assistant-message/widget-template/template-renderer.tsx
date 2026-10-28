@@ -16,6 +16,7 @@ import { MenuCards } from './menu-cards'
 import { MovieCards } from './movie-cards'
 import { MenuCategories } from './menu-categories'
 import { ImageCard, LinkCard, TicketCard, TicketList } from './pair-plugin-cards'
+import { CustomCard } from './custom-card'
 import {
   HiroBodyComposition,
   HiroBodySnapshot,
@@ -80,6 +81,9 @@ export function TemplateRenderer({ widgetTemplate, sourceMessageUlid }: Template
       return <LinkCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'image_card':
       return <ImageCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
+    // Every template an operator made in the studio, whatever it draws.
+    case 'custom_card':
+      return <CustomCard template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'hiro_body_snapshot':
       return <HiroBodySnapshot template={widgetTemplate} sourceMessageUlid={sourceMessageUlid} />
     case 'hiro_progress_trend':

@@ -1,6 +1,6 @@
 import { rowsOf } from '../dataSource.js'
 import { cleanDesign, type TemplateDesign } from './design.js'
-import { TEMPLATES, TEMPLATES_BY_NAME, type TemplateDef } from './registry.js'
+import { allTemplates, templateByName, type TemplateDef } from './registry.js'
 
 /**
  * Turning an agent's component list into finished cards.
@@ -48,6 +48,17 @@ export function rowsFor(def: TemplateDef, binding: TemplateBinding): Row[] {
 type Row = Record<string, unknown>
 
 /**
+ * The widget_template one card travels as. Most renderers read everything
+ * from `content`; one in Pair's native shape (an `envelope` on its template)
+ * also takes `config` beside it, and the envelope's own fields beside `type`.
+ */
+export function widgetTemplateOf(def: TemplateDef, data: Row, lang: 'ar' | 'en'): Row {
+  if (!def.envelope) return { type: def.widgetType, content: { lang, ...data } }
+  const { config, ...content } = data
+  return { type: def.widgetType, ...def.envelope, content: { lang, ...content }, ...(config ? { config } : {}) }
+}
+
+/**
  * Expands every template component in the list. Non-template components pass
  * through untouched, an unregistered template name passes through so a newer
  * agent is never silently broken by an older server, and a template the widget
@@ -66,7 +77,7 @@ export function hydrateComponents(list: unknown, binding: TemplateBinding = ALL_
       out.push(comp)
       continue
     }
-    const def = TEMPLATES_BY_NAME.get(String(comp.template ?? ''))
+    const def = templateByName(String(comp.template ?? ''))
     if (!def) {
       out.push(comp)
       continue
@@ -94,11 +105,11 @@ export function componentsToTemplate(comps: Array<Row>, replyText: string): Row 
   // a trend and the scan behind it answer one question, and dropping the second
   // would answer half of it.
   const stacked = comps
-    .filter((c) => c.type === 'template' && TEMPLATES_BY_NAME.get(String(c.template ?? ''))?.stackable)
-    .map((c) => ({ type: TEMPLATES_BY_NAME.get(String(c.template))!.widgetType, content: { lang, ...((c.data ?? {}) as Row) } }))
+    .filter((c) => c.type === 'template' && templateByName(String(c.template ?? ''))?.stackable)
+    .map((c) => widgetTemplateOf(templateByName(String(c.template))!, (c.data ?? {}) as Row, lang))
   if (stacked.length > 1) return { type: 'stack', content: { lang, items: stacked.slice(0, 4) } }
   if (stacked.length === 1) return stacked[0]
-  for (const def of TEMPLATES) {
+  for (const def of allTemplates()) {
     const matches = comps.filter((c) => c.type === 'template' && c.template === def.name)
     if (matches.length === 0) continue
     if (def.collects) {
@@ -113,7 +124,7 @@ export function componentsToTemplate(comps: Array<Row>, replyText: string): Row 
       const items = Array.isArray(data.items) ? (data.items as Array<{ image?: string }>) : []
       return { type: items.some((i) => i.image) ? 'menu_cards' : 'price_list', content: { lang, ...data } }
     }
-    return { type: def.widgetType, content: { lang, ...data } }
+    return widgetTemplateOf(def, data, lang)
   }
   return undefined
 }

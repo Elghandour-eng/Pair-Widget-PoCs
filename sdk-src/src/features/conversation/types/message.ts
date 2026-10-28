@@ -782,6 +782,23 @@ export interface ImageCardTemplate {
   content: { lang?: 'ar' | 'en'; design?: TemplateDesign; url: string; caption?: string }
 }
 
+/**
+ * A card made in the dashboard's template studio rather than compiled in here.
+ * The server sends finished markup — the agent's values are already in it — so
+ * one renderer draws every studio template (see custom-card.tsx).
+ */
+export interface CustomCardTemplate {
+  type: 'custom_card'
+  content: {
+    lang?: 'ar' | 'en'
+    design?: TemplateDesign
+    /** The studio template's name, for anyone reading a payload. */
+    template?: string
+    title?: string
+    html: string
+  }
+}
+
 export interface MenuCardsTemplate {
   type: 'menu_cards'
   content: {
@@ -842,6 +859,7 @@ export type WidgetTemplate =
   | TicketListTemplate
   | LinkCardTemplate
   | ImageCardTemplate
+  | CustomCardTemplate
   | HiroTemplate
   | StackTemplate
 

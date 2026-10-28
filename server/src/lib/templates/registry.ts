@@ -3,6 +3,7 @@ import type { TemplateDesign } from './design.js'
 import { menuItems } from '../../routes/cinescapeMenuSource.js'
 import { PAIR_PLUGIN_TEMPLATES, type PluginRef } from './pairPlugin.js'
 import { HIRO_TEMPLATES } from './hiro.js'
+import { COMMERCE_TEMPLATES } from './commerce.js'
 import { APP_LINKS, CINEMA_ROWS, EXPERIENCE_ITEMS, PRICE_ITEMS } from './seeds.js'
 
 /**
@@ -28,7 +29,7 @@ export interface TemplateField {
 }
 
 /** The shelf a template sits on in the dashboard's catalog. */
-export type TemplateCategory = 'health' | 'ticketing' | 'cinema' | 'media'
+export type TemplateCategory = 'health' | 'ticketing' | 'cinema' | 'media' | 'commerce'
 
 export interface TemplateDef {
   /** What the agent writes in `"template"`. */
@@ -39,12 +40,20 @@ export interface TemplateDef {
   description: string
   /** The SDK renderer that draws it. */
   widgetType: string
+  /**
+   * Set when the renderer takes Pair's native shape: these fields sit beside
+   * `type` (a carousel's `carousel_type`), and the hydrated `config` travels
+   * next to `content` instead of inside it.
+   */
+  envelope?: Record<string, unknown>
   /** True when several of these components in one reply become a single card list. */
   collects?: boolean
   /** What the agent may put in `data`. This is the contract the prompt repeats. */
   emits: TemplateField[]
   /** A worked example, shown in the dashboard catalog and copyable into a prompt. */
   sample: Record<string, unknown>
+  /** The same example in Arabic, for the catalog's Arabic preview; unset previews `sample`. */
+  sampleAr?: Record<string, unknown>
   /**
    * What the template renders when a widget has bound no source, or the bound
    * source has no good copy yet. A function, so a template whose fallback is
@@ -107,6 +116,7 @@ export const TEMPLATES: TemplateDef[] = [
   // reply it arrives in, and must not lose its place to a card emitted beside it.
   ...PAIR_PLUGIN_TEMPLATES,
   ...HIRO_TEMPLATES,
+  ...COMMERCE_TEMPLATES,
   {
     name: 'location_card',
     design: ['accent', 'surface', 'border', 'radius', 'padding', 'titleSize', 'imageRatio', 'showImage'],
@@ -277,4 +287,33 @@ export const TEMPLATES: TemplateDef[] = [
 ]
 
 export const TEMPLATES_BY_NAME = new Map(TEMPLATES.map((t) => [t.name, t]))
-export const templateNames = (): string[] => TEMPLATES.map((t) => t.name)
+
+/**
+ * Templates an operator made in the studio (see customTemplates.ts), kept
+ * beside the compiled ones rather than inside them: everything downstream —
+ * the catalog, hydration, a widget's bindings — goes through the two helpers
+ * below, so a studio template is a first-class template everywhere without
+ * the registry having to know how it was authored.
+ *
+ * They are held in memory because hydration is synchronous by design; Redis is
+ * the copy that survives a restart, loaded once at boot.
+ */
+const CUSTOM = new Map<string, TemplateDef>()
+
+export function registerCustom(def: TemplateDef): void {
+  if (TEMPLATES_BY_NAME.has(def.name)) throw new Error(`"${def.name}" is a built-in template`)
+  CUSTOM.set(def.name, def)
+}
+
+export function unregisterCustom(name: string): void {
+  CUSTOM.delete(name)
+}
+
+export const isCustom = (name: string): boolean => CUSTOM.has(name)
+
+/** Every template the engine knows, compiled-in first so registry order still decides a reply's card. */
+export const allTemplates = (): TemplateDef[] => [...TEMPLATES, ...CUSTOM.values()]
+
+export const templateByName = (name: string): TemplateDef | undefined => TEMPLATES_BY_NAME.get(name) ?? CUSTOM.get(name)
+
+export const templateNames = (): string[] => allTemplates().map((t) => t.name)

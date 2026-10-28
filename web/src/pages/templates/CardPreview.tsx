@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import * as Hiro from '../../../../sdk-src/src/features/conversation/components/conversation-message/ai-assistant-message/widget-template/hiro-cards-view'
 
 /**
@@ -423,7 +423,90 @@ function HiroCard({ type, content, isDark }: { type: string; content: CardConten
 /* --------------------------------- the switch ------------------------------- */
 
 /** Draws one hydrated card. Mirrors the SDK's `template-renderer` switch. */
+/** Where the widget is served from, as the catalog API reports it. */
+let sdkCardBase = '/sdk'
+export function setSdkCardBase(base?: string) {
+  if (base) sdkCardBase = base.replace(/\/$/, '')
+}
+
+/**
+ * A card in Pair's native shape, drawn by the widget itself: the widget page in
+ * card mode (`?card`), handed the exact widget_template a reply would carry.
+ * The frame takes the height the card reports, so it shows whole.
+ */
+function WidgetCard({ template, isDark }: { template: Record<string, unknown>; isDark: boolean }) {
+  const frame = useRef<HTMLIFrameElement>(null)
+  const [height, setHeight] = useState(240)
+  const base = sdkCardBase.startsWith('/') ? window.location.origin + sdkCardBase : sdkCardBase
+  const src = `${base}/?card&beBaseUrl=${encodeURIComponent(window.location.origin)}`
+
+  useEffect(() => {
+    const send = () =>
+      frame.current?.contentWindow?.postMessage({ type: 'pair:card', template, theme: isDark ? 'dark' : 'light' }, '*')
+    const onMessage = (e: MessageEvent) => {
+      if (e.source !== frame.current?.contentWindow) return
+      if (e.data?.type === 'pair:card-ready') send()
+      if (e.data?.type === 'pair:card-height' && typeof e.data.height === 'number') setHeight(e.data.height)
+    }
+    window.addEventListener('message', onMessage)
+    send()
+    return () => window.removeEventListener('message', onMessage)
+  }, [template, isDark])
+
+  return (
+    <iframe
+      ref={frame}
+      src={src}
+      title="Card preview"
+      className="block w-full max-w-[375px] rounded-xl border-0"
+      style={{ height }}
+    />
+  )
+}
+
+/**
+ * A card made in the template studio. There is nothing to lay out here: the
+ * engine hydrated the operator's markup server-side, and this draws it in a
+ * frame with no script permission — the same way the widget's own renderer
+ * does, so the catalog shows the card and not an approximation of it.
+ */
+function CustomCard({ content, isDark }: { content: CardContent; isDark: boolean }) {
+  const d = resolve(content, isDark)
+  const frame = useRef<HTMLIFrameElement>(null)
+  const [height, setHeight] = useState(0)
+  const html = typeof content.html === 'string' ? content.html : ''
+
+  const doc = `<!doctype html><html dir="${d.isArabic ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><style>
+    :root { --accent:${d.accent}; --surface:${d.surface}; --border:${d.border}; --radius:${d.radius}px;
+            --padding:${d.padding}px; --title-size:${d.titleSize}px; --text:${d.text}; --muted:${d.muted};
+            color-scheme:${d.isDark ? 'dark' : 'light'} }
+    html,body { margin:0; padding:0; background:transparent }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color:${d.text} }
+    img { max-width:100% }
+  </style></head><body>${html}</body></html>`
+
+  const measure = () => {
+    const body = frame.current?.contentDocument?.body
+    if (body) setHeight(Math.ceil(body.scrollHeight))
+  }
+
+  if (!html) return null
+  return (
+    <iframe
+      title="Card preview"
+      ref={frame}
+      srcDoc={doc}
+      onLoad={measure}
+      sandbox="allow-same-origin"
+      className="block w-full max-w-[375px] border-0"
+      style={{ height: height || 160 }}
+    />
+  )
+}
+
 export function CardPreview({ type, content, isDark }: { type: string; content: CardContent; isDark: boolean }) {
+  const native = content.widgetTemplate as Record<string, unknown> | undefined
+  if (native) return <WidgetCard template={native} isDark={isDark} />
   switch (type) {
     case 'price_list': return <PriceList content={content} isDark={isDark} />
     case 'experiences_list': return <ExperiencesList content={content} isDark={isDark} />
@@ -436,6 +519,9 @@ export function CardPreview({ type, content, isDark }: { type: string; content: 
     case 'ticket_list': return <TicketList content={content} isDark={isDark} />
     case 'link_card': return <LinkCard content={content} isDark={isDark} />
     case 'image_card': return <ImageCard content={content} isDark={isDark} />
+    // A studio template: the server already filled the markup in, so the
+    // preview is a frame around it rather than a renderer of its own.
+    case 'custom_card': return <CustomCard content={content} isDark={isDark} />
     default:
       if (type in HIRO_VIEWS) return <HiroCard type={type} content={content} isDark={isDark} />
       return (

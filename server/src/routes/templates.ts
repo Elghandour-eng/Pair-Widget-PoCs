@@ -4,10 +4,16 @@ import {
   SOURCE_KINDS, createSource, deleteSource, getSource, listSources, refreshSource,
   sourceConfigSchema, sourceId, sourceStatus, updateSource,
 } from '../lib/dataSource.js'
-import { notFound } from '../lib/errors.js'
+import { badRequest, notFound } from '../lib/errors.js'
 import { DESIGN_FIELDS, cleanDesign } from '../lib/templates/design.js'
-import { designFor, rowsFor } from '../lib/templates/hydrate.js'
-import { TEMPLATES, TEMPLATES_BY_NAME } from '../lib/templates/registry.js'
+import { designFor, rowsFor, widgetTemplateOf } from '../lib/templates/hydrate.js'
+import { sdkBaseUrl } from '../lib/sdkBase.js'
+import { allTemplates, isCustom, templateByName } from '../lib/templates/registry.js'
+import {
+  createCustomTemplate, customTemplateSchema, deleteCustomTemplate, getCustomTemplate,
+  listCustomTemplates, render, sanitizeHtml, updateCustomTemplate,
+} from '../lib/templates/customTemplates.js'
+import { generateTemplate, studioReady } from '../lib/templates/studio.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { asyncHandler } from '../middleware/error.js'
 
@@ -30,12 +36,18 @@ templatesRouter.get(
       // The knob catalog travels with the templates so the dashboard renders
       // the right control per field without hardcoding any of them.
       designFields: DESIGN_FIELDS,
-      templates: TEMPLATES.map((t) => ({
+      // Cards in Pair's native shape are previewed by the widget itself, from here.
+      sdkBaseUrl: sdkBaseUrl(),
+      templates: allTemplates().map((t) => ({
         name: t.name,
         category: t.category ?? 'cinema',
+        /** True on a studio template: made in the dashboard, editable there, not compiled in. */
+        custom: isCustom(t.name),
         title: t.title,
         description: t.description,
         widgetType: t.widgetType,
+        /** Previewed by the widget's own renderer rather than a dashboard twin. */
+        native: !!t.envelope,
         collects: !!t.collects,
         passthrough: !!t.passthrough,
         /** Set on a plugin component: which orchestrator plugin, group and tool produce it. */
@@ -65,7 +77,7 @@ const previewBody = z.object({
 
 /** GET previews the saved state; POST previews an unsaved design as the editor types. */
 const preview = asyncHandler(async (req, res) => {
-  const def = TEMPLATES_BY_NAME.get(req.params.name)
+  const def = templateByName(req.params.name)
   if (!def) throw notFound(`Unknown template "${req.params.name}"`)
   const input = previewBody.parse(req.method === 'POST' ? req.body : req.query)
   const binding = {
@@ -73,14 +85,140 @@ const preview = asyncHandler(async (req, res) => {
     sources: input.source ? { [def.name]: input.source } : {},
     designs: input.design ? { [def.name]: cleanDesign(input.design, def.design) } : {},
   }
-  const data = def.hydrate({ ...def.sample }, rowsFor(def, binding))
+  const sample = input.lang === 'ar' && def.sampleAr ? def.sampleAr : def.sample
+  const data = def.hydrate({ ...sample }, rowsFor(def, binding))
+  const template = widgetTemplateOf(def, { ...data, design: designFor(def, binding) }, input.lang)
   res.json({
     name: def.name,
     widgetType: def.widgetType,
-    content: { lang: input.lang, ...data, design: designFor(def, binding) },
+    content: template.content,
+    // The exact widget_template a widget would receive.
+    template,
   })
 })
 
+/* --------------------------------- studio --------------------------------- */
+
+/**
+ * Making a template without writing one.
+ *
+ * `/studio/generate` is the model call: a screenshot, a paste of markup or a
+ * sentence goes in and a template spec comes back, unsaved. `/custom` is the
+ * ordinary CRUD around what the operator keeps. The split matters — generating
+ * costs a model call and saving does not, so the dashboard can let someone
+ * iterate on a design and only write to the registry when they are happy.
+ */
+
+// The dashboard downscales before it uploads; this is the backstop, and it sits
+// under the server's 2mb JSON limit so an oversized image fails with a sentence
+// an operator can act on instead of a bare 413.
+const MAX_IMAGE_BYTES = 1_400_000
+
+const studioBody = z.object({
+  image: z
+    .object({
+      mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
+      data: z.string().min(1),
+    })
+    .optional(),
+  html: z.string().max(40_000).optional(),
+  prompt: z.string().max(2000).optional(),
+  previous: z
+    .object({
+      html: z.string().max(40_000),
+      fields: z.array(z.object({ key: z.string(), type: z.string(), description: z.string().default('') })).default([]),
+    })
+    .optional(),
+})
+
+templatesRouter.get(
+  '/studio/status',
+  asyncHandler(async (_req, res) => {
+    res.json({ ready: studioReady() })
+  }),
+)
+
+templatesRouter.post(
+  '/studio/generate',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    const body = studioBody.parse(req.body)
+    if (body.image && Buffer.byteLength(body.image.data, 'base64') > MAX_IMAGE_BYTES) {
+      throw badRequest('That image is too large. Shrink it, or paste the markup instead.')
+    }
+    const spec = await generateTemplate(body)
+    // Returned, not saved: the operator previews it and decides.
+    res.json({ template: spec })
+  }),
+)
+
+/**
+ * Renders an unsaved body against unsaved values — what the studio's live
+ * preview draws while the operator edits. It is the same renderer the engine
+ * uses at chat time, so what they are looking at is the card, not a likeness
+ * of it.
+ */
+templatesRouter.post(
+  '/studio/preview',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({ html: z.string().max(60_000), sample: z.record(z.unknown()).default({}) })
+      .parse(req.body)
+    res.json({ html: render(sanitizeHtml(body.html), { ...body.sample, rows: [] }) })
+  }),
+)
+
+/* ---------------------------- studio templates ----------------------------- */
+
+templatesRouter.get(
+  '/custom',
+  asyncHandler(async (_req, res) => {
+    res.json({ templates: listCustomTemplates() })
+  }),
+)
+
+templatesRouter.get(
+  '/custom/:name',
+  asyncHandler(async (req, res) => {
+    const def = getCustomTemplate(req.params.name)
+    if (!def) throw notFound(`Template "${req.params.name}" not found`)
+    res.json({ template: def })
+  }),
+)
+
+templatesRouter.post(
+  '/custom',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    const def = await createCustomTemplate(customTemplateSchema.parse(req.body), req.user!.email)
+    res.status(201).json({ template: def })
+  }),
+)
+
+templatesRouter.patch(
+  '/custom/:name',
+  requireRole('editor'),
+  asyncHandler(async (req, res) => {
+    const patch = customTemplateSchema.omit({ name: true }).partial().parse(req.body)
+    res.json({ template: await updateCustomTemplate(req.params.name, patch, req.user!.email) })
+  }),
+)
+
+templatesRouter.delete(
+  '/custom/:name',
+  requireRole('admin'),
+  asyncHandler(async (req, res) => {
+    await deleteCustomTemplate(req.params.name)
+    res.status(204).end()
+  }),
+)
+
+/**
+ * Registered after the studio's literal paths: `/:name/preview` would otherwise
+ * match `/studio/preview` with a template called "studio", and answer 404 for a
+ * route that exists.
+ */
 templatesRouter.get('/:name/preview', preview)
 templatesRouter.post('/:name/preview', preview)
 

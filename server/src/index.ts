@@ -5,6 +5,7 @@ import { logger } from './lib/logger.js'
 import { closeMongo, initMongo, logEvent } from './lib/mongo.js'
 import { connectRedis, redis } from './lib/redis.js'
 import { startDataSources } from './lib/dataSource.js'
+import { startCustomTemplates } from './lib/templates/customTemplates.js'
 import { startMenuRefresh } from './routes/cinescapeMenuSource.js'
 import { runSeed } from './scripts/seed.js'
 
@@ -17,6 +18,10 @@ async function main() {
   void startMenuRefresh()
   // Same rule: every template feed warms from its Redis copy and refreshes behind the boot.
   void startDataSources()
+  // Awaited, unlike the feeds above: a studio template *is* part of the
+  // registry, and a request that arrives before it loads would be told the
+  // template does not exist.
+  await startCustomTemplates()
   const server = createServer(createApp())
   server.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, 'server listening')

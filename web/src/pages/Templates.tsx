@@ -1,5 +1,6 @@
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, FlaskConical, Plus, RefreshCw, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Empty, Loading, Modal, PageHead, SectionHead, Spinner } from '@/components/ui'
 import {
   api, type AgentPlugin, type DataSource, type DesignField, type SourceKind, type TemplateDef,
@@ -8,7 +9,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useFormatDate, useI18n } from '@/lib/i18n'
 import { useToast } from '@/lib/toast'
-import { CardPreview, type CardContent } from './templates/CardPreview'
+import { CardPreview, setSdkCardBase, type CardContent } from './templates/CardPreview'
 import { DesignControls } from './templates/DesignControls'
 
 /**
@@ -44,6 +45,7 @@ export function Templates() {
     const [tpl, src, wid] = await Promise.all([api.listTemplates(), api.listDataSources(), api.listWidgets()])
     setTemplates(tpl.templates)
     setDesignFields(tpl.designFields)
+    setSdkCardBase(tpl.sdkBaseUrl)
     setSources(src.sources)
     setWidgets(wid.widgets)
   }, [])
@@ -71,6 +73,17 @@ export function Templates() {
             eyebrow={t('tpl.eyebrow')}
             title={t('tpl.title')}
             lede={tab === 'templates' ? t('tpl.lede') : t('tpl.sourcesLede')}
+            action={
+              <div className="flex gap-2">
+                <Link to="/templates/playground" className="btn-ghost btn-sm">
+                  <FlaskConical className="size-3.5" /> {t('tpl.playground')}
+                </Link>
+                {/* The way in that does not need an engineer: a design, and a template out. */}
+                <Link to="/templates/studio" className="btn-primary btn-sm">
+                  <Sparkles className="size-3.5" /> {t('tpl.new')}
+                </Link>
+              </div>
+            }
           />
           {/* The two halves of the engine, one at a time: the shapes, and the feeds behind them. */}
           <Tabs
@@ -119,7 +132,7 @@ function Tabs<T extends string>({ value, onChange, tabs }: {
 
 /* --------------------------------- gallery --------------------------------- */
 
-const CATEGORIES = ['all', 'health', 'ticketing', 'cinema', 'media'] as const
+const CATEGORIES = ['all', 'commerce', 'health', 'ticketing', 'cinema', 'media'] as const
 type Category = (typeof CATEGORIES)[number]
 const PAGE_SIZE = 9
 
@@ -136,7 +149,7 @@ function Gallery({ templates, onOpen }: { templates: TemplateDef[]; onOpen: (nam
   const [page, setPage] = useState(0)
 
   const counts = useMemo(() => {
-    const c: Record<Category, number> = { all: templates.length, health: 0, ticketing: 0, cinema: 0, media: 0 }
+    const c: Record<Category, number> = { all: templates.length, commerce: 0, health: 0, ticketing: 0, cinema: 0, media: 0 }
     for (const x of templates) c[x.category] = (c[x.category] ?? 0) + 1
     return c
   }, [templates])
@@ -198,7 +211,12 @@ function Gallery({ templates, onOpen }: { templates: TemplateDef[]; onOpen: (nam
       )}
 
       {pages > 1 && (
-        <nav className="flex items-center justify-center gap-2" aria-label={t('tpl.pages')}>
+        <nav
+          /* Pinned to the foot of the scroll pane: the pager stays in reach
+             without scrolling past the nine tiles first. */
+          className="raise sticky bottom-3 z-20 mx-auto flex w-fit items-center gap-2 rounded-full border border-line bg-white/90 px-2 py-1.5 backdrop-blur"
+          aria-label={t('tpl.pages')}
+        >
           <button type="button" className="btn-ghost btn-sm" onClick={() => setPage(current - 1)} disabled={current === 0} aria-label={t('tpl.prev')}>
             <ChevronLeft className="size-4 rtl:rotate-180" />
           </button>
@@ -225,13 +243,14 @@ function Gallery({ templates, onOpen }: { templates: TemplateDef[]; onOpen: (nam
 /** One template, drawn as the card it actually is. The shape is the label. */
 function GalleryTile({ tpl, onOpen }: { tpl: TemplateDef; onOpen: () => void }) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [content, setContent] = useState<CardContent | null>(null)
 
   useEffect(() => {
     let live = true
     api
       .previewTemplate(tpl.name)
-      .then((r) => live && setContent(r.content as CardContent))
+      .then((r) => live && setContent({ ...(r.content as CardContent), widgetTemplate: tpl.native ? r.template : undefined }))
       .catch(() => live && setContent(null))
     return () => {
       live = false
@@ -249,7 +268,9 @@ function GalleryTile({ tpl, onOpen }: { tpl: TemplateDef; onOpen: () => void }) 
           <h3 className="truncate text-sm font-bold text-ink">{tpl.title}</h3>
           <p className="mono text-[11px] text-muted">{tpl.name}</p>
         </div>
-        <span className="chip shrink-0 text-[10px]">{tpl.plugin ? t('tpl.pluginChip', { plugin: tpl.plugin.id, group: tpl.plugin.group }) : tpl.widgetType}</span>
+        <span className="chip shrink-0 text-[10px]">
+          {tpl.custom ? t('tpl.studio') : tpl.plugin ? t('tpl.pluginChip', { plugin: tpl.plugin.id, group: tpl.plugin.group }) : tpl.widgetType}
+        </span>
       </header>
 
       {/* The card at reduced scale: enough to recognise the shape at a glance. */}
@@ -264,8 +285,27 @@ function GalleryTile({ tpl, onOpen }: { tpl: TemplateDef; onOpen: () => void }) 
       </div>
 
       <p className="line-clamp-2 text-xs leading-relaxed text-muted">{tpl.description}</p>
-      <span className="text-[11px] font-bold text-brand opacity-0 transition-opacity group-hover:opacity-100">
-        {t('tpl.design')} →
+      <span className="flex items-center gap-3 text-[11px] font-bold">
+        <span className="text-brand opacity-0 transition-opacity group-hover:opacity-100">{t('tpl.design')} →</span>
+        {tpl.custom && (
+          <span
+            role="link"
+            tabIndex={0}
+            className="text-muted hover:text-accent-deep"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/templates/studio/${tpl.name}`)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.stopPropagation()
+                navigate(`/templates/studio/${tpl.name}`)
+              }
+            }}
+          >
+            {t('tpl.edit')}
+          </span>
+        )}
       </span>
     </button>
   )
@@ -328,7 +368,7 @@ function Designer({ tpl, fields, sources, widgets, onBack }: {
     timer.current = setTimeout(() => {
       api
         .previewTemplate(tpl.name, { design, source: sourceId || undefined, lang })
-        .then((r) => setContent(r.content as CardContent))
+        .then((r) => setContent({ ...(r.content as CardContent), widgetTemplate: tpl.native ? r.template : undefined }))
         .catch(() => undefined)
     }, 140)
     return () => clearTimeout(timer.current)
@@ -491,7 +531,7 @@ function Designer({ tpl, fields, sources, widgets, onBack }: {
   )
 }
 
-function Toggle({ options, value, onChange }: { options: Array<[string, string]>; value: string; onChange: (v: string) => void }) {
+export function Toggle({ options, value, onChange }: { options: Array<[string, string]>; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex gap-1 rounded-xl bg-sunken p-1">
       {options.map(([v, label]) => (

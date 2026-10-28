@@ -8,10 +8,18 @@ export interface User {
 export interface Widget {
   widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string
   /** Which backend answers this widget's chat, and which agent it runs. */
-  engine?: string; agentId?: string
+  engine?: string; agentId?: string; engineUrl?: string
+  /** The orchestrator key is write-only: the dashboard only learns whether one is set. */
+  hasEngineKey?: boolean
+  /** Pair's AI-agent token for resolving conversations: write-only too. */
+  hasPairAgentToken?: boolean
+  /** The live templates key's last four characters and when it was issued (the key itself is never returned again). */
+  templatesKeyHint?: string; templatesKeyAt?: string
   createdAt: string; createdBy: string; updatedAt: string; updatedBy: string
   configUpdatedAt: string | null; configUpdatedBy: string | null
 }
+
+export interface EngineDefaults { url: string; agentId: string; hasKey: boolean }
 
 /* ------------------------------ template engine ----------------------------- */
 
@@ -24,16 +32,20 @@ export interface TemplateField {
 /** A card shape the agent can emit and the widget can render. */
 export interface TemplateDef {
   name: string
-  /** The catalog shelf: health (Hiro), ticketing, cinema, media. */
-  category: 'health' | 'ticketing' | 'cinema' | 'media'
+  /** The catalog shelf: health (Hiro), ticketing, cinema, media, commerce (Boutiqaat). */
+  category: 'health' | 'ticketing' | 'cinema' | 'media' | 'commerce'
   title: string
   description: string
   widgetType: string
+  /** Drawn by the widget's own renderer (in a frame) rather than a dashboard twin. */
+  native?: boolean
   collects: boolean
   /** True when the rows come from the agent's own tool and no source applies. */
   passthrough: boolean
   /** Set on a plugin component: the orchestrator plugin, tool group and tool that produce it. */
   plugin: { id: string; group: string; tool: string } | null
+  /** True on a studio template: made in this dashboard, and editable here. */
+  custom?: boolean
   emits: TemplateField[]
   sample: Record<string, unknown>
   snippet: Record<string, unknown>
@@ -42,6 +54,33 @@ export interface TemplateDef {
   design: string[]
   designDefaults: TemplateDesign
 }
+/** What the studio is given: a design as a picture, as markup, or in words. */
+export interface StudioInput {
+  image?: { mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; data: string }
+  html?: string
+  prompt?: string
+  /** On a refine pass: the body on screen, so the model revises it instead of starting over. */
+  previous?: { html: string; fields: Array<{ key: string; type: string; description: string }> }
+}
+
+/** A template the studio made, before anyone saves it. */
+export interface StudioSpec {
+  name: string
+  title: string
+  description: string
+  category: TemplateDef['category']
+  fields: Array<{ key: string; type: TemplateField['type']; required: boolean; description: string }>
+  html: string
+  sample: Record<string, unknown>
+}
+
+export interface CustomTemplate extends StudioSpec {
+  createdAt: string
+  createdBy: string
+  updatedAt: string
+  updatedBy: string
+}
+
 /** A plugin as the agent has it installed; `groups` are the tool groups in use ("tickets", "messaging"…). */
 export interface AgentPlugin {
   enabled: boolean
@@ -158,7 +197,14 @@ export const api = {
   createWidget: (body: { widgetId: string; channelName: string; source: Source; apiBaseUrl?: string; notes?: string; importFromApi: boolean }) =>
     request<{ widget: Widget }>('/widgets', { method: 'POST', body: JSON.stringify(body) }),
   getWidget: (widgetId: string) =>
-    request<{ widget: Widget; storedConfig: WidgetConfig | null; hasStoredConfig: boolean; audit: AuditEntry[]; sdkBaseUrl: string }>(`/widgets/${encodeURIComponent(widgetId)}`),
+    request<{
+      widget: Widget; storedConfig: WidgetConfig | null; hasStoredConfig: boolean; audit: AuditEntry[]; sdkBaseUrl: string
+      /** The server's own Danah agent, which a Danah widget with empty fields uses. */
+      engineDefaults?: EngineDefaults
+    }>(`/widgets/${encodeURIComponent(widgetId)}`),
+  /** Tries orchestrator settings before they are saved. */
+  checkEngine: (widgetId: string, body: { engineUrl?: string; engineKey?: string; agentId?: string }) =>
+    request<{ ok: boolean; status: number; agent?: string; message?: string }>(`/widgets/${encodeURIComponent(widgetId)}/engine/check`, { method: 'POST', body: JSON.stringify(body) }),
   getFeedback: (widgetId: string, f: { q?: string; status?: FeedbackStatus; page?: number; perPage?: number } = {}) =>
     request<{ available: boolean; notes: FeedbackNote[]; total: number; counts: Record<FeedbackStatus, number> }>(
       `/widgets/${encodeURIComponent(widgetId)}/feedback?${new URLSearchParams(
@@ -181,7 +227,11 @@ export const api = {
       `/widgets/${encodeURIComponent(widgetId)}/versions/${encodeURIComponent(versionId)}/restore`,
       { method: 'POST' },
     ),
-  updateWidget: (widgetId: string, body: Partial<Pick<Widget, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId'>> & { engineKey?: string }) =>
+  issueTemplatesKey: (widgetId: string) =>
+    request<{ key: string; hint: string; at: string }>(`/widgets/${encodeURIComponent(widgetId)}/templates-key`, { method: 'POST' }),
+  revokeTemplatesKey: (widgetId: string) =>
+    request<void>(`/widgets/${encodeURIComponent(widgetId)}/templates-key`, { method: 'DELETE' }),
+  updateWidget: (widgetId: string, body: Partial<Pick<Widget, 'channelName' | 'source' | 'apiBaseUrl' | 'notes' | 'engine' | 'agentId' | 'engineUrl'>> & { engineKey?: string; pairAgentToken?: string }) =>
     request<{ widget: Widget }>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteWidget: (widgetId: string) => request<void>(`/widgets/${encodeURIComponent(widgetId)}`, { method: 'DELETE' }),
   resolveConfig: (widgetId: string, source?: Source) =>
@@ -190,13 +240,35 @@ export const api = {
   importFromApi: (widgetId: string) => request<{ widget: Widget; storedConfig: WidgetConfig }>(`/widgets/${encodeURIComponent(widgetId)}/import`, { method: 'POST' }),
 
   listTemplates: () =>
-    request<{ templates: TemplateDef[]; designFields: Record<string, DesignField> }>('/templates'),
+    request<{ templates: TemplateDef[]; designFields: Record<string, DesignField>; sdkBaseUrl?: string }>('/templates'),
   /** POST so an unsaved design can be previewed as the editor types. */
   previewTemplate: (name: string, body: { source?: string; design?: TemplateDesign; lang?: 'ar' | 'en' } = {}) =>
-    request<{ name: string; widgetType: string; content: Record<string, unknown> }>(
+    request<{ name: string; widgetType: string; content: Record<string, unknown>; template?: Record<string, unknown> }>(
       `/templates/${encodeURIComponent(name)}/preview`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
+  /* ------------------------------- the studio ------------------------------ */
+
+  studioStatus: () => request<{ ready: boolean }>('/templates/studio/status'),
+  /** One model call: a design in, an unsaved template out. Nothing is written until it is saved. */
+  generateTemplate: (body: StudioInput) =>
+    request<{ template: StudioSpec }>('/templates/studio/generate', { method: 'POST', body: JSON.stringify(body) }),
+  /** The engine's own renderer, run on an unsaved body, so the preview is the card and not a likeness. */
+  previewStudioHtml: (body: { html: string; sample: Record<string, unknown> }) =>
+    request<{ html: string }>('/templates/studio/preview', { method: 'POST', body: JSON.stringify(body) }),
+  listCustomTemplates: () => request<{ templates: CustomTemplate[] }>('/templates/custom'),
+  getCustomTemplate: (name: string) =>
+    request<{ template: CustomTemplate }>(`/templates/custom/${encodeURIComponent(name)}`),
+  createCustomTemplate: (body: StudioSpec) =>
+    request<{ template: CustomTemplate }>('/templates/custom', { method: 'POST', body: JSON.stringify(body) }),
+  updateCustomTemplate: (name: string, body: Partial<Omit<StudioSpec, 'name'>>) =>
+    request<{ template: CustomTemplate }>(`/templates/custom/${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  deleteCustomTemplate: (name: string) =>
+    request<void>(`/templates/custom/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+
   listDataSources: () => request<{ sources: DataSource[] }>('/datasources'),
   createDataSource: (body: { id: string; name: string; kind: SourceKind; ttlMs: number; config: DataSourceConfig }) =>
     request<{ source: DataSource }>('/datasources', { method: 'POST', body: JSON.stringify(body) }),

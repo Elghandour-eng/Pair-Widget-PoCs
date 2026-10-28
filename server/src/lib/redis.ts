@@ -56,4 +56,7 @@ export const keys = {
   dataSource: (id: string) => `datasource:${id}`,
   dataSourceCache: (id: string) => `datasource:${id}:cache`,
   dataSources: () => 'datasources',
+  /** A template an operator made in the studio, rather than one compiled in. */
+  customTemplate: (name: string) => `template:${name}`,
+  customTemplates: () => 'templates:custom',
 }

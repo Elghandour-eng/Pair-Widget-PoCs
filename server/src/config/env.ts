@@ -33,6 +33,11 @@ const schema = z.object({
   VITE_PUSHER_PORT: z.string().default(''),
   VITE_PUSHER_FORCE_TLS: z.string().default(''),
   VITE_HIRO_WIDGET_ID: z.string().default(''),
+  // The template studio: one Claude call turns a design — a screenshot, a paste
+  // of HTML, a sentence — into a template an agent can emit. Blank disables the
+  // studio; the rest of the template engine does not depend on it.
+  ANTHROPIC_API_KEY: z.string().default(''),
+  TEMPLATE_STUDIO_MODEL: z.string().default('claude-haiku-5-5'),
   // LiveKit, for voice calls from the widget. All three or none: without them
   // the call button still shows, and a call reports that calls are unavailable.
   // The secret signs tokens here and never leaves this server.

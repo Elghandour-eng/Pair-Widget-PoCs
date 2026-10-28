@@ -3,7 +3,7 @@ import { getSource } from '../lib/dataSource.js'
 import { getSoon, keys, redis } from '../lib/redis.js'
 import { cleanDesign, type TemplateDesign } from '../lib/templates/design.js'
 import { ALL_TEMPLATES, type TemplateBinding } from '../lib/templates/hydrate.js'
-import { TEMPLATES_BY_NAME } from '../lib/templates/registry.js'
+import { templateByName } from '../lib/templates/registry.js'
 
 /**
  * Which templates a widget may render, and where each one's rows come from.
@@ -57,20 +57,21 @@ export async function saveWidgetTemplates(
   // A name or source id that does not exist would fail silently at render time,
   // which is the worst place to find out, so it fails on the form instead.
   for (const name of enabled ?? []) {
-    if (!TEMPLATES_BY_NAME.has(name)) throw badRequest(`Unknown template "${name}".`)
+    if (!templateByName(name)) throw badRequest(`Unknown template "${name}".`)
   }
   for (const [name, sourceId] of Object.entries(sources)) {
-    if (!TEMPLATES_BY_NAME.has(name)) throw badRequest(`Unknown template "${name}".`)
+    if (!templateByName(name)) throw badRequest(`Unknown template "${name}".`)
     if (sourceId && !getSource(sourceId)) throw badRequest(`Unknown data source "${sourceId}".`)
   }
   // Each design is cleaned against its own template's knobs, so a value that
   // template would ignore is never stored and never shown back as if it applied.
   const cleanedDesigns: Record<string, TemplateDesign> = {}
   for (const [name, design] of Object.entries(designs)) {
-    const def = TEMPLATES_BY_NAME.get(name)
+    const def = templateByName(name)
     if (!def) throw badRequest(`Unknown template "${name}".`)
-    const cleaned = cleanDesign(design, def.design)
-    if (Object.keys(cleaned).length > 0) cleanedDesigns[name] = cleaned
+    // kept even when empty: a template saved to the widget with the default look is still assigned to it
+    // (what an agent platform is offered, GET /api/integrations/widgets/:id/templates)
+    cleanedDesigns[name] = cleanDesign(design, def.design)
   }
   const record: WidgetTemplatesRecord = {
     enabled,
